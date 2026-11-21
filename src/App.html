@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>초등방과후 프로그램 운영 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<?!= include('Styles') ?>
+<style>
+.savestate{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+.savestate.bad{color:var(--crit);font-weight:700}
+.admwho{display:flex;align-items:center;gap:8px;margin-left:12px;font-size:12.5px;white-space:nowrap}.admwho:empty{display:none}.admwho .btn{color:inherit}
+.boot{padding:48px 0;text-align:center;color:var(--muted)}
+.admlogin{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,rgba(0,0,0,.35))}
+.admcard{width:min(400px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:var(--shadow)}
+.admcard input{width:100%}
+</style>
+</head>
+<body data-mode="<?= mode ?>" data-token="<?= token ?>" data-key="<?= adminKey ?>" data-link="<?= adminLink ?>" data-biz="<?= biz ?>" data-trole="<?= trole ?>" data-aname="<?= aname ?>">
+<header class="top">
+  <div class="wrap">
+    <div class="topin">
+      <span class="logo-h" role="img" aria-label="호서대학교"></span><span class="hsep"></span>
+      <div class="brand"><b id="brandTitle">초등방과후 프로그램 운영 관리</b><span id="seasonLbl"></span></div>
+      <div class="savestate" id="saveState" role="status"></div>
+      <div class="admwho" id="admWho"></div>
+    </div>
+  </div>
+  <div class="navbar"><div class="wrap"><nav class="tabs" id="tabs"></nav></div></div>
+</header>
+<main class="wrap" id="app"><div class="boot">불러오는 중…</div></main>
+<footer class="site wrap"><span class="ft-txt"><b>충남 1권역(천안·아산)</b><i>｜</i><span>ANCHOR(구 RISE)늘봄 고도화</span></span><span class="ft-logos"><span class="flogo fl-hoseo" role="img" aria-label="호서대학교" title="호서대학교"></span><span class="flogo fl-sangmyung" role="img" aria-label="상명대학교" title="상명대학교"></span><span class="flogo fl-u1" role="img" aria-label="유원대학교" title="유원대학교"></span><span class="flogo fl-dankook" role="img" aria-label="단국대학교" title="단국대학교"></span><span class="flogo fl-yonam" role="img" aria-label="연암대학교" title="연암대학교"></span></span></footer>
+<div id="layer"></div>
+
+<?!= include('Lib') ?>
+
+<script>
+/* ===== 엑셀 라이브러리(약 1.9MB)는 첫 화면을 막지 않게 나중에 불러옴 =====
+   운영 화면은 화면을 그린 뒤 바로 뒤에서 받아 두고, 강사·학교 등은 몇 초 뒤 받아 둠.
+   다 받기 전에 엑셀 버튼·파일 선택을 누르면 받은 다음 그 동작을 다시 실행 */
+const XL_SRC = ['https:\/\/cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', 'https:\/\/cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'];
+let XL_P = null;
+const XL_OK = () => typeof XLSX !== 'undefined' && typeof ExcelJS !== 'undefined';
+function loadXL() {
+  if (XL_OK()) return Promise.resolve();
+  if (XL_P) return XL_P;
+  const one = src => new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.async = true; sc.onload = res; sc.onerror = () => rej(new Error('엑셀 기능을 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 눌러 주세요')); document.head.appendChild(sc); });
+  XL_P = Promise.all(XL_SRC.map(one)).catch(e => { XL_P = null; throw e; });
+  return XL_P;
+}
+const XL_ACTS = new Set(['asstsms', 'devexport', 'edu-dl', 'export', 'export-tpl', 'extres', 'foundx', 'idbtpl', 'instsms', 'jxls', 'kitexport', 'kittpl', 'kqspec', 'kqxlsx', 'opsx', 'pcexport', 'pctpl', 'rmsend', 'rmsendsel', 'sexport', 'sopsx', 'st-xbase', 'st-xtpl', 'trtpl', 'ures', 'x-fmt', 'univres', 'rmprev']);
+const XL_RE = /xls|export|tpl|sms|-dl$|spec/i;
+window.addEventListener('click', e => {
+  if (XL_OK()) return;
+  const el = e.target.closest && e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act || ''; if (!XL_ACTS.has(a) && !XL_RE.test(a)) return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  if (typeof toast === 'function') toast('엑셀 기능을 불러오는 중입니다…');
+  loadXL().then(() => el.click()).catch(err => toast(err.message));
+}, true);
+window.addEventListener('change', e => {
+  const t = e.target; if (XL_OK() || !t || t.type !== 'file' || !t.files || !t.files.length) return;
+  e.stopImmediatePropagation();
+  if (typeof toast === 'function') toast('엑셀 기능을 불러오는 중입니다…');
+  loadXL().then(() => t.dispatchEvent(new Event('change', { bubbles: true }))).catch(err => toast(err.message));
+}, true);
+/* ===== 역할별 연결: 운영기관(admin) · 학교(school) · 강사(teacher) ===== */
+let MODE = document.body.dataset.mode || 'teacher';
+let TOKEN = document.body.dataset.token || '';
+let ADMIN_KEY = document.body.dataset.key || '';
+const ADMIN_LINK = document.body.dataset.link || '';
+const ADM_SS = 'anc_adm';
+const BIZ = document.body.dataset.biz || '';
+const TITLES = { admin: '초등방과후 프로그램 운영 관리', school: '초등방과후 프로그램 운영 정보 확인', teacher: document.body.dataset.trole === 'asst' ? '초등방과후 프로그램 보조강사 수업 신청' : '초등방과후 프로그램 강사 수업 신청', join: '초등방과후 프로그램 기관 담당자 페이지' };
+document.getElementById('brandTitle').textContent = TITLES[MODE];
+
+function run(fn, ...args) {
+  return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
+}
+const errMsg = e => { const m = (e && e.message) ? e.message.replace(/^Exception:\s*/, '') : String(e); return /is not a function/.test(m) ? '서버 코드가 이 화면보다 예전 버전입니다. Code.gs가 최신인지, 「배포 관리 → 연필 → 새 버전」으로 같은 배포에 올렸는지, 이 주소가 그 배포 주소인지 확인해 주세요.' : m; };
+function setSave(t, bad) { const el = document.getElementById('saveState'); el.textContent = t; el.className = 'savestate' + (bad ? ' bad' : ''); }
+function fatal(e) { const box = document.createElement('div'); box.className = 'notice bad'; box.style.marginTop = '24px'; box.textContent = '열 수 없습니다. ' + ((e && e.message) || String(e)); const app = document.getElementById('app'); app.innerHTML = ''; app.appendChild(box); }
+function typing() { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); }
+function copyText(t) {
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('복사했습니다'); } catch (e) { toast('복사하지 못했습니다. 직접 선택해 복사해 주세요'); } ta.remove(); };
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했습니다')).catch(fallback); else fallback();
+}
+function base(settings) {
+  const d = defaultSettings(), s = settings || {};
+  Object.keys(s).forEach(k => { if (s[k] != null) d[k] = s[k]; });
+  return d;
+}
+
+/* ---------------- 운영기관 ---------------- */
+let SAVED = null, saveTimer = null, saving = false, again = false;
+function snap() {
+  SAVED = { rows: {}, contacts: {}, inst: {}, set: {} };
+  S.rows.forEach(r => SAVED.rows[r.id] = JSON.stringify(r));
+  Object.entries(S.contacts || {}).forEach(([k, v]) => SAVED.contacts[k] = JSON.stringify(v));
+  S.instructors.forEach(t => SAVED.inst[t.id] = JSON.stringify(t));
+  SETTING_KEYS.forEach(k => SAVED.set[k] = JSON.stringify(S[k] ?? null));
+}
+function dirtyPayload() {
+  if (!SAVED) return null;
+  const p = { rows: [], deleteRows: [], contacts: {}, instructors: [], deleteInstructors: [], settings: {} };
+  const ids = new Set();
+  S.rows.forEach(r => { ids.add(r.id); if (SAVED.rows[r.id] !== JSON.stringify(r)) p.rows.push(r); });
+  Object.keys(SAVED.rows).forEach(id => { if (!ids.has(id)) p.deleteRows.push(id); });
+  Object.entries(S.contacts || {}).forEach(([k, v]) => { if (v && SAVED.contacts[k] !== JSON.stringify(v)) p.contacts[k] = v; });
+  const tids = new Set();
+  S.instructors.forEach(t => { tids.add(t.id); if (SAVED.inst[t.id] !== JSON.stringify(t)) p.instructors.push(t); });
+  Object.keys(SAVED.inst).forEach(id => { if (!tids.has(id)) p.deleteInstructors.push(id); });
+  SETTING_KEYS.forEach(k => { if (SAVED.set[k] !== JSON.stringify(S[k] ?? null)) p.settings[k] = S[k]; });
+  if (S.ui.replaceRows) { p.replaceRows = true; p.rows = S.rows.slice(); p.deleteRows = []; p.resetContacts = !!S.ui.resetContacts; p.resetSkip = S.ui.resetSkip || []; if (p.resetContacts) { const kc = {}; p.resetSkip.forEach(n => { if (S.contacts[n]) kc[n] = S.contacts[n]; }); Object.keys(S.contacts).forEach(n => { if (S.contacts[n] && S.contacts[n].pre) kc[n] = S.contacts[n]; }); p.contacts = kc; } }
+  if ((S.ui.resetNames || []).length) p.resetNames = S.ui.resetNames.slice();
+  const n = (p.resetNames ? p.resetNames.length : 0) + p.rows.length + p.deleteRows.length + Object.keys(p.contacts).length + p.instructors.length + p.deleteInstructors.length + Object.keys(p.settings).length;
+  return (n || p.replaceRows) ? p : null;
+}
+function adminPersist() { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700); }
+function flush() {
+  if (saving) { again = true; return; }
+  if (!S.adminOrg && typeof fixPhonesAll === 'function') { try { fixPhonesAll(); if (typeof snapDatesAll === 'function') snapDatesAll(); } catch (e) {} }
+  const p = dirtyPayload();
+  if (!p) return;
+  const sent = JSON.parse(JSON.stringify(p));
+  saving = true; setSave('저장 중…');
+  run('adminSave', ADMIN_KEY, p).then(res => {
+    const strip = o => { const c = { ...o }; delete c.rev; return JSON.stringify(c); };
+    sent.rows.forEach(r => {
+      const rev = res.revs.rows[r.id]; if (!rev) return;
+      const live = S.rows.find(x => x.id === r.id);
+      if (live) { const same = strip(live) === strip(r); live.rev = rev; SAVED.rows[r.id] = same ? JSON.stringify(live) : JSON.stringify({ ...r, rev }); }
+    });
+    sent.deleteRows.forEach(id => delete SAVED.rows[id]);
+    Object.keys(sent.contacts).forEach(k => {
+      const rev = res.revs.contacts[k]; if (!rev) return;
+      const live = S.contacts[k]; if (live) { const same = strip(live) === strip(sent.contacts[k]); live.rev = rev; SAVED.contacts[k] = same ? JSON.stringify(live) : JSON.stringify({ ...sent.contacts[k], rev }); }
+    });
+    sent.instructors.forEach(t => {
+      const rev = res.revs.instructors[t.id]; if (!rev) return;
+      const live = S.instructors.find(x => x.id === t.id);
+      if (live) { const same = strip(live) === strip(t); live.rev = rev; SAVED.inst[t.id] = same ? JSON.stringify(live) : JSON.stringify({ ...t, rev }); }
+    });
+    sent.deleteInstructors.forEach(id => delete SAVED.inst[id]);
+    Object.keys(sent.settings).forEach(k => SAVED.set[k] = JSON.stringify(sent.settings[k] ?? null));
+    if (sent.resetNames) { S.ui.resetNames = (S.ui.resetNames || []).filter(n => sent.resetNames.indexOf(n) < 0); sent.resetNames.forEach(n => delete SAVED.contacts[n]); }
+    if (sent.replaceRows) {
+      S.ui.replaceRows = false;
+      Object.keys(SAVED.rows).forEach(id => { if (!S.rows.some(r => r.id === id)) delete SAVED.rows[id]; });
+      if (sent.resetContacts) { SAVED.contacts = {}; S.ui.resetContacts = false; }
+    }
+    let rerender = false;
+    const C = res.conflicts || {};
+    (C.rows || []).forEach(srv => { const i = S.rows.findIndex(x => x.id === srv.id); if (i >= 0) S.rows[i] = srv; SAVED.rows[srv.id] = JSON.stringify(srv); rerender = true; });
+    (C.contacts || []).forEach(x => { S.contacts[x.school] = x.contact; SAVED.contacts[x.school] = JSON.stringify(x.contact); rerender = true; });
+    (C.instructors || []).forEach(srv => { const i = S.instructors.findIndex(x => x.id === srv.id); if (i >= 0) S.instructors[i] = srv; SAVED.inst[srv.id] = JSON.stringify(srv); rerender = true; });
+    if (rerender) toast('학교나 다른 담당자가 먼저 고친 내용이 있어 그 내용으로 새로 불러왔습니다. 확인 후 다시 고쳐 주세요');
+    if (res.schoolLinks) { const before = JSON.stringify(S.schoolLinks); S.schoolLinks = res.schoolLinks; if (before !== JSON.stringify(S.schoolLinks)) rerender = true; }
+    setSave('저장됨 · ' + now());
+    saving = false;
+    if (rerender && !typing()) render();
+    if (again || dirtyPayload()) { again = false; adminPersist(); }
+  }).catch(e => {
+    saving = false; setSave('저장 실패 · 잠시 뒤 다시 저장합니다', true); toast(errMsg(e));
+    if (/만료/.test(errMsg(e))) { if (ADMIN_LINK) adminAskLogin(() => adminPersist()); return; }
+    setTimeout(adminPersist, 8000);
+  });
+}
+function aUse(d, keepUi) {
+  const ui = keepUi && S ? S.ui : { role: 'admin', view: 'board', st: '', q: '', region: '', probOnly: false, sel: '', showWait: false, onlyApps: false, condEdit: '' };
+  const set = d.settings || {};
+  S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined };
+  MY_ORG = S.adminOrg || '호서대학교';
+  if (S.adminOrg) { const sc = new Set(S.rows.filter(r => mine(r)).map(r => r.school)); S.joinReqs = S.joinReqs.filter(q => sc.has(q.school)); }
+  if (!keepUi && S && S.ui) S.ui.stLoaded = false;
+  if ((!S.webAppUrl || /script\.google\.com/.test(S.webAppUrl)) && d.webAppUrl) S.webAppUrl = d.webAppUrl;
+  snap();
+  if (!S.adminOrg && typeof fixPhonesAll === 'function' && (fixPhonesAll() + (typeof snapDatesAll === 'function' ? snapDatesAll() : 0) + (typeof fixRegionsAll === 'function' ? fixRegionsAll() : 0))) setTimeout(() => { if (typeof adminPersist === 'function') adminPersist(); }, 2500);
+  if (!set.programs) { SETTING_KEYS.forEach(k => SAVED.set[k] = '"__first__"'); }
+  return !set.programs;
+}
+/* 웹 앱 운영자 링크(?a=)로 열었을 때: 비밀번호 확인 후 운영 화면 */
+function adminStart() {
+  if (ADMIN_KEY) { adminBoot(); return; }
+  if (!ADMIN_LINK) { fatal(new Error('운영자 링크로 열어 주세요.')); return; }
+  let saved = ''; try { saved = sessionStorage.getItem(ADM_SS) || ''; } catch (e) {}
+  if (saved) { ADMIN_KEY = saved; adminBoot(); return; }
+  adminAskLogin(adminBoot);
+}
+function adminAskLogin(after) {
+  if (document.getElementById('admlogin')) return;
+  run('adminGate', ADMIN_LINK).then(g => showAdminLogin(g.pwSet, after, g.biz || [])).catch(fatal);
+}
+function showAdminLogin(pwSet, after, bizL) {
+  bizL = bizL || [];
+  const box = document.createElement('div'); box.id = 'admlogin'; box.className = 'admlogin';
+  let who = '';  /* '' = 총괄 관리자, 아니면 사업 키 */
+  try { who = localStorage.getItem('anc_admwho') || ''; } catch (e) {}
+  /* 관리자별 접속 링크(&b=사업&n=이름)로 열면 그 센터·이름을 미리 고름 */
+  const AN = document.body.dataset.aname || '';
+  if (BIZ && bizL.some(b => b.k === BIZ)) who = BIZ;
+  if (who && !bizL.some(b => b.k === who)) who = '';
+  const draw = () => {
+    const b = bizL.find(x => x.k === who), master = !who;
+    box.innerHTML = `<form class="admcard stack" autocomplete="on">
+    <span class="logo-h" role="img" aria-label="호서대학교"></span>
+    <div><h2>초등방과후 프로그램 운영 관리</h2><div class="small muted" style="margin-top:4px">센터(사업)를 고르고 관리자 비밀번호를 입력해 주세요.</div></div>
+    <label class="f">접속 구분<select id="adm-who">${pwSet || !master ? '' : ''}<option value="" ${master ? 'selected' : ''}>총괄 관리자 (모든 사업)</option>${bizL.map(x => `<option value="${x.k}" ${x.k === who ? 'selected' : ''}>${x.center} · ${x.name}</option>`).join('')}</select></label>
+    ${master ? '' : (b && b.admins.length ? `<label class="f">관리자<select id="adm-name">${b.admins.map(n => `<option ${n === AN ? 'selected' : ''}>${n}</option>`).join('')}</select></label>` : '<div class="notice small">이 사업의 관리자 계정이 아직 없습니다. 총괄 관리자가 「기준정보 → 관리자 계정」에서 만들어 주세요.</div>')}
+    <input type="text" name="username" value="${master ? '총괄 관리자' : (b ? b.center : '')}" autocomplete="username" hidden>
+    <label class="f">비밀번호<input type="password" id="adm-pw" autocomplete="${master && !pwSet ? 'new-password' : 'current-password'}" required></label>
+    ${master && !pwSet ? '<div class="small muted">처음 접속입니다. 총괄 관리자 비밀번호(8자 이상)를 정해 주세요.</div><label class="f">비밀번호 한 번 더<input type="password" id="adm-pw2" autocomplete="new-password" required></label>' : ''}
+    <button class="btn pri" type="submit" ${!master && !(b && b.admins.length) ? 'disabled' : ''}>${master && !pwSet ? '비밀번호 정하고 들어가기' : '들어가기'}</button>
+    <div class="small lv-crit" id="adm-msg" role="alert"></div>
+    <div class="small muted">이 링크와 비밀번호는 운영 담당자만 알고 있어야 합니다.</div></form>`;
+    const pw = box.querySelector('#adm-pw'), msg = box.querySelector('#adm-msg'), btn = box.querySelector('button');
+    box.querySelector('#adm-who').addEventListener('change', e => { who = e.target.value; try { localStorage.setItem('anc_admwho', who); } catch (er) {} draw(); });
+    setTimeout(() => pw.focus(), 50);
+    box.querySelector('form').addEventListener('submit', ev => {
+      ev.preventDefault(); msg.textContent = '';
+      if (master && !pwSet) { const p2 = box.querySelector('#adm-pw2').value; if (pw.value.length < 8) { msg.textContent = '8자 이상으로 정해 주세요.'; return; } if (pw.value !== p2) { msg.textContent = '두 비밀번호가 다릅니다.'; return; } }
+      btn.disabled = true; btn.textContent = '확인 중…';
+      const nm = (box.querySelector('#adm-name') || {}).value || '';
+      run('adminLogin', ADMIN_LINK, pw.value, master ? '' : who, nm).then(r => {
+        ADMIN_KEY = r.key; try { sessionStorage.setItem(ADM_SS, r.key); } catch (e) {}
+        box.remove(); if (after) after();
+      }).catch(e => { btn.disabled = false; btn.textContent = '들어가기'; msg.textContent = errMsg(e); pw.select(); });
+    });
+  };
+  ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation()));
+  document.body.appendChild(box); draw();
+}
+/* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
+let ADM_TIMER = null;
+const APP_VER = '11.28';
+function afterRender() {
+  if (MODE !== 'admin') return;
+  const w = document.getElementById('admWho'); if (!w || !S) return;
+  const who = S.isMaster ? '총괄 관리자' : `${bizName()}${S.adminOrg ? ' · ' + orgShort(S.adminOrg) : ''} · ${S.adminName || '관리자'}`;
+  if (w.dataset.who === who) return;
+  w.dataset.who = who;
+  const lv = typeof LIB_VER !== 'undefined' ? LIB_VER : '';
+  w.innerHTML = `<span class="muted">${esc(who)}</span><span class="small" style="color:${lv === APP_VER ? 'var(--muted)' : '#c0392b'}" title="${lv === APP_VER ? '화면 코드(App·Lib)가 같은 버전입니다' : 'Lib.html이 예전 버전입니다. Lib.html을 바꾸고 새 버전으로 배포해 주세요'}">${lv === APP_VER ? '버전 ' + APP_VER : 'Lib 예전 버전 · 교체 필요'}</span><button class="btn sm" id="admOut" type="button">로그아웃</button>`;
+  w.querySelector('#admOut').addEventListener('click', ev => { ev.stopPropagation(); adminLogoutGo(); });
+}
+function adminLogoutGo() {
+  let n = 0;
+  const go = () => {
+    if (saving || dirtyPayload()) { if (++n > 40) { toast('저장이 끝나지 않았습니다. 잠시 뒤 다시 눌러 주세요'); return; } flush(); setSave('저장한 뒤 로그아웃합니다…'); setTimeout(go, 500); return; }
+    const k = ADMIN_KEY;
+    run('adminLogout', k).catch(() => {}).then(() => {
+      if (ADM_TIMER) { clearInterval(ADM_TIMER); ADM_TIMER = null; }
+      try { sessionStorage.removeItem(ADM_SS); } catch (e) {}
+      ADMIN_KEY = '';
+      const w = document.getElementById('admWho'); if (w) { w.innerHTML = ''; delete w.dataset.who; }
+      document.getElementById('tabs').innerHTML = ''; document.getElementById('seasonLbl').textContent = ''; setSave('');
+      if (!ADMIN_LINK) { document.getElementById('app').innerHTML = '<div class="notice" style="margin-top:24px">로그아웃했습니다. 운영자 링크로 다시 들어와 주세요.</div>'; return; }
+      document.getElementById('app').innerHTML = '<div class="boot">로그아웃했습니다.</div>';
+      adminAskLogin(adminBoot);
+    });
+  };
+  go();
+}
+function adminBoot() {
+  /* 새로 열면 항상: 공개 중인 시기 · 학교 · 목록 업로드 화면 */
+  run('adminLoad', ADMIN_KEY, true).then(d => {
+    const first = aUse(d, false);
+    S.ui.view = 'board'; S.ui.scope = '';
+    render(); setSave('불러옴 · ' + now());
+    if (first) { toast('처음 실행입니다. 기본 설정을 저장했습니다. [교육청 목록 올리기]와 기준정보의 [강사 DB 올리기]로 시작하세요'); adminPersist(); }
+    if (ADM_TIMER) clearInterval(ADM_TIMER);
+    ADM_TIMER = setInterval(() => {
+      if (!S || !ADMIN_KEY) return;
+      if (saving || dirtyPayload() || S.ui.drawer || typing() || S.ui.pending || S.ui.idbPending) return;
+      run('adminLoad', ADMIN_KEY).then(d2 => { if (saving || dirtyPayload() || typing() || S.ui.drawer) return; aUse(d2, true); render(); setSave('최신 내용 · ' + now()); }).catch(() => {});
+    }, 60000);
+  }).catch(e => {
+    if (ADMIN_LINK && /만료/.test(errMsg(e))) { try { sessionStorage.removeItem(ADM_SS); } catch (_) {} ADMIN_KEY = ''; adminAskLogin(adminBoot); return; }
+    fatal(e);
+  });
+  window.addEventListener('beforeunload', e => { if (typeof kitFlush === 'function' && typeof KIT_DIRTY !== 'undefined' && (KIT_DIRTY.kit.size || KIT_DIRTY.dev.size)) { kitFlush(); e.preventDefault(); e.returnValue = ''; } if (saving || dirtyPayload()) { e.preventDefault(); e.returnValue = ''; } });
+}
+
+/* ---------------- 학교 ---------------- */
+let schoolTimer = null, lastDraft = '';
+function schoolDraft() {
+  const rows = S.rows.filter(r => r.status === 'wait' || r.reopen || r.status === 'blocked')
+    .map(r => ({ id: r.id, label: r.label, start: r.start, end: r.end, days: r.days, ts: r.ts, te: r.te, cond: r.cond, edited: r.edited, sc: r.sc }));
+  return { contact: S.contacts[S.ui.school], rows };
+}
+const IS_PV = () => String(TOKEN).indexOf('PV-') === 0;
+function schoolPersist() {
+  clearTimeout(schoolTimer);
+  if (IS_PV()) return;
+  schoolTimer = setTimeout(() => {
+    const d = schoolDraft(), j = JSON.stringify(d);
+    if (j === lastDraft) return;
+    setSave('저장 중…');
+    run('schoolSave', TOKEN, d).then(r => { lastDraft = j; setSave('임시 저장됨 · ' + r.at); }).catch(e => { setSave('저장 실패', true); toast(errMsg(e)); });
+  }, 900);
+}
+function sUse(p) {
+  const old = S && S.ui;
+  S = { ...base(p.settings), rows: p.rows || [], contacts: p.contacts || {}, instructors: p.instructors || [], addr: p.addr || {}, bizInfo: p.bizInfo || [], ctxSeason: p.ctxSeason || '', biz: (p.settings || {}).biz || 'anchor', bizList: (p.settings || {}).bizList || [],
+    ui: { role: 'school', view: 'school', school: p.school, justSubmitted: old ? old.justSubmitted : '', ask: '', offAsk: null, preview: IS_PV() } };
+  lastDraft = JSON.stringify(schoolDraft());
+}
+function schoolBoot() {
+  run('schoolLoad', TOKEN).then(p => { sUse(p); render(); setSave(''); }).catch(fatal);
+}
+function schoolCall(promise, okMsg, after) {
+  if (IS_PV()) { promise.catch(() => {}); toast('관리자 미리보기에서는 저장·제출되지 않습니다'); return Promise.resolve(); }
+  setSave('보내는 중…');
+  return promise.then(p => { sUse(p); if (after) after(p); render(); setSave('저장됨 · ' + now()); if (okMsg) toast(typeof okMsg === 'function' ? okMsg(p) : okMsg); })
+    .catch(e => { setSave(''); toast(errMsg(e)); });
+}
+
+/* ---------------- 타대학 희망 강사 선택 (?u=토큰) ---------------- */
+function statsBoot() {
+  run('statsView', TOKEN).then(d => {
+    S = { ...base({ seasons: [{ k: 'x', name: d.season || '', link: '' }], season: 'x' }), rows: [], contacts: {}, instructors: [], stats: { ds: d.ds || [], at: d.at || '', addrs: d.addrs || {} }, kpi: d.kpi || { targets: {} }, ui: { role: 'stats', view: 'stats', stLoaded: true } };
+    render();
+  }).catch(fatal);
+}
+function univBoot() {
+  run('univLoad', TOKEN).then(d => {
+    S = { ...base({ seasons: [{ k: 'x', name: d.season || '', link: '' }], season: 'x', ops: d.ops || {} }), rows: [], contacts: {}, instructors: [], univ: d, ui: { role: 'univ', view: 'univ' } };
+    render();
+  }).catch(fatal);
+}
+/* ---------------- 학교 접속 신청 (공문 대표 링크 ?join) ---------------- */
+const JQ_LS = 'anc_join' + (BIZ ? '_' + BIZ : '');
+function jqGet() { try { return JSON.parse(localStorage.getItem(JQ_LS) || 'null'); } catch (e) { return null; } }
+function jqSet(v) { try { if (v) localStorage.setItem(JQ_LS, JSON.stringify(v)); else localStorage.removeItem(JQ_LS); } catch (e) {} }
+function joinBoot() {
+  run('joinLoad', BIZ).then(d => {
+    S = { ...base(d.settings), rows: [], contacts: {}, instructors: [], joinSchools: d.schools || [], bizInfo: d.bizInfo || [], joinMine: null, ui: { role: 'join', view: 'join', jf: null } };
+    const saved = jqGet();
+    if (saved && saved.id) run('joinStatus', saved.id, saved.rt, BIZ).then(m => { S.joinMine = m; if (m.status === 'approved' && m.token) enterSchool(m.token); else render(); }).catch(() => { jqSet(null); render(); });
+    else render();
+  }).catch(fatal);
+}
+/* 승인된 담당자: 접속 신청 주소에서 바로 우리 기관 페이지로 (주소 이동 없이 이 화면에서 전환) */
+function enterSchool(tok) {
+  setSave('여는 중…');
+  run('schoolLoad', tok).then(p => { MODE = 'school'; TOKEN = tok; document.getElementById('brandTitle').textContent = TITLES.school; sUse(p); render(); setSave(''); window.scrollTo(0, 0); })
+    .catch(e => { setSave(''); render(); toast(errMsg(e)); });
+}
+/* i-ONE 문자 보내기 스크립트에서 「보냄」 알림이 오면 서버에 기록 */
+window.joinSmsMark = id => { if (MODE === 'admin' && ADMIN_KEY) run('adminJoinMarkSms', ADMIN_KEY, id).catch(() => {}); };
+/* 운영기관: 접속 승인 메일 보내기 (웹앱을 배포한 지메일 계정에서 발송) */
+function joinSend(id, auto) {
+  const q = joinCur((S.joinReqs || []).find(x => x.id === id)); if (!q) return Promise.resolve();
+  const m = joinMailOf(q);
+  return run('adminJoinSendMail', ADMIN_KEY, id, m.subject, m.body).then(r => {
+    const i = S.joinReqs.findIndex(x => x.id === id); if (i >= 0) S.joinReqs[i] = r.req;
+    if (r.mailInfo) S.mailInfo = r.mailInfo;
+    render(); toast(`${q.school} 담당자(${q.email})에게 메일을 보냈습니다${r.mailInfo && r.mailInfo.remaining != null ? ` · 오늘 남은 발송 ${r.mailInfo.remaining}건` : ''}`);
+  }).catch(err => toast(`${auto ? '승인은 되었지만 ' : ''}메일을 보내지 못했습니다: ${errMsg(err)}`));
+}
+/* 운영기관: 프로그램 계획안 올리기 · 드라이브 링크 연결 (파일은 계획안 폴더에 저장, 프로그램 설정에는 파일 정보만) */
+function planUpload(i, file) {
+  const p = S.programs[i]; if (!p || !file) return;
+  if (!PLAN_EXT.test(file.name)) { toast('한글(hwp, hwpx), PDF, 워드 파일만 올릴 수 있습니다'); return; }
+  if (file.size > 20 * 1048576) { toast('20MB보다 큰 파일은 드라이브에 올린 뒤 「드라이브 링크」로 연결해 주세요'); return; }
+  toast(`${file.name} 올리는 중…`);
+  const rd = new FileReader();
+  rd.onload = () => {
+    const b64 = String(rd.result).split(',')[1] || '';
+    run('adminPlanUpload', ADMIN_KEY, p.key, file.name, b64).then(info => { p.plan = info; render(); toast(`${p.name} 계획안을 올렸습니다`); }).catch(err => toast(errMsg(err)));
+  };
+  rd.onerror = () => toast('파일을 읽지 못했습니다');
+  rd.readAsDataURL(file);
+}
+function planLink(i, url) {
+  const p = S.programs[i]; if (!p) return;
+  run('adminPlanLink', ADMIN_KEY, p.key, url).then(info => { p.plan = info; S.ui.planLink = null; render(); toast(`${p.name} 계획안을 연결했습니다`); }).catch(err => toast(errMsg(err)));
+}
+/* 운영기관: 학교별 배치 완료 메일 (학교용 운영 목록 엑셀을 화면에서 만들어 서버로 보내고, 서버가 계획안을 붙여 발송) */
+function bufB64(buf) { const u = new Uint8Array(buf); let s = ''; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
+function resultSend(sch) {
+  const m = resultMailOf(sch);
+  if (!m.to) { toast(`${sch} 담당자 메일 주소가 없습니다`); return Promise.resolve(false); }
+  return resultXlsxBuf(sch)
+    .then(buf => run('adminResultSend', ADMIN_KEY, sch, m.subject, m.body, { name: m.xlsxName, b64: bufB64(buf) }, m.plans.map(x => x.id)))
+    .then(r => { S.resultSent = r.resultSent || {}; if (r.mailInfo) S.mailInfo = r.mailInfo; render(); toast(`${shortSch(sch)} 담당자(${m.to})에게 배치 완료 메일을 보냈습니다`); return true; })
+    .catch(err => { toast(`${shortSch(sch)} 메일을 보내지 못했습니다: ${errMsg(err)}`); render(); return false; });
+}
+/* 운영기관: 최근 강사 확인 실패 기록 (서버가 원인 추정) */
+/* 운영 통계 자료: 서버 「통계자료」 탭 */
+function statsLoad() { if (S.ui.stLoading) return; S.ui.stLoading = true; run('adminStatsLoad', ADMIN_KEY).then(d => { S.stats = d || { ds: [] }; S.ui.stLoaded = true; S.ui.stLoading = false; render(); }).catch(err => { S.ui.stLoading = false; S.stats = { ds: [], err: errMsg(err) }; S.ui.stLoaded = true; toast('통계 자료를 불러오지 못했습니다: ' + errMsg(err)); render(); }); }
+function statsPut(d) { return run('adminStatsPut', ADMIN_KEY, d).then(() => render()); }
+function statsDel(id) { return run('adminStatsDel', ADMIN_KEY, id).then(() => render()); }
+function loginFailsLoad() { toast('강사 확인 실패 기록을 불러오는 중…'); return run('adminLoginFails', ADMIN_KEY).then(L => { S.ui.lfails = L || []; render(); }).catch(err => toast('기록을 불러오지 못했습니다: ' + errMsg(err))); }
+/* 운영기관: 접속 신청 승인 · 반려 결과 반영 */
+function joinApplied(res) {
+  const q = res.req || {};
+  if (res.all) S.joinReqs = res.all;
+  else { const i = S.joinReqs.findIndex(x => x.id === q.id); if (i >= 0) S.joinReqs[i] = q; else S.joinReqs.push(q); }
+  const sch = q.school || res.school;
+  if (res.contact) { S.contacts[sch] = res.contact; SAVED.contacts[sch] = JSON.stringify(res.contact); }
+  else if (res.cleared) { delete S.contacts[sch]; delete SAVED.contacts[sch]; }
+  if (res.link) { const L = (S.schoolLinks || []).find(y => y.school === res.link.school); if (L) { L.token = res.link.token; L.link = res.link.link; } else S.schoolLinks.push(res.link); }
+  render();
+}
+
+/* ---------------- 강사 ---------------- */
+let TK = '';
+const TK_SS = 'anc_tk';
+function tUse(p) {
+  /* 같은 강사면 찾기 조건 · 보기 방식 · 열린 상세 화면을 그대로 둡니다 */
+  const keep = (typeof S !== 'undefined' && S && S.ui && S.ui.tAuth === p.me.id) ? S.ui : {};
+  S = { ...base(p.settings), rows: p.rows || [], contacts: p.contacts || {}, instructors: p.instructors || [], ctxSeason: p.ctxSeason || '', bizInfo: p.bizInfo || [],
+    ui: { ...keep, role: 'teacher', view: keep.view || 'teacher', tAuth: p.me.id, teacher: p.me.id } };
+  /* 공지 주소(?b=사업)로 들어오면 그 사업 탭으로 바로 */
+  if (!S.ui.tBiz && BIZ && (S.bizInfo || []).some(b => b.k === BIZ)) S.ui.tBiz = BIZ;
+}
+function teacherBoot() {
+  S = { ...defaultSettings(), rows: [], contacts: {}, instructors: [], ui: { role: 'teacher', view: 'teacher', tBiz: BIZ || undefined } };
+  let saved = ''; try { saved = sessionStorage.getItem(TK_SS) || ''; } catch (e) {}
+  if (saved) run('teacherRefresh', saved).then(p => { TK = saved; tUse(p); render(); }).catch(() => { try { sessionStorage.removeItem(TK_SS); } catch (e) {} render(); });
+  else render();
+  run('bizContacts').then(L => { if (!(S.bizInfo && S.bizInfo.length)) { S.bizInfo = L; render(); } }).catch(() => {});
+}
+function teacherOut(msg) {
+  TK = ''; try { sessionStorage.removeItem(TK_SS); } catch (e) {}
+  const keepName = S.ui && S.ui.tlName, keepPhone = S.ui && S.ui.tlPhone;
+  S.ui = { role: 'teacher', view: 'teacher', tlName: keepName, tlPhone: keepPhone, tBiz: BIZ || undefined }; S.rows = []; S.instructors = []; render(); if (msg) toast(msg);
+}
+function teacherCall(promise, okMsg) {
+  return promise.then(p => { tUse(p); render(); if (okMsg) toast(okMsg); })
+    .catch(e => { const m = errMsg(e); if (/만료/.test(m)) teacherOut(m); else toast(m); });
+}
+function teacherLoginGo(name, phone, pin, confirmPin) {
+  run('teacherLogin', name, phone, pin, confirmPin == null ? null : confirmPin, tRoleA() ? 'asst' : '').then(p => {
+    if (p.signup) { S.ui.tSignup = { name, phone, jobFields: [] }; S.ui.tPinSetup = null; render(); toast('명단에 없어 보조강사 가입 화면으로 넘어갑니다'); return; }
+    if (p.denied && p.asstOnly) { S.ui.tDenied = { name, phone, asstOnly: true }; S.ui.tPinSetup = null; render(); return; }
+    if (p.denied) { if (p.recruitLink) S.recruitLink = p.recruitLink; S.ops = { ...S.ops, ...(p.ops || {}) }; S.ui.tDenied = { name, phone }; S.ui.tPinSetup = null; render(); return; }
+    if (p.needPin) { S.ui.tPinSetup = { name, phone, pin, tname: p.name }; render(); setTimeout(() => { const x = document.getElementById('tl-pin2'); if (x) x.focus(); }, 30); return; }
+    TK = p.token; try { sessionStorage.setItem(TK_SS, TK); } catch (e) {}
+    S.ui.tPinSetup = null; tUse(p); render();
+    toast(confirmPin != null ? '비밀번호를 정했습니다. 다음부터 이 번호로 로그인하세요' : `${p.me.name} 강사님, 확인되었습니다`);
+  }).catch(err => toast(errMsg(err)));
+}
+
+/* ---------------- 역할별 동작 가로채기 ---------------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, id = el.dataset.id;
+  const stop = () => { e.stopPropagation(); e.preventDefault(); };
+  if (a === 'copytext') { stop(); copyText(el.dataset.t); return; }
+
+  if (MODE === 'admin') {
+    if (a === 'schprev') {
+      stop(); const v = (document.getElementById('qn-school') || {}).value || ''; if (!v) return; S.ui.spSch = v;
+      const w = window.open('', '_blank'); if (w) { try { w.document.write('<p style="font-family:sans-serif;padding:24px">미리보기를 여는 중입니다…</p>'); } catch (e) {} }
+      run('adminSchoolPreview', ADMIN_KEY, v).then(r => { if (!r.link) { if (w) w.close(); toast('웹앱 주소를 알 수 없습니다. 배포 후 다시 해 주세요'); return; } if (w) w.location.href = r.link; else { copyText(r.link); toast('팝업이 막혀 미리보기 링크를 복사했습니다. 새 탭에 붙여 넣어 주세요'); } })
+        .catch(e => { if (w) w.close(); toast(errMsg(e)); });
+      return;
+    }
+    if (a === 'st-link') { const m = el.dataset.m; if ((m === 'regen' || m === 'off') && S.ui.stLinkAsk !== m) return; stop(); S.ui.stLinkAsk = ''; el.disabled = true; run('adminStatsLink', ADMIN_KEY, m).then(L => { S.statsLink = L || ''; render(); toast(m === 'off' ? '공유 링크를 껐습니다' : m === 'regen' ? '새 링크를 만들었습니다. 이전 링크는 더 이상 열리지 않습니다' : (L ? '공유 링크를 만들었습니다' : '웹앱 주소를 먼저 저장해 주세요(기준정보)')); }).catch(err => { el.disabled = false; toast('링크를 만들지 못했습니다: ' + errMsg(err)); }); return; }
+    if (a === 'st-linkopen') { stop(); if (S.statsLink) window.open(S.statsLink, '_blank', 'noopener'); return; }
+    if (a === 'tpinreset') {
+      stop(); const t = S.instructors.find(x => x.id === el.dataset.t); if (!t) return;
+      S.ui.pinAsk = ''; run('adminResetPin', ADMIN_KEY, t.id).then(() => { t.hasPin = false; SAVED.inst[t.id] = JSON.stringify(t); render(); toast(`${t.name} 강사 비밀번호를 초기화했습니다. 다음 로그인 때 새로 정합니다`); }).catch(err => toast(errMsg(err)));
+      return;
+    }
+    if (a === 'export-sheet') {
+      stop(); const msg = document.getElementById('xmsg'), B = buildExportAoa();
+      if (!B) { msg.textContent = '저장할 학급이 없습니다.'; return; }
+      const fmt = v => v instanceof Date ? `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}` : v;
+      const aoa = B.aoa.map((r, i) => r.map((v, c) => i > 0 && (c === 28 || c === 29) && typeof v === 'number' ? hm(Math.round(v * 1440)) : fmt(v)));
+      msg.textContent = '구글 시트를 만드는 중…';
+      run('adminExportToSheet', ADMIN_KEY, aoa, `${season().name} 호서대 운영 목록`).then(url => { msg.innerHTML = `만들었습니다. <a href="${esc(url)}" target="_blank" rel="noopener">구글 시트 열기</a> → [파일 > 다운로드 > Microsoft Excel]`; }).catch(err => msg.textContent = errMsg(err));
+      return;
+    }
+    if (a === 'regen') {
+      stop();
+      run('adminRegenToken', ADMIN_KEY, el.dataset.s).then(x => { const L = (S.schoolLinks || []).find(y => y.school === x.school); if (L) { L.token = x.token; L.link = x.link; } render(); toast('새 링크를 만들었습니다. 이전 링크는 더 이상 열리지 않습니다'); }).catch(err => toast(errMsg(err)));
+      return;
+    }
+    if (a === 'univlink') { stop(); el.disabled = true; run('adminUnivLink', ADMIN_KEY, el.dataset.o, !!el.dataset.regen).then(L => { S.univLinks = L || []; render(); toast(el.dataset.regen ? '새 링크를 만들었습니다. 이전 링크는 더 이상 열리지 않습니다' : '희망 강사 선택 링크를 만들었습니다'); }).catch(err => { el.disabled = false; toast(errMsg(err)); }); return; }
+    if (a === 'univview') { stop(); const L = (S.univLinks || []).find(x => x.org === el.dataset.o); if (L && L.link) window.open(L.link, '_blank', 'noopener'); else toast('먼저 「링크 만들기」를 눌러 주세요'); return; }
+    if (a === 'jok') {
+      stop(); el.disabled = true;
+      run('adminJoinDecide', ADMIN_KEY, id, true, '').then(res => { joinApplied(res); toast(`${res.req.school} 승인 · 새 확인 링크를 만들었습니다`); if (S.joinAutoMail !== false) joinSend(res.req.id, true); }).catch(err => { el.disabled = false; toast(errMsg(err)); });
+      return;
+    }
+    if (a === 'jsend') { stop(); el.disabled = true; el.textContent = '보내는 중…'; joinSend(id, false).then(() => { el.disabled = false; }); return; }
+    if (a === 'jrevoke2') {
+      stop(); const clear = !!(document.getElementById('jrev-clear') || {}).checked; el.disabled = true;
+      run('adminJoinRevoke', ADMIN_KEY, id, clear).then(res => { S.ui.jRev = ''; joinApplied(res); toast(`${res.school} 승인을 취소했습니다. 기존 링크는 막혔고, 이 학교는 다시 신청할 수 있습니다`); }).catch(err => { el.disabled = false; toast(errMsg(err)); });
+      return;
+    }
+    if (a === 'jno2') {
+      stop(); const why = ((document.getElementById('jrej-why') || {}).value || '').trim(); if (!why) { toast('반려 사유를 적어 주세요'); return; }
+      run('adminJoinDecide', ADMIN_KEY, id, false, why).then(res => { S.ui.jRej = ''; joinApplied(res); toast(`${res.req.school} 신청을 반려했습니다`); }).catch(err => toast(errMsg(err)));
+      return;
+    }
+    if (a === 'mail-send') {
+      stop();
+      const msgEl = document.getElementById('mailmsg'), text = (document.getElementById('rm-text') || {}).value || '';
+      const pend = [...new Set(myRows().filter(r => r.status === 'wait').map(r => r.school))].filter(s => (S.contacts[s] || {}).email);
+      const list = pend.map(s => { const L = (S.schoolLinks || []).find(x => x.school === s) || {}; return { to: S.contacts[s].email, subject: `[충남 1권역 앵커늘봄] ${season().name} 운영 정보 확인 요청 (${s})`, body: text.replace('확인 링크: (학교별 링크)', '확인 링크: ' + (L.link || '(운영 담당자에게 문의)')) }; });
+      msgEl.textContent = '보내는 중…';
+      run('adminSendMail', ADMIN_KEY, list).then(r => { msgEl.textContent = `${r.sent}곳에 보냈습니다${r.fails.length ? ` · 실패 ${r.fails.length}곳` : ''} · 오늘 남은 발송 ${r.remaining}건`; }).catch(err => msgEl.textContent = errMsg(err));
+      return;
+    }
+  }
+
+  if (MODE === 'school') {
+    const r = id ? S.rows.find(x => x.id === id) : null;
+    if (a === 'submit') {
+      const oe = typeof outSubmitErr === 'function' ? outSubmitErr() : ''; if (oe) { toast(oe); return; }
+      stop(); clearTimeout(schoolTimer);
+      schoolCall(run('schoolSubmit', TOKEN, schoolDraft()), p => p.result && p.result.cancelled ? `제출했습니다. 운영 취소로 정한 ${p.result.cancelled}학급은 운영하지 않습니다` : p.result && p.result.blocked ? (typeof schIsOut === 'function' && schIsOut() ? `제출했습니다. 운영 조건을 충족하지 못한 ${p.result.blocked}학급은 호서대가 확인 후 연락드립니다` : `제출했습니다. ${p.result.blocked}학급은 고르신 대체 프로그램으로 호서대가 확인 후 바꿔 드립니다`) : '제출했습니다. 호서대 담당자에게 전달되었습니다', () => { S.ui.justSubmitted = S.ui.school; try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {} });
+      return;
+    }
+    if (a === 'accept') { stop(); schoolCall(run('schoolAction', TOKEN, id, 'accept', {}), '수락했습니다. 운영이 확정되었습니다'); return; }
+    if (a === 'sendchg') { stop(); const v = (document.getElementById('ask-' + id) || {}).value || ''; schoolCall(run('schoolAction', TOKEN, id, 'askchg', { text: v }), '조정 요청을 보냈습니다'); return; }
+    if (a === 'offok') { stop(); const d = S.ui.offAsk && S.ui.offAsk.d, why = ((document.getElementById('offwhy') || {}).value || '').trim(); schoolCall(run('schoolAction', TOKEN, id, 'offnotify', { d, why }), '휴강 알림을 반영했습니다'); return; }
+    if (a === 'edseen') { stop(); schoolCall(run('schoolAction', TOKEN, id, 'edseen', {}), '확인했습니다'); return; }
+  }
+
+  if (MODE === 'univ') {
+    if (a === 'uwish') { stop(); el.disabled = true; run('univWish', TOKEN, id, el.dataset.t || '').then(d => { S.univ = d; render(); toast(el.dataset.t ? '희망 강사를 저장했습니다. 호서대학교가 검토 후 확정합니다' : '희망 강사 선택을 해제했습니다'); }).catch(err => { el.disabled = false; toast(errMsg(err)); }); return; }
+  }
+  if (MODE === 'join') {
+    if (a === 'jsubmit') {
+      stop(); const x = joinRead(); if (x.err) { toast(x.err); return; }
+      el.disabled = true; el.textContent = '보내는 중…';
+      run('joinRequest', { ...x.info, biz: BIZ }).then(r => { jqSet({ id: r.id, rt: r.rtoken }); S.joinMine = r.mine; S.ui.jf = null; render(); toast('접속 신청을 보냈습니다'); })
+        .catch(err => { el.disabled = false; el.textContent = '접속 신청하기'; toast(errMsg(err)); });
+      return;
+    }
+    if (a === 'jrefresh') {
+      stop(); const sv = jqGet(); if (!sv) return;
+      run('joinStatus', sv.id, sv.rt, BIZ).then(m => { S.joinMine = m; render(); toast(m.status === 'approved' ? '승인되었습니다' : m.status === 'rejected' ? '반려되었습니다' : '아직 확인 중입니다'); }).catch(err => toast(errMsg(err)));
+      return;
+    }
+    if (a === 'jnew') { stop(); jqSet(null); S.joinMine = null; S.ui.jf = null; render(); return; }
+    if (a === 'jopen') { stop(); const m = S.joinMine; if (m && m.token) enterSchool(m.token); else if (m && m.link) window.open(m.link, '_top'); return; }
+    if (a === 'jreenter') {
+      stop(); const sch = (S.ui.jf || {}).school, nm = (document.getElementById('jr-name') || {}).value || '', k = (document.getElementById('jr-key') || {}).value || '';
+      if (!nm.trim() || !k.trim()) { toast('담당자 이름과 메일 주소(또는 휴대폰번호)를 입력해 주세요'); return; }
+      el.disabled = true; el.textContent = '확인 중…';
+      run('joinReenter', BIZ, sch, nm, k).then(r => { jqSet({ id: r.id, rt: r.rtoken }); S.joinMine = r.mine; if (r.mine.token) enterSchool(r.mine.token); else render(); })
+        .catch(err => { el.disabled = false; el.textContent = '우리 기관 페이지 들어가기'; toast(errMsg(err)); });
+      return;
+    }
+  }
+
+  if (MODE === 'teacher') {
+    if (a === 'tlogin') {
+      stop(); const g = tLoginRead(); if (g.err) { toast(g.err); return; }
+      teacherLoginGo(g.name, g.phone, g.pin); return;
+    }
+    if (a === 'tpinset') {
+      stop(); const ps = S.ui.tPinSetup, v = ((document.getElementById('tl-pin2') || {}).value || '').trim();
+      if (!ps) return; if (v !== ps.pin) { toast('두 번 입력한 비밀번호가 다릅니다'); return; }
+      teacherLoginGo(ps.name, ps.phone, ps.pin, v); return;
+    }
+    if (a === 'apply') { stop(); if (![...document.querySelectorAll('.aachk')].every(x => x.checked)) { toast('신청 확인 문항에 모두 체크해 주세요'); return; } const note = ((document.getElementById('an-' + id) || {}).value || '').trim(); teacherCall(run('teacherApply', TK, id, note, { all: true, noSub: true, tablet: !!document.getElementById('at-' + id), keep: true }), '수업을 신청했습니다'); return; }
+    if (a === 'toffseen') { stop(); teacherCall(run('teacherOffSeen', TK, id, el.dataset.d), '휴강 알림을 확인했습니다. 운영기관에 전달되었습니다'); return; }
+    if (a === 'tcancel') { stop(); const why = ((document.getElementById('tcx-why-' + id) || {}).value || '').trim(); if (!why) { toast('취소 사유를 적어 주세요'); return; } if (!(document.getElementById('tcx-ok-' + id) || {}).checked) { toast('확인 문항에 체크해 주세요'); return; } S.ui.tDetail = ''; teacherCall(run('teacherCancelAssign', TK, id, why), '배정을 취소했습니다. 운영기관에 알림이 남았습니다'); return; }
+    if (a === 'tinfo-save') { stop(); const x = tInfoRead(); if (x.err) { toast(x.err); render(); return; } teacherCall(run('teacherComplete', TK, x.info, tRoleA() ? 'asst' : ''), '강사 명단에 저장했습니다'); return; }
+    if (a === 'tsignup-ok') {
+      stop(); const x = asstSignupRead(); if (x.err) { toast(x.err); render(); return; }
+      el.disabled = true;
+      run('asstSignup', x.info).then(p => { TK = p.token; try { sessionStorage.setItem(TK_SS, TK); } catch (e) {} S.ui.tSignup = null; tUse(p); render(); toast(`${p.me.name} 님, 보조강사로 가입되었습니다`); })
+        .catch(err => { el.disabled = false; toast(errMsg(err)); });
+      return;
+    }
+    if (a === 'trefresh') { stop(); teacherCall(run('teacherRefresh', TK), '최신 내용으로 다시 불러왔습니다'); return; }
+    if (a === 'unapply') { stop(); teacherCall(run('teacherUnapply', TK, id), '신청을 취소했습니다'); return; }
+    if (a === 'aapply') { stop(); const c = document.getElementById('asc-' + id); if (!c || !c.checked) { toast('수업일 참여 확인에 체크해 주세요'); return; } const note = ((document.getElementById('asn-' + id) || {}).value || '').trim(); S.ui.taAsk = ''; teacherCall(run('teacherApplyAsst', TK, id, note), '보조강사로 신청했습니다'); return; }
+    if (a === 'aunapply') { stop(); teacherCall(run('teacherUnapplyAsst', TK, id), '보조강사 신청을 취소했습니다'); return; }
+    if (a === 'tlogout') { stop(); teacherOut(''); return; }
+  }
+}, true);
+
+/* 총괄 관리자: 사업 바꾸기 */
+if (MODE === 'admin') bizGo = function (b) {
+  if (!b || b === S.biz) return;
+  let n = 0;
+  const go = () => {
+    if (saving || dirtyPayload()) { if (++n > 40) { toast('저장이 끝나지 않아 사업을 바꾸지 못했습니다'); render(); return; } flush(); setTimeout(go, 500); return; }
+    setSave('사업 바꾸는 중…');
+    run('adminSetBiz', ADMIN_KEY, b).then(d => { const keep = S.ui; aUse(d, true); S.ui = { ...keep, view: 'board', scope: '', st: '', q: '', sel: '', mDrawer: '', drawer: '', asOpen: false, afAsk: false, spAsk: false, pending: null, spubAsk: false, sdelAsk: false }; setSave('불러옴 · ' + now()); render(); toast(`${bizName()} 관리로 바꿨습니다`); })
+      .catch(e => { setSave('사업을 바꾸지 못했습니다', true); toast(errMsg(e)); render(); });
+  };
+  go();
+};
+if (MODE === 'admin') adminAcc = function (op, d) { return run('adminAccounts', ADMIN_KEY, op, d).then(L => { S.admins = L || []; render(); return L; }).catch(e => { toast(errMsg(e)); throw e; }); };
+/* 운영 화면 시기 바꾸기: 저장할 것이 있으면 먼저 저장한 뒤 서버에서 그 시기 자료를 불러옴 */
+if (MODE === 'admin') seasonGo = function (k, after) {
+  if (!k || k === S.ctxSeason) { if (after) after(); return; }
+  let n = 0;
+  const go = () => {
+    if (saving || dirtyPayload()) { if (++n > 40) { toast('저장이 끝나지 않아 시기를 바꾸지 못했습니다. 잠시 뒤 다시 골라 주세요'); render(); return; } flush(); setTimeout(go, 500); return; }
+    setSave('시기 바꾸는 중…');
+    run('adminSetSeason', ADMIN_KEY, k).then(d => { const keep = S.ui; aUse(d, true); S.ui = { ...keep, st: '', q: '', sel: '', mDrawer: '', drawer: '', asOpen: false, afAsk: false, spAsk: false, pending: null, spubAsk: false, sdelAsk: false }; setSave('불러옴 · ' + now()); render(); toast(`${season().name} 운영 관리로 바꿨습니다`); if (after) after(); })
+      .catch(e => { setSave('시기를 바꾸지 못했습니다', true); toast(errMsg(e)); render(); });
+  };
+  go();
+};
+function persist() { if (MODE === 'admin') adminPersist(); else if (MODE === 'school') schoolPersist(); }
+
+if (MODE === 'admin') adminStart(); else if (MODE === 'school') schoolBoot(); else if (MODE === 'join') joinBoot(); else if (MODE === 'univ') univBoot(); else if (MODE === 'stats') statsBoot(); else teacherBoot();
+setTimeout(() => loadXL().catch(() => {}), MODE === 'admin' ? 300 : 4000);
+</script>
+</body>
+</html>
