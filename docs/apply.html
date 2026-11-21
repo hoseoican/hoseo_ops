@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>강사 서류 제출 · 호서대학교 앵커늘봄총괄센터</title>
+<link rel="icon" href="favicon.png">
+<style>
+  @font-face { font-family: 'Pretendard Variable'; font-weight: 45 920; font-style: normal; font-display: swap; src: url('PretendardVariable.woff2') format('woff2-variations'); }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  :root { --hs: #89171A; --hs-d: #6A1013; --hs-dd: #4A0B0D; --hs-50: #FBF4F4; --hs-100: #F5E4E4; --ink: #2B2324; --mute: #7A6E6F; --line: #E6DEDD; --bg: #F6F3F2; --ok: #2F6B4F; --danger: #B42318; --warn: #A9781F; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Pretendard Variable', Pretendard, 'Malgun Gothic', sans-serif; -webkit-font-smoothing: antialiased; font-size: 15px; line-height: 1.5; }
+  header { background: linear-gradient(90deg, var(--hs-dd), var(--hs)); color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  header b { display: block; font-size: 17px; letter-spacing: -.3px; } header small { opacity: .8; font-size: 12.5px; }
+  main { max-width: 640px; margin: 0 auto; padding: 14px 12px 110px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .card h2 { margin: 0 0 10px; font-size: 16.5px; color: var(--hs-d); display: flex; align-items: center; gap: 8px; }
+  .card h2 small { font-weight: 500; color: var(--mute); font-size: 12.5px; }
+  .hint { color: var(--mute); font-size: 13px; }
+  label.f { display: block; margin: 0 0 10px; } label.f > span { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  input[type=text], input[type=tel], input[type=email], input[type=date], input[type=password] { width: 100%; padding: 11px 12px; font: inherit; font-size: 16px; border: 1px solid #D6CCCB; border-radius: 10px; background: #fff; color: var(--ink); }
+  input:focus { outline: none; border-color: var(--hs); box-shadow: 0 0 0 3px rgba(137,23,26,.12); }
+  input[type=checkbox] { accent-color: var(--hs); width: 18px; height: 18px; vertical-align: -3px; }
+  button { padding: 12px 18px; background: var(--hs); color: #fff; border: 0; border-radius: 10px; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  button.ghost { background: #fff; color: var(--hs); border: 1px solid var(--hs-100); }
+  button.sm { padding: 7px 12px; font-size: 13.5px; border-radius: 8px; }
+  button:disabled { opacity: .45; cursor: default; }
+  .wide { width: 100%; }
+  .err { background: #FDECEA; color: var(--danger); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin: 8px 0; }
+  .consent { background: #FCFAFA; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #4A4041; margin: 8px 0 12px; }
+  .consent ul { margin: 4px 0 0; padding-left: 18px; } .consent li { margin: 2px 0; }
+  .todo { list-style: none; margin: 0; padding: 0; }
+  .todo li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid #F1EBEA; font-size: 14px; }
+  .todo li:first-child { border-top: 0; }
+  .todo i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 12px; font-weight: 800; margin-top: 1px; }
+  .todo i.ok { background: #E3F1E8; color: var(--ok); } .todo i.no { background: #FDE4E1; color: var(--danger); } .todo i.fx { background: #FFF1DB; color: #9A5B00; }
+  .todo small { display: block; color: #9A5B00; font-size: 12.5px; }
+  .bar { height: 8px; background: #F1EBEA; border-radius: 99px; overflow: hidden; margin: 6px 0 10px; } .bar b { display: block; height: 100%; background: var(--ok); width: 0; transition: width .3s; }
+  .rows { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+  .rows h3 { margin: 0 0 8px; font-size: 14px; } .rows .r { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 8px 0; border-top: 1px dashed #EEE6E5; } .rows .r:first-of-type { border-top: 0; padding-top: 0; }
+  .doc { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .doc.need { border-color: #F2C3BE; background: #FFFAF9; } .doc.fix { border-color: #F0D29A; background: #FFFCF5; } .doc.done { border-color: #CFE3D7; }
+  .doc .hd { display: flex; justify-content: space-between; gap: 8px; align-items: center; } .doc .hd b { font-size: 15px; }
+  .st { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+  .st.ok { background: #E3F1E8; color: var(--ok); } .st.no { background: #FDE4E1; color: var(--danger); } .st.fx { background: #FFF1DB; color: #9A5B00; } .st.op { background: #F1EBEA; color: var(--mute); }
+  .doc p { margin: 4px 0 8px; font-size: 13px; color: var(--mute); } .doc .use { color: var(--ink); font-weight: 600; }
+  .fldu { display: block; font-weight: 500; color: var(--mute); font-size: 12px; margin-top: 1px; }
+  .center { font-size: 13.5px; background: var(--hs-50); border: 1px solid var(--hs-100); border-radius: 10px; padding: 9px 12px; margin: 0 0 10px; } .center b { color: var(--hs-d); } .doc .why { color: #9A5B00; font-weight: 600; }
+  .doc .acts { display: flex; gap: 6px; flex-wrap: wrap; } .doc .files { font-size: 13px; margin: 6px 0 0; padding: 0; list-style: none; } .doc .files li { display: flex; justify-content: space-between; gap: 6px; align-items: center; padding: 3px 0; }
+  .cls { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; } .cls b { font-size: 15px; } .cls .pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px; background: var(--hs-50); color: var(--hs-d); margin-right: 4px; }
+  .cls .m { font-size: 13px; color: var(--mute); margin-top: 3px; }
+  .prog { font-size: 13px; color: var(--hs-d); margin-top: 6px; }
+  #pad { width: 100%; height: 200px; border: 1px dashed #C9BDBC; border-radius: 10px; background: #fff; touch-action: none; display: block; }
+  .foot { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; box-shadow: 0 -2px 10px rgba(0,0,0,.12); padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); z-index: 10; }
+  .foot .in { max-width: 640px; margin: 0 auto; display: flex; gap: 8px; } .foot button { flex: 1; }
+  .toast { position: fixed; left: 12px; right: 12px; bottom: 84px; max-width: 616px; margin: 0 auto; background: #2B2324; color: #F8F3F2; padding: 11px 14px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+  .toast.on { opacity: 1; }
+  .done { text-align: center; padding: 24px 12px; } .done b { font-size: 18px; color: var(--ok); display: block; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<header><b>강사 서류 제출</b><small>호서대학교 앵커늘봄총괄센터</small></header>
+<main>
+  <div class="card" id="vLoad"><span class="hint">링크를 확인하는 중입니다…</span></div>
+
+  <div class="card" id="vBad" hidden><h2>링크를 열 수 없습니다</h2><div class="err" id="badMsg"></div><p class="hint">센터에서 받은 문자의 링크를 다시 눌러 보시고, 계속 안 되면 센터로 연락해 주세요.</p></div>
+
+  <div class="card" id="vAuth" hidden>
+    <h2><span id="who"></span> 강사님</h2>
+    <p class="hint" style="margin:0 0 6px">늘봄 프로그램 출강을 위한 계약 서류를 이 화면에서 직접 입력하고 올릴 수 있습니다. 본인 자료만 볼 수 있습니다.</p>
+    <div class="consent">
+      <b>개인정보 수집·이용 안내</b>
+      <ul>
+        <li>목적: 늘봄학교 프로그램 강사 계약 서류 작성, 학교 송부, 강사료 지급</li>
+        <li>항목: 성명, 주민등록번호, 연락처, 주소, 이메일, 학력·경력·자격, 서명, 증명사진, 신분증·통장 사본, 건강검진·졸업·자격 증빙</li>
+        <li>보관: 계약 종료 후 관련 법령에서 정한 기간 동안 보관 후 파기</li>
+        <li>동의하지 않으실 수 있으나, 이 경우 서류를 직접 내 주셔야 합니다.</li>
+      </ul>
+      <label style="display:block;margin-top:8px"><input type="checkbox" id="agree"> 위 내용을 확인했고 동의합니다</label>
+    </div>
+    <label class="f"><span id="askLabel"></span><input type="tel" id="ans" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+    <div class="err" id="authErr" hidden></div>
+    <button type="button" class="wide" id="btnAuth">확인</button>
+  </div>
+
+  <div id="vMain" hidden>
+    <div class="card">
+      <h2>제출 현황 <small id="lead"></small></h2>
+      <div class="bar"><b id="barFill"></b></div>
+      <ul class="todo" id="todo"></ul>
+      <p class="hint" id="subInfo" style="margin:8px 0 0"></p>
+      <div class="center" id="center" hidden style="margin:10px 0 0"></div>
+    </div>
+
+    <div class="card" id="clsCard" hidden>
+      <h2>이번 배치 수업</h2>
+      <div id="clsList"></div>
+    </div>
+
+    <div class="card">
+      <h2>인적사항</h2>
+      <label class="f"><span>성명</span><input type="text" id="fName" disabled></label>
+      <label class="f"><span>주민등록번호<small class="fldu">범죄경력 조회, 강사료 지급(세금 신고)에 씁니다</small></span><input type="tel" id="rrn" placeholder="900101-1234567" autocomplete="off" maxlength="14"></label>
+      <label class="f"><span>연락처<small class="fldu">학교·센터 연락용, 이력서</small></span><input type="tel" id="phone" placeholder="010-1234-5678" autocomplete="tel" maxlength="13"></label>
+      <label class="f"><span>주소<small class="fldu">이력서, 강사료 지급(세금 신고)에 씁니다</small></span><input type="text" id="address" placeholder="도로명 주소" autocomplete="street-address"></label>
+      <label class="f"><span>이메일<small class="fldu">이력서 (선택)</small></span><input type="email" id="email" autocomplete="email"></label>
+    </div>
+
+    <div class="card">
+      <h2>서류 올리기 <small>사진을 찍거나 파일을 고르면 바로 올라갑니다</small></h2>
+      <div id="docs"></div>
+    </div>
+    <div class="card">
+      <h2>이력 <small>이력서에 들어갑니다 (최대 3개씩)</small></h2>
+      <div id="rowsBox"></div>
+    </div>
+
+    <p class="hint" style="text-align:center">입력한 내용은 센터 담당자만 봅니다. 문의는 센터 담당자에게 해 주세요.</p>
+  </div>
+</main>
+<div class="foot" id="foot" hidden><div class="in"><button type="button" class="ghost" id="btnSave">입력 내용 저장</button><button type="button" id="btnSubmit">제출 완료</button></div></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="fileIn" hidden>
+<script src="pdf-lib.min.js"></script>
+<script>
+(function(){
+'use strict';
+var API = 'https://script.google.com/macros/s/AKfycby5iQBKK3NIYigURP54G6ri-Do76lYIQVnflA2lqmpBLYkPZhN-g0ZflYaZFsT4ClDOMg/exec';
+var qs = new URLSearchParams(location.search), T = qs.get('t') || '', A = '', ASK = '', me = null, busy = false;
+// 시험용: 내 컴퓨터(127.0.0.1)의 시험 서버만 바꿔 쓸 수 있다
+if (/^http:\/\/(127\.0\.0\.1|localhost):\d+\//.test(qs.get('api') || '') && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) API = qs.get('api');
+try { history.replaceState(null, '', location.pathname + (T ? '?t=' + encodeURIComponent(T) : '')); } catch (e) {}
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+var toastT; function toast(m){ var t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove('on'); }, 3200); }
+function show(v){ ['vLoad','vBad','vAuth','vMain'].forEach(function(k){ $(k).hidden = k !== v; }); $('foot').hidden = v !== 'vMain'; }
+async function call(action, extra){
+  var body = Object.assign({ action: action, t: T, a: A }, extra || {});
+  var r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' });
+  var j = await r.json();
+  if (!j.ok) { var e = new Error(j.message || '처리하지 못했습니다'); e.code = j.error; throw e; }
+  return j;
+}
+function digits(s){ return String(s || '').replace(/\D/g, ''); }
+function fmtRrn(s){ var d = digits(s).slice(0, 13); return d.length > 6 ? d.slice(0, 6) + '-' + d.slice(6) : d; }
+function fmtTel(s){ var d = digits(s).slice(0, 11); if (d.length < 4) return d; if (d.length < 8) return d.slice(0, 3) + '-' + d.slice(3); return d.slice(0, 3) + '-' + d.slice(3, d.length - 4) + '-' + d.slice(-4); }
+
+/* ---------- 시작 · 본인 확인 ---------- */
+async function start(){
+  if (!T) { $('badMsg').textContent = '링크 주소가 올바르지 않습니다.'; return show('vBad'); }
+  try {
+    var r = await call('lstart'); ASK = r.ask;
+    $('who').textContent = r.name;
+    $('askLabel').textContent = ASK === 'birth' ? '본인 확인: 생년월일 6자리 (예: 900101)' : '본인 확인: 연락처 뒤 4자리';
+    $('ans').maxLength = ASK === 'birth' ? 6 : 4; $('ans').placeholder = ASK === 'birth' ? '900101' : '5678';
+    show('vAuth');
+  } catch (e) { $('badMsg').textContent = e.message; show('vBad'); }
+}
+$('btnAuth').onclick = async function(){
+  if (!$('agree').checked) { $('authErr').hidden = false; $('authErr').textContent = '개인정보 수집·이용에 동의해 주세요.'; return; }
+  var a = digits($('ans').value); if (a.length !== (ASK === 'birth' ? 6 : 4)) { $('authErr').hidden = false; $('authErr').textContent = ASK === 'birth' ? '생년월일 6자리를 넣어 주세요.' : '연락처 뒤 4자리를 넣어 주세요.'; return; }
+  A = a; this.disabled = true;
+  try { var r = await call('lget'); me = r.me; render(); show('vMain'); window.scrollTo(0, 0); }
+  catch (e) { A = ''; $('authErr').hidden = false; $('authErr').textContent = e.message; if (e.code === 'lock' || e.code === 'link') { $('badMsg').textContent = e.message; show('vBad'); } }
+  finally { this.disabled = false; }
+};
+$('ans').addEventListener('keydown', function(e){ if (e.key === 'Enter') $('btnAuth').click(); });
+// 주민번호를 넣으면 다음부터 생년월일로 확인한다
+function afterSave(r){ me = r.me; if (r.saved) dirty = false; if (digits(me.rrn).length >= 6) A = digits(me.rrn).slice(0, 6); render(); }
+
+/* ---------- 화면 ---------- */
+var ROWS = [
+  { k: 'edu', t: '학력', f: [['period', '기간', '2010. 3.~2014. 2.'], ['school', '학교명', '호서대학교'], ['major', '전공', '']] },
+  { k: 'career', t: '경력', f: [['period', '기간', '2024. 3.~2025. 2.'], ['place', '장소', '천안초등학교'], ['note', '비고', '방과후 코딩 강사']] },
+  { k: 'cert', t: '자격증', f: [['date', '취득일자', '2021. 3. 1.'], ['name', '자격사항', ''], ['issuer', '시행처', '']] }
+];
+var DOCS = [
+  { k: 'sign', t: '서명', img: true, need: true, s: '아래 칸에 손가락(마우스)으로 크게 서명해 주세요.', use: '범죄경력조회 동의서, 이력서, 개인정보 동의서, 각종 서약서의 서명란' },
+  { k: 'photo', t: '증명사진', img: true, need: true, s: '최근 6개월 이내 증명사진 (배경이 밝은 정면 사진)', use: '이력서 사진란' },
+  { k: 'idcard', t: '신분증 사본', img: true, need: true, s: '주민등록증 또는 운전면허증 앞면', use: '본인 확인, 성범죄·아동학대 범죄경력 조회' },
+  { k: 'bank', t: '통장 사본', img: true, need: true, s: '본인 명의, 은행명·계좌번호가 선명하게', use: '강사료 지급' },
+  { k: 'exam', t: '채용신체검사서', need: true, s: 'PDF 또는 사진 (여러 장이면 한 번에 고르세요). 검진일부터 1년 동안 유효합니다.', use: '아동 관련 기관 출강 전 건강 확인 (학교 제출)', date: true },
+  { k: 'tb', t: '잠복결핵 검사 확인서', need: true, s: 'PDF 또는 사진', use: '학교 출강자 결핵 검사 확인 (학교 제출)' },
+  { k: 'grad', t: '최종학력 졸업증명서', need: true, s: 'PDF 또는 사진', use: '이력서 학력 확인' },
+  { k: 'cert', t: '자격증 사본·경력증명서', need: false, multi: true, s: '해당하는 분만, 여러 개 올릴 수 있습니다', use: '이력서 자격·경력 확인' }
+];
+function has(k){ if (k === 'tb' && me.tbIn41 && me.files.exam.length) return true; return (me.files[k] || []).length > 0; }
+function needOf(k){ return (me.need || []).filter(function(x){ return x.k === k; })[0] || null; }
+// 확인할 항목 전체: 필수 항목은 완료/미제출/보완으로, 그 밖의 보완(자격증 등)도 함께
+var CHECK = [['rrn','주민등록번호'],['phone','연락처'],['address','주소'],['sign','서명'],['photo','증명사진'],['idcard','신분증 사본'],['bank','통장 사본'],['exam','채용신체검사서'],['examDate','채용신체검사서 검진일'],['tb','잠복결핵 검사 확인서'],['grad','최종학력 졸업증명서']];
+function todoList(){
+  var L = CHECK.filter(function(c){ return c[0] !== 'examDate' || has('exam'); }).map(function(c){ var n = needOf(c[0]); return { k: c[0], t: c[1], ok: !n, st: n ? n.st : '', why: n ? n.why : '' }; });
+  (me.need || []).forEach(function(n){ if (!CHECK.some(function(c){ return c[0] === n.k; })) L.push({ k: n.k, t: n.t, ok: false, st: n.st, why: n.why }); });
+  return L;
+}
+function md(s){ var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? (+m[2]) + '. ' + (+m[3]) + '.' : ''; }
+function renderCls(){
+  var c = me.cls || [];
+  $('clsCard').hidden = !c.length && !(me.schools || []).length;
+  $('clsList').innerHTML = c.length ? c.map(function(x){
+    return '<div class="cls"><b>' + esc(x.school) + '</b><div style="margin-top:3px">' + (x.field ? '<span class="pill">' + esc(x.field) + '</span>' : '') + esc(x.program) + (x.role === '보조강사' ? ' <span class="hint">(보조강사)</span>' : '') + '</div>' +
+      '<div class="m">' + [x.grade ? esc(x.grade) : '', x.sigi ? esc(x.sigi) : '', (x.start || x.end) ? md(x.start) + ' ~ ' + md(x.end) : ''].filter(Boolean).join(' · ') + '</div></div>';
+  }).join('') + '<p class="hint" style="margin:4px 0 0">요일·시간 등 자세한 일정은 배치 학교와 확인해 주세요.</p>'
+    : (me.schools || []).map(function(s){ return '<div class="cls"><b>' + esc(s) + '</b></div>'; }).join('');
+}
+function render(){
+  $('fName').value = me.name || '';
+  if (document.activeElement !== $('rrn')) $('rrn').value = fmtRrn(me.rrn || '');
+  if (document.activeElement !== $('phone')) $('phone').value = fmtTel(me.phone || '');
+  if (document.activeElement !== $('address')) $('address').value = me.address || '';
+  if (document.activeElement !== $('email')) $('email').value = me.email || '';
+  if (!$('rowsBox').dataset.built) buildRows();
+  renderCls();
+  var c = me.center;
+  $('center').hidden = !c;
+  if (c) $('center').innerHTML = (c.due ? '<b>제출기한</b> ' + esc(c.due) + '<br>' : '') + (c.tel || c.who ? '<b>문의</b> 호서대학교 앵커늘봄총괄센터 ' + esc(c.who || '') + ' ' + (c.tel ? '<a href="tel:' + esc(c.tel.replace(/[^0-9+]/g, '')) + '">' + esc(c.tel) + '</a>' : '') + '<br>' : '') + (c.exp ? '<span class="hint">이 링크는 ' + new Date(c.exp).toLocaleDateString('ko-KR') + '까지 쓸 수 있습니다.</span>' : '');
+  var L = todoList(), n = L.filter(function(x){ return x.ok; }).length, nMiss = L.filter(function(x){ return x.st === 'miss'; }).length, nFix = L.filter(function(x){ return x.st === 'fix'; }).length;
+  $('lead').textContent = n + ' / ' + L.length + ' 완료' + (nMiss ? ' · 미제출 ' + nMiss : '') + (nFix ? ' · 보완 ' + nFix : '');
+  $('barFill').style.width = Math.round(n * 100 / L.length) + '%';
+  L.sort(function(a, b){ var r = { fix: 0, miss: 1, '': 2 }; return r[a.st] - r[b.st]; });
+  $('todo').innerHTML = L.map(function(x){ return '<li><i class="' + (x.ok ? 'ok' : x.st === 'fix' ? 'fx' : 'no') + '">' + (x.ok ? '✓' : x.st === 'fix' ? '!' : '') + '</i><div>' + esc(x.t) + (x.st === 'fix' ? ' <b style="color:#9A5B00;font-size:12.5px">보완</b><small>' + esc(x.why) + '</small>' : x.st === 'miss' ? ' <b style="color:var(--danger);font-size:12.5px">미제출</b>' + (x.why ? '<small style="color:var(--danger)">' + esc(x.why) + '</small>' : '') : '') + '</div></li>'; }).join('');
+  var ls = me.lsub;
+  $('subInfo').textContent = ls && ls.done ? '제출 완료로 알렸습니다 (' + new Date(ls.done).toLocaleString('ko-KR') + '). 고칠 것이 있으면 고친 뒤 다시 「제출 완료」를 눌러 주세요.' : '모두 채운 뒤 아래 「제출 완료」를 눌러 주세요. 중간에 닫아도 올린 파일과 저장한 내용은 남습니다.';
+  renderDocs();
+}
+function buildRows(){
+  $('rowsBox').dataset.built = 1;
+  $('rowsBox').innerHTML = ROWS.map(function(g){
+    var h = '<div class="rows"><h3>' + g.t + '</h3>';
+    for (var r = 0; r < 3; r++) h += '<div class="r">' + g.f.map(function(f){ return '<input type="text" data-row="' + g.k + '" data-i="' + r + '" data-f="' + f[0] + '" placeholder="' + f[1] + (f[2] ? ' (예: ' + f[2] + ')' : '') + '" value="' + esc(((me[g.k] || [])[r] || {})[f[0]] || '') + '">'; }).join('') + '</div>';
+    return h + '</div>';
+  }).join('');
+}
+function renderDocs(){
+  $('docs').innerHTML = DOCS.map(function(d){
+    var n = needOf(d.k), ok = has(d.k), fx = n && n.st === 'fix', cls = fx ? 'fix' : ok ? 'done' : d.need ? 'need' : '', files = me.files[d.k] || [];
+    var st = fx ? '<span class="st fx">보완 필요</span>' : ok ? '<span class="st ok">올림</span>' : d.need ? '<span class="st no">미제출</span>' : '<span class="st op">해당자</span>';
+    var dn = d.date ? needOf('examDate') : null;
+    var h = '<div class="doc ' + cls + '" data-doc="' + d.k + '"><div class="hd"><b>' + d.t + '</b>' + st + '</div><p><span class="use">용도: ' + esc(d.use) + '</span><br>' + esc(d.s) + (fx ? '<br><span class="why">보완 사유: ' + esc(n.why) + '</span>' : '') + (dn ? '<br><span class="why" style="color:var(--danger)">' + esc(dn.why) + '</span>' : '') + '</p>';
+    if (d.date) h += '<label class="f" style="margin-bottom:8px"><span style="font-weight:500;font-size:12.5px">검진일</span><input type="date" id="examDate" value="' + esc(me.examDate || '') + '"></label>';
+    if (d.k === 'tb') h += '<label style="display:block;font-size:13px;margin:0 0 8px"><input type="checkbox" id="tbIn41"' + (me.tbIn41 ? ' checked' : '') + '> 채용신체검사서에 잠복결핵 검사 결과가 함께 있습니다</label>';
+    var at = (me.fat || {})[d.k] || [];
+    if (d.multi && files.length) h += '<ul class="files">' + files.map(function(n, i){ return '<li><span>' + esc(n) + '</span><span style="display:flex;gap:4px"><button type="button" class="ghost sm" data-view="' + d.k + '" data-i="' + i + '">보기</button><button type="button" class="ghost sm" data-del="' + i + '">삭제</button></span></li>'; }).join('') + '</ul>';
+    else if (files.length && (me.files[d.k] || []).length) h += '<ul class="files"><li><span>올린 파일' + (at[0] ? ' · ' + new Date(at[0]).toLocaleDateString('ko-KR') : '') + '</span><button type="button" class="ghost sm" data-view="' + d.k + '" data-i="0">보기</button></li></ul>';
+    if (d.k === 'sign') h += (ok ? '<p style="margin:0 0 6px">올린 서명이 있습니다. 바꾸려면 아래에 다시 서명하세요.</p>' : '') + '<canvas id="pad"></canvas><div class="acts" style="margin-top:8px"><button type="button" class="ghost sm" id="padClear">지우기</button><button type="button" class="sm" id="padOk" style="flex:1">서명 올리기</button></div><div class="acts" style="margin-top:6px"><button type="button" class="ghost sm" data-pick="sign">서명 사진으로 올리기</button></div><div class="prog" data-prog="sign"></div></div>';
+    else h += '<div class="acts"><button type="button" class="' + (ok && !d.multi ? 'ghost ' : '') + 'sm" data-cam="' + d.k + '">사진 찍기</button><button type="button" class="ghost sm" data-pick="' + d.k + '">' + (d.img ? '사진 고르기' : '파일 고르기') + '</button></div><div class="prog" data-prog="' + d.k + '"></div></div>';
+    return h;
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('[data-cam],[data-pick]'), function(b){ b.onclick = function(){ pick(b.dataset.cam || b.dataset.pick, !!b.dataset.cam); }; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function(b){ b.onclick = async function(){ if (!confirm('이 파일을 지울까요?')) return; try { afterSave(await call('lfile', { k: 'cert', del: true, i: +b.dataset.del })); toast('지웠습니다'); } catch (e) { toast(e.message); } }; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function(b){ b.onclick = function(){ viewFile(b.dataset.view, +b.dataset.i, b); }; });
+  initPad();
+  if ($('examDate')) $('examDate').onchange = function(){ saveText(false, true); };
+  if ($('tbIn41')) $('tbIn41').onchange = function(){ saveText(false, true); };
+}
+
+/* ---------- 올린 파일 보기 ---------- */
+async function viewFile(k, i, btn){
+  var w = null; try { w = window.open('', '_blank'); if (w) w.document.write('<p style="font-family:sans-serif;padding:20px">파일을 여는 중입니다…</p>'); } catch (e) {}
+  var lb = btn.textContent; btn.disabled = true; btn.textContent = '여는 중…';
+  try {
+    var r = await call('lview', { k: k, i: i }), bin = atob(r.b64), u8 = new Uint8Array(bin.length);
+    for (var j = 0; j < bin.length; j++) u8[j] = bin.charCodeAt(j);
+    var url = URL.createObjectURL(new Blob([u8], { type: r.mime }));
+    if (w && !w.closed) w.location.href = url; else { var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove(); }
+  } catch (e) { if (w) w.close(); toast(e.message); }
+  finally { btn.disabled = false; btn.textContent = lb; }
+}
+
+/* ---------- 입력 저장 ---------- */
+function collect(){
+  var o = { rrn: fmtRrn($('rrn').value), phone: fmtTel($('phone').value), address: $('address').value.trim(), email: $('email').value.trim() };
+  ROWS.forEach(function(g){ o[g.k] = [{}, {}, {}]; });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-row]'), function(el){ o[el.dataset.row][+el.dataset.i][el.dataset.f] = el.value.trim(); });
+  if ($('examDate')) o.examDate = $('examDate').value;
+  if ($('tbIn41')) o.tbIn41 = $('tbIn41').checked;
+  return o;
+}
+async function saveText(submit, quiet){
+  var o = collect(), d = digits(o.rrn);
+  if (d.length && d.length !== 13) { toast('주민등록번호 13자리를 확인해 주세요'); $('rrn').focus(); return false; }
+  if (submit) {
+    // 방금 입력한 칸(주민번호·주소 등)은 저장 뒤 서버가 다시 판단하므로 여기서는 입력값으로 빼고 본다
+    var filled = { rrn: digits(o.rrn).length === 13, phone: digits(o.phone).length >= 10, address: !!o.address, examDate: !!o.examDate };
+    var miss = todoList().filter(function(x){ return !x.ok && !(x.st === 'miss' && filled[x.k]); });
+    if (miss.length && !confirm('아직 ' + miss.map(function(x){ return x.t + (x.st === 'fix' ? '(보완)' : ''); }).join(', ') + ' 이(가) 남았습니다. 그래도 지금까지 낸 것으로 제출을 알릴까요?')) return false;
+  }
+  try { var rr = await call('lput', { data: o, submit: !!submit }); rr.saved = true; afterSave(rr); if (!quiet) toast(submit ? '제출을 알렸습니다. 센터에서 확인 후 연락드립니다' : '저장했습니다'); return true; }
+  catch (e) { toast(e.message); return false; }
+}
+var dirty = false;
+document.addEventListener('input', function(e){ if (e.target.closest && e.target.closest('#vMain') && e.target.type !== 'file' && e.target.type !== 'checkbox' && e.target.type !== 'date') dirty = true; });
+window.addEventListener('beforeunload', function(e){ if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+$('btnSave').onclick = function(){ saveText(false); };
+$('btnSubmit').onclick = async function(){ if (await saveText(true)) window.scrollTo(0, 0); };
+$('rrn').addEventListener('input', function(){ this.value = fmtRrn(this.value); });
+$('phone').addEventListener('input', function(){ this.value = fmtTel(this.value); });
+
+/* ---------- 파일 ---------- */
+var pickKey = '';
+function pick(k, cam){
+  var d = DOCS.filter(function(x){ return x.k === k; })[0], fi = $('fileIn');
+  pickKey = k; fi.value = '';
+  fi.accept = d.img ? 'image/*' : 'image/*,application/pdf';
+  fi.multiple = !d.img;
+  if (cam) fi.setAttribute('capture', 'environment'); else fi.removeAttribute('capture');
+  fi.click();
+}
+$('fileIn').onchange = async function(){
+  var files = Array.prototype.slice.call(this.files || []), k = pickKey; if (!files.length) return;
+  var d = DOCS.filter(function(x){ return x.k === k; })[0];
+  try {
+    if (d.img) { var im = await shrink(files[0], k === 'photo' ? 1200 : 2000); await upload(k, im.bytes, im.ext, files[0].name, im); }
+    else {
+      var pdfs = files.filter(function(f){ return /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name); }), imgs = files.filter(function(f){ return /^image\//.test(f.type); });
+      if (d.multi) { for (const f of pdfs) await upload(k, new Uint8Array(await f.arrayBuffer()), 'pdf', f.name); if (imgs.length) await upload(k, await imgsToPdf(imgs), 'pdf', imgs[0].name.replace(/\.[^.]+$/, '') + '.pdf'); }
+      else if (pdfs.length) await upload(k, new Uint8Array(await pdfs[0].arrayBuffer()), 'pdf', pdfs[0].name);
+      else if (imgs.length) await upload(k, await imgsToPdf(imgs), 'pdf', 'scan.pdf');
+      else toast('PDF나 사진 파일을 골라 주세요');
+    }
+  } catch (e) { console.error(e); toast(e.message || '올리지 못했습니다'); prog(k, ''); }
+};
+function prog(k, t){ var el = document.querySelector('[data-prog="' + k + '"]'); if (el) el.textContent = t; }
+async function upload(k, bytes, ext, name, im){
+  if (bytes.length > 15 * 1024 * 1024) throw new Error('파일이 너무 큽니다 (15MB까지). 사진은 화질을 낮춰 다시 골라 주세요.');
+  prog(k, '올리는 중… (' + Math.round(bytes.length / 1024) + 'KB)');
+  var r = await call('lfile', { k: k, ext: ext, name: name, b64: b64(bytes), pxW: im ? im.w : 0, pxH: im ? im.h : 0 });
+  afterSave(r); toast('올렸습니다');
+}
+function b64(u8){ var s = '', C = 0x8000; for (var i = 0; i < u8.length; i += C) s += String.fromCharCode.apply(null, u8.subarray(i, i + C)); return btoa(s); }
+function loadImg(file){ return new Promise(function(res, rej){ var u = URL.createObjectURL(file), im = new Image(); im.onload = function(){ res(im); }; im.onerror = function(){ rej(new Error('사진을 읽지 못했습니다. JPG·PNG 사진으로 골라 주세요.')); }; im.src = u; }); }
+function canvasBytes(c, type, q){ return new Promise(function(res){ c.toBlob(function(b){ b.arrayBuffer().then(function(a){ res(new Uint8Array(a)); }); }, type, q); }); }
+async function shrink(file, max){
+  var im = await loadImg(file), w = im.naturalWidth, h = im.naturalHeight, s = Math.min(1, max / Math.max(w, h));
+  var c = document.createElement('canvas'); c.width = Math.round(w * s); c.height = Math.round(h * s);
+  var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+  return { bytes: await canvasBytes(c, 'image/jpeg', .86), ext: 'jpg', w: c.width, h: c.height };
+}
+async function imgsToPdf(files){
+  var doc = await PDFLib.PDFDocument.create();
+  for (const f of files) {
+    var im = await shrink(f, 2000), j = await doc.embedJpg(im.bytes);
+    var W = 595.28, H = 841.89, s = Math.min((W - 40) / j.width, (H - 40) / j.height), page = doc.addPage([W, H]);
+    page.drawImage(j, { x: (W - j.width * s) / 2, y: (H - j.height * s) / 2, width: j.width * s, height: j.height * s });
+  }
+  return await doc.save();
+}
+
+/* ---------- 바로 서명 (서명 카드 안의 칸) ---------- */
+var pad = null, pg = null, drawn = false, last = null;
+function initPad(){
+  pad = $('pad'); if (!pad) return;
+  drawn = false; last = null; fit();
+  // 화면에 보일 때의 크기에 맞춘다 (숨겨진 채 만들어지면 크기가 0)
+  function fit(){ var r = pad.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+    if (!w || (pad.width === w && pad.height === h && pg)) return; pad.width = w; pad.height = h;
+    pg = pad.getContext('2d'); pg.setTransform(dpr, 0, 0, dpr, 0, 0); pg.lineWidth = 3; pg.lineCap = 'round'; pg.lineJoin = 'round'; pg.strokeStyle = '#111'; drawn = false; }
+  function pt(e){ var b = pad.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; }
+  pad.onpointerdown = function(e){ e.preventDefault(); fit(); last = pt(e); try { pad.setPointerCapture(e.pointerId); } catch (x) {} pg.beginPath(); pg.arc(last.x, last.y, 1.4, 0, 7); pg.fillStyle = '#111'; pg.fill(); drawn = true; };
+  pad.onpointermove = function(e){ if (!last) return; var p = pt(e); pg.beginPath(); pg.moveTo(last.x, last.y); pg.lineTo(p.x, p.y); pg.stroke(); last = p; drawn = true; };
+  pad.onpointerup = pad.onpointercancel = function(){ last = null; };
+  $('padClear').onclick = function(){ if (pg) pg.clearRect(0, 0, pad.width, pad.height); drawn = false; };
+  $('padOk').onclick = async function(){
+    if (!drawn || !pg) { toast('서명을 해 주세요'); return; }
+    // 서명 부분만 잘라 바탕 없는(투명) PNG로
+    var W = pad.width, H = pad.height, data = pg.getImageData(0, 0, W, H).data, x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) if (data[(y * W + x) * 4 + 3] > 0) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    var m = 8, c = document.createElement('canvas'); x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(W - 1, x1 + m); y1 = Math.min(H - 1, y1 + m);
+    c.width = x1 - x0 + 1; c.height = y1 - y0 + 1; c.getContext('2d').drawImage(pad, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
+    this.disabled = true;
+    try { await upload('sign', await canvasBytes(c, 'image/png'), 'png', 'sign.png', { w: c.width, h: c.height }); }
+    catch (e) { toast(e.message); this.disabled = false; }
+  };
+}
+
+start();
+})();
+</script>
+</body>
+</html>

@@ -17,6 +17,13 @@
 .admlogin{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,rgba(0,0,0,.35))}
 .admcard{width:min(400px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:var(--shadow)}
 .admcard input{width:100%}
+/* 9 강사서류: 운영 관리 머리글 아래를 강사서류 화면으로 채움 */
+#app[hidden],footer.site[hidden],#docsPane[hidden]{display:none!important}
+#docsPane{width:100%;background:#f4f6fa}
+#docsPane iframe{display:block;width:100%;height:100%;border:0}
+body.docs-on{overflow:hidden}
+/* PC 화면은 body 를 10% 키워 두지만(zoom) 강사서류는 원래 크기로: body 대신 머리글만 키움 (겹친 zoom 은 클릭 위치가 어긋날 수 있음) */
+@media (min-width:900px){body.docs-on{zoom:1}body.docs-on header.top{zoom:1.1}}
 </style>
 </head>
 <body data-mode="<?= mode ?>" data-token="<?= token ?>" data-key="<?= adminKey ?>" data-link="<?= adminLink ?>" data-biz="<?= biz ?>" data-trole="<?= trole ?>" data-aname="<?= aname ?>">
@@ -32,6 +39,7 @@
   <div class="navbar"><div class="wrap"><nav class="tabs" id="tabs"></nav></div></div>
 </header>
 <main class="wrap" id="app"><div class="boot">불러오는 중…</div></main>
+<div id="docsPane" hidden></div>
 <footer class="site wrap"><span class="ft-txt"><b>충남 1권역(천안·아산)</b><i>｜</i><span>ANCHOR(구 RISE)늘봄 고도화</span></span><span class="ft-logos"><span class="flogo fl-hoseo" role="img" aria-label="호서대학교" title="호서대학교"></span><span class="flogo fl-sangmyung" role="img" aria-label="상명대학교" title="상명대학교"></span><span class="flogo fl-u1" role="img" aria-label="유원대학교" title="유원대학교"></span><span class="flogo fl-dankook" role="img" aria-label="단국대학교" title="단국대학교"></span><span class="flogo fl-yonam" role="img" aria-label="연암대학교" title="연암대학교"></span></span></footer>
 <div id="layer"></div>
 
@@ -235,9 +243,24 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.28';
+const APP_VER = '11.29';
+function docsFit() {
+  const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
+  const top = document.querySelector('header.top').getBoundingClientRect().bottom;
+  pane.style.height = Math.max(320, window.innerHeight - Math.max(0, top)) + 'px';
+}
+function docsShow(on) {
+  const pane = document.getElementById('docsPane'), app = document.getElementById('app'), ft = document.querySelector('footer.site');
+  if (!pane) return;
+  if (on && !pane.firstChild) pane.innerHTML = '<iframe id="docsFrame" src="docs/" title="강사서류"></iframe>';
+  pane.hidden = !on; app.hidden = on; if (ft) ft.hidden = on;
+  document.body.classList.toggle('docs-on', on);
+  if (on) { window.scrollTo(0, 0); docsFit(); }
+}
+window.addEventListener('resize', docsFit);
 function afterRender() {
   if (MODE !== 'admin') return;
+  try { docsShow(!!(S && S.ui && ADMIN_KEY && route() === 'docs')); } catch (e) {}
   const w = document.getElementById('admWho'); if (!w || !S) return;
   const who = S.isMaster ? '총괄 관리자' : `${bizName()}${S.adminOrg ? ' · ' + orgShort(S.adminOrg) : ''} · ${S.adminName || '관리자'}`;
   if (w.dataset.who === who) return;
@@ -256,7 +279,7 @@ function adminLogoutGo() {
       try { sessionStorage.removeItem(ADM_SS); } catch (e) {}
       ADMIN_KEY = '';
       const w = document.getElementById('admWho'); if (w) { w.innerHTML = ''; delete w.dataset.who; }
-      document.getElementById('tabs').innerHTML = ''; document.getElementById('seasonLbl').textContent = ''; setSave('');
+      document.getElementById('tabs').innerHTML = ''; document.getElementById('seasonLbl').textContent = ''; setSave(''); docsShow(false);
       if (!ADMIN_LINK) { document.getElementById('app').innerHTML = '<div class="notice" style="margin-top:24px">로그아웃했습니다. 운영자 링크로 다시 들어와 주세요.</div>'; return; }
       document.getElementById('app').innerHTML = '<div class="boot">로그아웃했습니다.</div>';
       adminAskLogin(adminBoot);
@@ -268,7 +291,7 @@ function adminBoot() {
   /* 새로 열면 항상: 공개 중인 시기 · 학교 · 목록 업로드 화면 */
   run('adminLoad', ADMIN_KEY, true).then(d => {
     const first = aUse(d, false);
-    S.ui.view = 'board'; S.ui.scope = '';
+    S.ui.view = (new URLSearchParams(location.search).get('v') === 'docs' && !S.adminOrg) ? 'docs' : 'board'; S.ui.scope = '';
     render(); setSave('불러옴 · ' + now());
     if (first) { toast('처음 실행입니다. 기본 설정을 저장했습니다. [교육청 목록 올리기]와 기준정보의 [강사 DB 올리기]로 시작하세요'); adminPersist(); }
     if (ADM_TIMER) clearInterval(ADM_TIMER);

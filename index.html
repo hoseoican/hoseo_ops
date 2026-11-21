@@ -936,6 +936,13 @@ tr:first-child>td{border-top:0}
 .admlogin{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:color-mix(in srgb,var(--bg) 70%,rgba(0,0,0,.35))}
 .admcard{width:min(400px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:var(--shadow)}
 .admcard input{width:100%}
+/* 9 강사서류: 운영 관리 머리글 아래를 강사서류 화면으로 채움 */
+#app[hidden],footer.site[hidden],#docsPane[hidden]{display:none!important}
+#docsPane{width:100%;background:#f4f6fa}
+#docsPane iframe{display:block;width:100%;height:100%;border:0}
+body.docs-on{overflow:hidden}
+/* PC 화면은 body 를 10% 키워 두지만(zoom) 강사서류는 원래 크기로: body 대신 머리글만 키움 (겹친 zoom 은 클릭 위치가 어긋날 수 있음) */
+@media (min-width:900px){body.docs-on{zoom:1}body.docs-on header.top{zoom:1.1}}
 </style>
 </head>
 <body data-mode="teacher" data-token="" data-key="" data-link="" data-biz="" data-trole="" data-aname="">
@@ -984,6 +991,7 @@ tr:first-child>td{border-top:0}
   <div class="navbar"><div class="wrap"><nav class="tabs" id="tabs"></nav></div></div>
 </header>
 <main class="wrap" id="app"><div class="boot">불러오는 중…</div></main>
+<div id="docsPane" hidden></div>
 <footer class="site wrap"><span class="ft-txt"><b>충남 1권역(천안·아산)</b><i>｜</i><span>ANCHOR(구 RISE)늘봄 고도화</span></span><span class="ft-logos"><span class="flogo fl-hoseo" role="img" aria-label="호서대학교" title="호서대학교"></span><span class="flogo fl-sangmyung" role="img" aria-label="상명대학교" title="상명대학교"></span><span class="flogo fl-u1" role="img" aria-label="유원대학교" title="유원대학교"></span><span class="flogo fl-dankook" role="img" aria-label="단국대학교" title="단국대학교"></span><span class="flogo fl-yonam" role="img" aria-label="연암대학교" title="연암대학교"></span></span></footer>
 <div id="layer"></div>
 
@@ -1938,10 +1946,10 @@ function autoAssign(silent){
 const stPill = s => { const [t,c]=ST[s]; return `<span class="pill st-${c}">${t}</span>`; };
 const issList = (list,max=9) => list.slice(0,max).map(i=>`<span class="iss lv-${i.lv}"><i>${i.lv==='crit'?'!':i.lv==='warn'?'△':'i'}</i>${esc(i.t)}</span>`).join('<br>');
 const thread = r => r.thread.length?`<div class="thread">${r.thread.map(m=>`<div class="msg"><b>${esc(m.who)}</b>${esc(m.text)} <span class="muted small">${esc(m.at)}</span></div>`).join('')}</div>`:'';
-const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>목록 업로드'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영 목록 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
+const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>목록 업로드'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영 목록 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
 /* 보조강사 신청 페이지(?r=asst): 주강사 신청 페이지와 완전히 분리. 강사 DB에 없는 사람도 가입해 보조강사 신청 */
 const tRoleA = () => ((document.body&&document.body.dataset.trole)||new URLSearchParams(location.search).get('r')||'')==='asst';
-const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&x[0]==='stats'&&curBiz()!=='anchor')).map(x=>role==='teacher'&&tRoleA()&&x[0]==='teacher'?['teacher','보조강사 모집']:x);
+const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&x[0]==='stats'&&curBiz()!=='anchor')&&!(role==='admin'&&x[0]==='docs'&&(!window.ON_PAGES||S.adminOrg))).map(x=>role==='teacher'&&tRoleA()&&x[0]==='teacher'?['teacher','보조강사 모집']:x);
 function route(){ const ok=routesOf(S.ui.role).map(x=>x[0]); return ok.includes(S.ui.view)?S.ui.view:homeView(S.ui.role); }
 function homeView(role){ const ok=ROUTES[role].map(x=>x[0]); return ok.includes('board')?'board':ok[0]; }
 function render(){
@@ -1951,7 +1959,7 @@ function render(){
   const tabs=routesOf(S.ui.role); document.getElementById('tabs').innerHTML=tabs.length>1?tabs.map(([k,t])=>`<button class="tabbtn ${cur===k?'on':''}" data-act="tab" data-v="${k}">${t}</button>`).join(''):'';
   { const rj=document.getElementById('role-join'); if(rj) rj.classList.toggle('on',S.ui.role==='join'); }
   { const ru=document.getElementById('role-univ'); if(ru) ru.classList.toggle('on',S.ui.role==='univ'); }
-  const V={univ:viewUniv,join:viewJoin,joinadm:viewJoinAdmin,board:viewBoard,match:viewMatch,setup:viewSetup,export:viewExport,stats:viewStats,dev:viewDev,kit:viewKit,school:viewSchool,teacher:viewTeacher,tmine:viewTeacherMine};
+  const V={univ:viewUniv,join:viewJoin,joinadm:viewJoinAdmin,board:viewBoard,match:viewMatch,setup:viewSetup,export:viewExport,stats:viewStats,dev:viewDev,kit:viewKit,docs:()=>'',school:viewSchool,teacher:viewTeacher,tmine:viewTeacherMine};
   if(S.ui.role==='teacher') tBizApply();
   document.getElementById('seasonLbl').textContent=S.ui.role==='teacher'&&(S.bizInfo||[]).length>1?'호서대학교 · 초등방과후 프로그램':`${season().name} · ${bizTitle()}`;
   migratePrograms();
@@ -1962,7 +1970,7 @@ function render(){
   if((S.ui.role==='school'&&S.ui.school&&!fcSch().kakao)||(S.ui.role==='join'&&!formCfg(S.ui.jType==='out'?'out':'school').kakao)) body=noKakaoWords(body);
   body=S.ui.role==='teacher'&&(S.bizInfo||[]).length>1?body.replace(/충남 1권역 앵커늘봄/g,'호서대학교 초등방과후 프로그램'):bizWords(body);
   if(['school','join'].includes(S.ui.role)&&curBiz()!=='anchor') body=body.replace(/도교육청|교육청/g,'늘봄허브');
-  document.getElementById('app').innerHTML=(S.ui.role==='admin'&&cur!=='stats'?seasonBar(sc):(sc?scopeBar():''))+(S.ui.role==='admin'?adminQuickNav():'')+rn+body;
+  document.getElementById('app').innerHTML=(S.ui.role==='admin'&&cur!=='stats'&&cur!=='docs'?seasonBar(sc):(sc?scopeBar():''))+(S.ui.role==='admin'&&cur!=='docs'?adminQuickNav():'')+rn+body;
   enhanceTables(cur); renderLayer(); save(); if(typeof afterRender==='function') afterRender();
 }
 
@@ -2031,7 +2039,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.28';
+const LIB_VER='11.29';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5033,7 +5041,7 @@ function smsBrDlg(){ if(!S.ui.smsBrDlg) return '';
    <ol class="small" style="margin:0;padding-left:18px;line-height:1.8">
     <li>Chrome 웹 스토어에서 <b>Tampermonkey</b>를 설치합니다.</li>
     <li><span class="mono">chrome:\/\/extensions</span> → Tampermonkey 「세부정보」 → <b>사용자 스크립트 허용</b>을 켭니다. (메뉴에 없으면 오른쪽 위 「개발자 모드」를 켭니다)</li>
-    <li>${S.ops.smsBridge?`<a href="${esc(S.ops.smsBridge)}" target="_blank" rel="noopener">문자 보내기 스크립트 설치 ↗</a>를 열고 「설치」를 누릅니다.`:'운영 담당자가 받은 <b>hoseo-sms-bridge.user.js</b>를 Tampermonkey 대시보드 → 「유틸리티」 → 「파일에서 가져오기」로 설치합니다.'}</li>
+    <li>${(S.ops.smsBridge||(window.ON_PAGES?'hoseo-sms-bridge.user.js':''))?`<a href="${esc(S.ops.smsBridge||'hoseo-sms-bridge.user.js')}" target="_blank" rel="noopener">문자 보내기 스크립트 설치 ↗</a>를 열고 「설치」를 누릅니다.`:'운영 담당자가 받은 <b>hoseo-sms-bridge.user.js</b>를 Tampermonkey 대시보드 → 「유틸리티」 → 「파일에서 가져오기」로 설치합니다.'}</li>
     <li>같은 Chrome에서 <b>i-ONE 캠퍼스(campus.ibk.co.kr)</b>에 로그인해 둡니다.</li>
     <li>이 화면을 새로 고치면 문자 버튼의 「· 설치 필요」 표시가 사라집니다.</li></ol>
    <div class="small muted">문자를 여러 명에게 보낼 때는 한 명씩 차례로 채워집니다. 보낸 뒤 오른쪽 아래 안내 상자의 「보냄 · 다음」을 누르면 다음 사람으로 넘어갑니다.</div>
@@ -6897,9 +6905,24 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.28';
+const APP_VER = '11.29';
+function docsFit() {
+  const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
+  const top = document.querySelector('header.top').getBoundingClientRect().bottom;
+  pane.style.height = Math.max(320, window.innerHeight - Math.max(0, top)) + 'px';
+}
+function docsShow(on) {
+  const pane = document.getElementById('docsPane'), app = document.getElementById('app'), ft = document.querySelector('footer.site');
+  if (!pane) return;
+  if (on && !pane.firstChild) pane.innerHTML = '<iframe id="docsFrame" src="docs/" title="강사서류"></iframe>';
+  pane.hidden = !on; app.hidden = on; if (ft) ft.hidden = on;
+  document.body.classList.toggle('docs-on', on);
+  if (on) { window.scrollTo(0, 0); docsFit(); }
+}
+window.addEventListener('resize', docsFit);
 function afterRender() {
   if (MODE !== 'admin') return;
+  try { docsShow(!!(S && S.ui && ADMIN_KEY && route() === 'docs')); } catch (e) {}
   const w = document.getElementById('admWho'); if (!w || !S) return;
   const who = S.isMaster ? '총괄 관리자' : `${bizName()}${S.adminOrg ? ' · ' + orgShort(S.adminOrg) : ''} · ${S.adminName || '관리자'}`;
   if (w.dataset.who === who) return;
@@ -6918,7 +6941,7 @@ function adminLogoutGo() {
       try { sessionStorage.removeItem(ADM_SS); } catch (e) {}
       ADMIN_KEY = '';
       const w = document.getElementById('admWho'); if (w) { w.innerHTML = ''; delete w.dataset.who; }
-      document.getElementById('tabs').innerHTML = ''; document.getElementById('seasonLbl').textContent = ''; setSave('');
+      document.getElementById('tabs').innerHTML = ''; document.getElementById('seasonLbl').textContent = ''; setSave(''); docsShow(false);
       if (!ADMIN_LINK) { document.getElementById('app').innerHTML = '<div class="notice" style="margin-top:24px">로그아웃했습니다. 운영자 링크로 다시 들어와 주세요.</div>'; return; }
       document.getElementById('app').innerHTML = '<div class="boot">로그아웃했습니다.</div>';
       adminAskLogin(adminBoot);
@@ -6930,7 +6953,7 @@ function adminBoot() {
   /* 새로 열면 항상: 공개 중인 시기 · 학교 · 목록 업로드 화면 */
   run('adminLoad', ADMIN_KEY, true).then(d => {
     const first = aUse(d, false);
-    S.ui.view = 'board'; S.ui.scope = '';
+    S.ui.view = (new URLSearchParams(location.search).get('v') === 'docs' && !S.adminOrg) ? 'docs' : 'board'; S.ui.scope = '';
     render(); setSave('불러옴 · ' + now());
     if (first) { toast('처음 실행입니다. 기본 설정을 저장했습니다. [교육청 목록 올리기]와 기준정보의 [강사 DB 올리기]로 시작하세요'); adminPersist(); }
     if (ADM_TIMER) clearInterval(ADM_TIMER);
