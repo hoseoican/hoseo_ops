@@ -193,7 +193,6 @@ function aUse(d, keepUi) {
 /* 웹 앱 운영자 링크(?a=)로 열었을 때: 비밀번호 확인 후 운영 화면 */
 function adminStart() {
   if (ADMIN_KEY) { adminBoot(); return; }
-  if (!ADMIN_LINK) { fatal(new Error('운영자 링크로 열어 주세요.')); return; }
   let saved = ''; try { saved = sessionStorage.getItem(ADM_SS) || ''; } catch (e) {}
   if (saved) { ADMIN_KEY = saved; adminBoot(); return; }
   adminAskLogin(adminBoot);
@@ -243,7 +242,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.30';
+const APP_VER = '11.31';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;

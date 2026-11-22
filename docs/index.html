@@ -1056,7 +1056,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.21-16';
+var APP_VERSION = '2026.11.21-17';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2137,7 +2137,7 @@ function bind(){
   $('rows').addEventListener('input', function(e){ var t=e.target; if(!t.dataset.row) return; var arr=cur[t.dataset.row]=cur[t.dataset.row]||[{},{},{}]; arr[+t.dataset.r]=arr[+t.dataset.r]||{}; arr[+t.dataset.r][t.dataset.f]=t.value; changed(); });
   each('label', function(b){ b.onclick=function(){ cur.role=b.dataset.v; renderForm(); changed(); }; }, $('role'));
   each('#nav label', function(l){ l.onclick=function(e){ e.preventDefault(); go(l.dataset.page); }; });
-  if($('navBack')) $('navBack').onclick=function(e){ e.preventDefault(); openManage(e.shiftKey); };
+  if($('navBack')) $('navBack').onclick=function(e){ e.preventDefault(); openManage(); };
   $('btnPrev').onclick=function(){ var i=PAGES.indexOf(page); if(i>0) go(PAGES[i-1]); };
   $('btnNext').onclick=function(){ var i=PAGES.indexOf(page); if(i<PAGES.length-1) go(PAGES[i+1]); };
   $('btnAddSchool').onclick=function(){ cur.schools.push(''); renderSchools(); var l=$('schools').querySelectorAll('input'); l[l.length-1].focus(); };
@@ -2168,17 +2168,7 @@ function lsubFixGo(){
   toast('다시 보완할 서류에 「보완 필요」를 표시하고 사유를 넣으세요. 표시 후 「서류 제출·보완 요청」에서 문자를 보내면 강사 화면에 사유가 나옵니다');
 }
 /* 운영 관리 화면으로 돌아가기 (따로 열었을 때). 운영자 링크는 이 브라우저에만 기억 (Shift+클릭으로 다시 입력) */
-function openManage(reset){
-  var k=''; try{ k=localStorage.getItem('hsMgKey')||''; }catch(e){}
-  if(!k || reset){
-    var v=window.prompt('운영 관리 운영자 링크(…?a=…)를 붙여 넣어 주세요.\n이 브라우저에만 기억하고, 다음부터는 바로 열립니다.', '');
-    if(v===null) return;
-    var m=/[?&]a=([A-Za-z0-9]+)/.exec(v) || /^([A-Za-z0-9]{20,})$/.exec(v.trim());
-    if(!m){ toast('운영자 링크가 아닙니다. 주소에 ?a= 가 들어 있는 링크를 넣어 주세요'); return; }
-    k=m[1]; try{ localStorage.setItem('hsMgKey', k); }catch(e){}
-  }
-  location.href='../?a='+encodeURIComponent(k)+'&v=docs';
-}
+function openManage(){ location.href='../app.html?admin&v=docs'; }
 function renderLsub(){
   var el=$('lsubBar'), p=cur; if(!el) return;
   renderLinkBar();
@@ -2970,6 +2960,34 @@ function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('on'); 
 var GAS_DEFAULT_URL = 'https://script.google.com/macros/s/AKfycby5iQBKK3NIYigURP54G6ri-Do76lYIQVnflA2lqmpBLYkPZhN-g0ZflYaZFsT4ClDOMg/exec';
 var gas = { url: GAS_DEFAULT_URL, code: '', auto: true }, gasInfo = null, gasOpsList = [];
 function gasOn(){ return !!(gas.url && gas.code); }
+/* ---------- 입장 접근 코드 (운영현황 구글 시트 연동용 접근 코드와 같은 코드. 한 번 넣으면 이 브라우저에 기억) ---------- */
+function gateAsk(msg){
+  return new Promise(function(done){
+    var o=document.createElement('div');
+    o.style.cssText='position:fixed;inset:0;z-index:99999;background:#f4f1ee;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
+    o.innerHTML='<form style="background:#fff;border:1px solid #ddd5d5;border-radius:14px;padding:26px 24px;width:100%;max-width:340px;box-shadow:0 6px 24px rgba(0,0,0,.08)">'
+      +'<h2 style="margin:0 0 6px;font-size:18px;color:#7d1a1f">강사서류</h2>'
+      +'<p style="margin:0 0 14px;font-size:13px;color:#6b6262;line-height:1.5">관계자만 들어올 수 있습니다.<br>접근 코드를 입력해 주세요. (한 번만 입력하면 됩니다)</p>'
+      +'<input type="password" autocomplete="off" placeholder="접근 코드" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cfc7c7;border-radius:8px;font:inherit;font-size:15px">'
+      +'<p class="gmsg" style="min-height:18px;margin:8px 0;font-size:12.5px;color:#b3261e"></p>'
+      +'<button type="submit" style="width:100%;padding:10px;border:0;border-radius:8px;background:#7d1a1f;color:#fff;font:inherit;font-size:14.5px;cursor:pointer">들어가기</button></form>';
+    document.body.appendChild(o);
+    var f=o.firstChild, inp=f.querySelector('input'), m=f.querySelector('.gmsg'), b=f.querySelector('button');
+    m.textContent=msg||''; inp.focus();
+    f.onsubmit=async function(e){
+      e.preventDefault(); var c=inp.value.trim(); if(!c) return;
+      b.disabled=true; b.textContent='확인 중…'; m.textContent='';
+      try{
+        gas.code=c; var j=await gasCall('ping');
+        await kvPut('gas', gas); gasInfo=j; o.remove(); done(true);
+      }catch(er){
+        gas.code=''; b.disabled=false; b.textContent='들어가기';
+        m.textContent = er.code==='code' ? '접근 코드가 맞지 않습니다.' : er.message; inp.select();
+      }
+    };
+  });
+}
+async function gateEnsure(){ if(!gas.code) await gateAsk(''); }
 async function gasCall(action, extra){
   if(!gasOn()) throw { message: '구글 시트 연동 설정이 없습니다. 「운영현황 → 구글 시트 연동」에서 연동 주소와 접근 코드를 넣어 주세요' };
   var res;
@@ -3000,7 +3018,9 @@ async function gasPing(quiet){
     syRender(); if(!quiet) syStart();
     if(!quiet) $('gsTestInfo').textContent = '연결했습니다. 날인대장 「'+gasInfo.sheet+'」 탭, 운영현황 시트 '+gasOpsList.length+'개';
     return true;
-  }catch(e){ gasInfo = null; gasState(); if(!quiet) $('gsTestInfo').textContent = e.message; else toast('구글 시트 연동: '+e.message); return false; }
+  }catch(e){
+    if(e && e.code==='code' && !gasPing.again){ gasPing.again=1; gas.code=''; await gateAsk('저장된 접근 코드가 바뀌었습니다. 새 접근 코드를 입력해 주세요.'); gasPing.again=0; return gasPing(quiet); }
+    gasInfo = null; gasState(); if(!quiet) $('gsTestInfo').textContent = e.message; else toast('구글 시트 연동: '+e.message); return false; }
 }
 /* ---------- 강사 자료 공유 (공유드라이브 + 나눠 읽기) ----------
    people.json(강사 입력값)은 바뀐 강사만 받고, 스캔본·사진·서명은 그 강사를 열 때만 받는다.
@@ -3561,6 +3581,7 @@ openDb().then(async function(){
   var sl=await kvGet('smsLog'); if(sl) smsLog=sl;
   var mc=await kvGet('mailCfg'); if(mc){ delete mc.html; delete mc.notice; delete mc.oldBody; if(!mc.ver || mc.ver<DEFAULT_MAIL.ver){ if(!mc.body || mc.body===DEFAULT_MAIL.notice || mc.body===MAIL_V6.body) mc.body=DEFAULT_MAIL.body; if(!mc.subject || mc.subject===MAIL_V6.subject) mc.subject=DEFAULT_MAIL.subject; if(mc.ver<9 && mc.body && mc.body.indexOf('범죄경력조회 동의서만 보내 드리는 이유')>=0){ mc.bodyOut=mc.body.replace('■ 부탁드리는 사항','■ 협조사항'); mc.subjectOut=mc.subject; mc.body=DEFAULT_MAIL.body; mc.subject=DEFAULT_MAIL.subject; } else if(mc.ver<7){ delete mc.bodyOut; delete mc.subjectOut; } if(mc.ver<10){ ['  - 그 밖의 서류(이력서, 신분증·통장 사본, 개인정보 동의서, 서약서 등)는 기관마다 쓰는 양식과 필요한 서류가 달라 센터에서 일괄로 작성해 드리지 않습니다.','  - 개인정보는 필요한 범위에서만 주고받는 것이 원칙이므로(개인정보 보호법), 기관에 필요한 서류는 강사님께 직접 받아 주시기 바랍니다.'].forEach(function(l){ if(mc.bodyOut) mc.bodyOut=mc.bodyOut.replace('\n'+l,''); }); if(mc.body) mc.body=mc.body.replace('  - 검토하시고 보완이 필요한 서류가 있으면 회신 부탁드립니다.','  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.'); } mc.ver=DEFAULT_MAIL.ver; } mailCfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_MAIL)), mc); }
   var gs=await kvGet('gas'); if(gs) gas=Object.assign(gas, gs); if(!gas.url) gas.url=GAS_DEFAULT_URL;
+  await gateEnsure();
   var cc=await kvGet('certCfg'); if(cc) applyCertCfg(cc, false);
   var cl=await kvGet('certLog'); if(cl) certLog=cl;
   var cpp=await kvGet('certPeople'); if(cpp) certSaved=cpp;

@@ -57,12 +57,10 @@ footer{padding:20px 0 28px;font-size:12.5px;color:var(--muted);text-align:center
 
   <div class="grp">운영 담당자</div>
   <div class="grid">
-    <div class="card main" id="cAdmin" role="button" tabindex="0">
+    <a class="card main" id="cAdmin" href="app.html?admin">
       <h2>운영 관리 <i>→</i></h2>
       <p>접수·승인, 검토·매칭, 운영 목록, 통계, 프로그램 개발, 강사서류(9번 메뉴)</p>
-      <div class="akey" id="akey"><input id="akIn" placeholder="운영자 링크를 붙여 넣어 주세요 (…?a=…)" autocomplete="off"><button type="button" id="akGo">열기</button><p class="msg" id="akMsg"></p></div>
-      <p class="small" id="akClr" hidden><a href="#" id="akClrA">저장된 운영자 링크 지우기</a></p>
-    </div>
+    </a>
     <a class="card" href="docs/"><h2>강사서류 <i>→</i></h2><p>강사 서류 작성·검토·학교별 발송, 증명서 발급 (운영 관리 안에서도 열립니다)</p></a>
   </div>
 
@@ -78,30 +76,5 @@ footer{padding:20px 0 28px;font-size:12.5px;color:var(--muted);text-align:center
   </div>
 </div></main>
 <footer><div class="wrap">© 호서대학교 앵커늘봄총괄센터</div></footer>
-<script>
-(function(){
-  var $=function(i){return document.getElementById(i);};
-  function key(){ try{ return localStorage.getItem('hsMgKey')||''; }catch(e){ return ''; } }
-  function go(k){ location.href='app.html?a='+encodeURIComponent(k); }
-  function refresh(){ $('akClr').hidden=!key(); }
-  function open_(){
-    var k=key();
-    if(k){ go(k); return; }
-    $('akey').classList.add('on'); $('akIn').focus();
-  }
-  $('cAdmin').addEventListener('click',function(e){ if(e.target.closest('.akey')||e.target.closest('#akClr')) return; open_(); });
-  $('cAdmin').addEventListener('keydown',function(e){ if((e.key==='Enter'||e.key===' ')&&e.target===$('cAdmin')){ e.preventDefault(); open_(); } });
-  function submit(){
-    var v=($('akIn').value||'').trim(), m=/[?&]a=([A-Za-z0-9]+)/.exec(v)||/^([A-Za-z0-9]{20,})$/.exec(v);
-    if(!m){ $('akMsg').textContent='운영자 링크가 아닙니다. 주소에 ?a= 가 들어 있는 링크를 넣어 주세요.'; return; }
-    try{ localStorage.setItem('hsMgKey',m[1]); }catch(e){}
-    go(m[1]);
-  }
-  $('akGo').addEventListener('click',submit);
-  $('akIn').addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
-  $('akClrA').addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); try{ localStorage.removeItem('hsMgKey'); }catch(x){} refresh(); });
-  refresh();
-})();
-</script>
 </body>
 </html>
