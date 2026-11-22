@@ -2041,7 +2041,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.31';
+const LIB_VER='11.32';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6906,7 +6906,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.31';
+const APP_VER = '11.32';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -6950,12 +6950,19 @@ function adminLogoutGo() {
   };
   go();
 }
+function showMissing(L) {
+  let el = document.getElementById('missBar');
+  if (!L || !L.length) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'missBar'; el.className = 'notice bad'; el.style.cssText = 'margin:10px auto;max-width:1400px'; const a = document.getElementById('app'); a.parentNode.insertBefore(el, a); }
+  el.textContent = '연결하지 못한 데이터: ' + L.map(x => x.name).join(', ') + ' — 접근 권한이 없어 이 데이터는 빼고 보여 줍니다. 해당 시트 파일을 운영 관리 배포 계정과 공유한 뒤, 앱스 스크립트 편집기에서 checkSheets 를 실행하면 다시 연결됩니다.';
+}
 function adminBoot() {
   /* 새로 열면 항상: 공개 중인 시기 · 학교 · 목록 업로드 화면 */
   run('adminLoad', ADMIN_KEY, true).then(d => {
     const first = aUse(d, false);
     S.ui.view = (new URLSearchParams(location.search).get('v') === 'docs' && !S.adminOrg) ? 'docs' : 'board'; S.ui.scope = '';
     render(); setSave('불러옴 · ' + now());
+    showMissing(d.missing);
     if (first) { toast('처음 실행입니다. 기본 설정을 저장했습니다. [교육청 목록 올리기]와 기준정보의 [강사 DB 올리기]로 시작하세요'); adminPersist(); }
     if (ADM_TIMER) clearInterval(ADM_TIMER);
     ADM_TIMER = setInterval(() => {
