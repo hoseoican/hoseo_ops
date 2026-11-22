@@ -42,7 +42,7 @@ body.docs-on{overflow:hidden}
 </header>
 <main class="wrap" id="app"><div class="boot">불러오는 중…</div></main>
 <div id="docsPane" hidden></div>
-<footer class="site wrap"><span class="ft-txt"><b>충남 1권역(천안·아산)</b><i>｜</i><span>ANCHOR(구 RISE)늘봄 고도화</span></span><span class="ft-logos"><span class="flogo fl-hoseo" role="img" aria-label="호서대학교" title="호서대학교"></span><span class="flogo fl-sangmyung" role="img" aria-label="상명대학교" title="상명대학교"></span><span class="flogo fl-u1" role="img" aria-label="유원대학교" title="유원대학교"></span><span class="flogo fl-dankook" role="img" aria-label="단국대학교" title="단국대학교"></span><span class="flogo fl-yonam" role="img" aria-label="연암대학교" title="연암대학교"></span></span></footer>
+<footer class="site wrap"><span class="ft-ver" id="ftVer" style="order:9;width:100%;font-size:11.5px;color:var(--muted)"></span><span class="ft-txt"><b>충남 1권역(천안·아산)</b><i>｜</i><span>ANCHOR(구 RISE)늘봄 고도화</span></span><span class="ft-logos"><span class="flogo fl-hoseo" role="img" aria-label="호서대학교" title="호서대학교"></span><span class="flogo fl-sangmyung" role="img" aria-label="상명대학교" title="상명대학교"></span><span class="flogo fl-u1" role="img" aria-label="유원대학교" title="유원대학교"></span><span class="flogo fl-dankook" role="img" aria-label="단국대학교" title="단국대학교"></span><span class="flogo fl-yonam" role="img" aria-label="연암대학교" title="연암대학교"></span></span></footer>
 <div id="layer"></div>
 
 <?!= include('Lib') ?>
@@ -91,6 +91,8 @@ function run(fn, ...args) {
   return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
 }
 const errMsg = e => { const m = (e && e.message) ? e.message.replace(/^Exception:\s*/, '') : String(e); return /is not a function/.test(m) ? '서버 코드가 이 화면보다 예전 버전입니다. Code.gs가 최신인지, 「배포 관리 → 연필 → 새 버전」으로 같은 배포에 올렸는지, 이 주소가 그 배포 주소인지 확인해 주세요.' : m; };
+/* 화면 아래쪽 버전 표시: 화면 버전 · (알면) 서버 버전 */
+function showVer(sv) { const el = document.getElementById('ftVer'); if (el) el.textContent = '버전 ' + APP_VER + (sv ? ' · 서버 ' + sv : ''); }
 function setSave(t, bad) { const el = document.getElementById('saveState'); el.textContent = t; el.className = 'savestate' + (bad ? ' bad' : ''); }
 function fatal(e) { const box = document.createElement('div'); box.className = 'notice bad'; box.style.marginTop = '24px'; box.textContent = '열 수 없습니다. ' + ((e && e.message) || String(e)); const app = document.getElementById('app'); app.innerHTML = ''; app.appendChild(box); }
 function typing() { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); }
@@ -183,6 +185,7 @@ function aUse(d, keepUi) {
   const ui = keepUi && S ? S.ui : { role: 'admin', view: 'board', st: '', q: '', region: '', probOnly: false, sel: '', showWait: false, onlyApps: false, condEdit: '' };
   const set = d.settings || {};
   S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined };
+  S.serverVer = d.serverVer || '';
   MY_ORG = S.adminOrg || '호서대학교';
   if (S.adminOrg) { const sc = new Set(S.rows.filter(r => mine(r)).map(r => r.school)); S.joinReqs = S.joinReqs.filter(q => sc.has(q.school)); }
   if (!keepUi && S && S.ui) S.ui.stLoaded = false;
@@ -203,7 +206,7 @@ function adminAskLogin(after) {
   if (document.getElementById('admlogin')) return;
   /* 로그인 화면은 지난번 정보로 바로 띄우고, 서버 확인은 뒤에서 (달라졌으면 다시 그림) */
   let cg = null; try { cg = JSON.parse(localStorage.getItem('anc_gate') || 'null'); } catch (e) {}
-  const show = g => showAdminLogin(g.pwSet, after, g.biz || []);
+  const show = g => { showVer(g.serverVer); showAdminLogin(g.pwSet, after, g.biz || []); };
   if (cg && cg.pwSet && !ADMIN_LINK) show(cg);
   run('adminGate', ADMIN_LINK).then(g => {
     try { localStorage.setItem('anc_gate', JSON.stringify(g)); } catch (e) {}
@@ -256,7 +259,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.40';
+const APP_VER = '11.41';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -279,7 +282,8 @@ function afterRender() {
   if (w.dataset.who === who) return;
   w.dataset.who = who;
   const lv = typeof LIB_VER !== 'undefined' ? LIB_VER : '';
-  w.innerHTML = `<span class="muted">${esc(who)}</span><span class="small" style="color:${lv === APP_VER ? 'var(--muted)' : '#c0392b'}" title="${lv === APP_VER ? '화면 코드(App·Lib)가 같은 버전입니다' : 'Lib.html이 예전 버전입니다. Lib.html을 바꾸고 새 버전으로 배포해 주세요'}">${lv === APP_VER ? '버전 ' + APP_VER : 'Lib 예전 버전 · 교체 필요'}</span><button class="btn sm" id="admOut" type="button">로그아웃</button>`;
+  showVer(S && S.serverVer);
+  w.innerHTML = `<span class="muted">${esc(who)}</span><span class="small" style="color:${lv === APP_VER ? 'var(--muted)' : '#c0392b'}" title="${lv === APP_VER ? '화면 코드(App·Lib)가 같은 버전입니다' : 'Lib.html이 예전 버전입니다. Lib.html을 바꾸고 새 버전으로 배포해 주세요'}">${lv === APP_VER ? '버전 ' + APP_VER + (S && S.serverVer ? ' · 서버 ' + esc(S.serverVer) : '') : 'Lib 예전 버전 · 교체 필요'}</span><button class="btn sm" id="admOut" type="button">로그아웃</button>`;
   w.querySelector('#admOut').addEventListener('click', ev => { ev.stopPropagation(); adminLogoutGo(); });
 }
 function adminLogoutGo() {
@@ -689,6 +693,7 @@ if (MODE === 'admin') seasonGo = function (k, after) {
 };
 function persist() { if (MODE === 'admin') adminPersist(); else if (MODE === 'school') schoolPersist(); }
 
+showVer('');
 if (MODE === 'admin') adminStart(); else if (MODE === 'school') schoolBoot(); else if (MODE === 'join') joinBoot(); else if (MODE === 'univ') univBoot(); else if (MODE === 'stats') statsBoot(); else teacherBoot();
 setTimeout(() => loadXL().catch(() => {}), MODE === 'admin' ? 300 : 4000);
 </script>
