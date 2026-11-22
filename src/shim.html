@@ -5,7 +5,8 @@
   var p=new URLSearchParams(location.search), g=function(k){ return p.get(k)||''; }, d=document.body.dataset;
   d.mode = g('a') ? 'admin' : g('s') ? 'school' : g('u') ? 'univ' : g('st') ? 'stats' : p.has('join') ? 'join' : 'teacher';
   d.token = g('s')||g('u')||g('st'); d.key=''; d.link=g('a'); d.biz=g('b'); d.trole = g('r')==='asst' ? 'asst' : ''; d.aname=g('n');
-  document.title = g('a') ? '초등방과후 프로그램 운영 관리' : g('r')==='asst' ? '초등방과후 프로그램 보조강사 신청' : g('u') ? '희망 강사 선택' : g('st') ? '운영 통계' : p.has('join') ? '초등방과후 프로그램 기관 담당자 페이지' : '초등방과후 프로그램 강사 신청';
+  if(g('a') && /^[A-Za-z0-9]{20,}$/.test(g('a'))) { try{ localStorage.setItem('hsMgKey', g('a')); }catch(e){} }
+  document.title = g('a') ? '초등방과후 프로그램 운영 관리' : g('r')==='asst' ? '초등방과후 프로그램 보조강사 신청' : g('s') ? '초등방과후 프로그램 운영 정보 확인' : g('u') ? '희망 강사 선택' : g('st') ? '운영 통계' : p.has('join') ? '초등방과후 프로그램 기관 담당자 페이지' : '초등방과후 프로그램 강사 신청';
 })();
 /* google.script.run 대신 웹앱 주소로 요청 */
 (function(){

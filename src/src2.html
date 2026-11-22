@@ -2032,12 +2032,12 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.29';
+const LIB_VER='11.30';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
   const bk=curBiz();
-  const pub=kind=>{ if(!base) return ''; const bq=bk!=='anchor'?'b='+bk:''; return kind==='t'?base+(bq?'?'+bq:''):kind==='a'?base+'?r=asst'+(bq?'&'+bq:''):base+'?join=1'+(bq?'&'+bq:''); };
+  const pub=kind=>{ if(!base) return ''; const bq=bk!=='anchor'?'b='+bk:''; return kind==='t'?base+'?r=teacher'+(bq?'&'+bq:''):kind==='a'?base+'?r=asst'+(bq?'&'+bq:''):base+'?join=1'+(bq?'&'+bq:''); };
   const pair=(label,url,title,demoAct,demoV)=>{
     if(!live) return `<span class="ql"><button class="ql-o" data-act="${demoAct}" data-v="${esc(demoV||'')}">${label}</button></span>`;
     if(!url) return `<span class="ql off" title="웹앱 주소가 정해지면 열 수 있습니다"><span class="ql-o">${label}</span></span>`;
@@ -5055,7 +5055,7 @@ const smsFill=(tpl,v)=>String(tpl).replace(/\{([^{}\s]+)\}/g,(m,k)=>Object.proto
 function instSmsText(x,tp,kind){
   const T=tp||smsTpl(kind), ss=season(), dd=d=>`${md(d)}(${DOWS[dowOf(d)]})`;
   const items=x.items.map(({r,role},i)=>{ const p=prog(r.prog); return smsFill(T.item,{번호:i+1,학교:r.school,역할:role?` (${role})`:'',분야:p.field||'-',프로그램:p.name,시작일:dd(r.start),종료일:dd(r.end),요일:daysTxt(r.days).replace(/, /g,'/'),시간:`${hm(r.ts)}~${hm(r.te)}`,횟수:classDays(r).length,운영대학:orgShort(orgOfRow(r)),참여일:(role?aDaysOf(r):classDays(r)).map(dd).join(', '),참여횟수:(role?aDaysOf(r):classDays(r)).length}).replace(/\s+$/,''); }).join('\n\n')+'\n';
-  const out=smsFill(S.webAppUrl?T.body:String(T.body).replace(/^[ \t]*\{접속주소\}[ \t]*\n?/m,''),{강사명:x.t.name,시즌:ss.name,수업목록:items,수업수:x.items.length,접속주소:S.webAppUrl||'',담당자:S.ops.name||'',담당자전화:S.ops.phone||''});
+  const out=smsFill(S.webAppUrl?T.body:String(T.body).replace(/^[ \t]*\{접속주소\}[ \t]*\n?/m,''),{강사명:x.t.name,시즌:ss.name,수업목록:items,수업수:x.items.length,접속주소:S.webAppUrl?S.webAppUrl+(kind==='asst'?'?r=asst':'?r=teacher')+(curBiz()!=='anchor'?'&b='+curBiz():''):'',담당자:S.ops.name||'',담당자전화:S.ops.phone||''});
   return bizWords(smsSafe(out.split('\n').map(l=>l.replace(/\s+$/,'')).join('\n').replace(/\n{3,}/g,'\n\n')).trim());
 }
 const smsK = () => S.ui.smsTpl==='asst'?'asst':'main';

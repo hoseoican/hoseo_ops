@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>초등방과후 프로그램 운영 관리 — 메인</title>
+<link rel="icon" href="docs/favicon.png">
+<script>
+/* 예전 주소(?a= ?s= ?u= ?st= ?join= ?r= ?b= …)로 들어오면 그대로 화면으로 넘긴다. 주소만 열었을 때만 이 메인이 보인다. */
+if (location.search) location.replace('app.html' + location.search + location.hash);
+</script>
+<style>
+:root{--maroon:#7d1a1f;--maroon2:#5f1115;--ink:#222;--muted:#6b6b6b;--line:#e6e1e1;--bg:#f6f3f3}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color:var(--ink);background:var(--bg);min-height:100vh;display:flex;flex-direction:column}
+@font-face{font-family:Pretendard;src:url(docs/PretendardVariable.woff2) format("woff2");font-weight:45 920;font-display:swap}
+header{background:#fff;box-shadow:0 1px 0 var(--line)}
+.wrap{max-width:980px;margin:0 auto;padding:0 20px}
+.top{display:flex;align-items:center;gap:14px;padding:16px 0}
+.top img{height:34px}
+.top .sep{width:1px;align-self:stretch;background:var(--line);margin:4px 0}
+.top b{display:block;font-size:18px;letter-spacing:-.01em}
+.top span{font-size:12.5px;color:var(--muted)}
+main{flex:1;padding:34px 0 40px}
+h1{font-size:22px;margin:0 0 6px;letter-spacing:-.01em}
+.lead{margin:0 0 26px;color:var(--muted);font-size:14.5px}
+.grp{font-size:13px;font-weight:700;color:var(--maroon);margin:26px 0 10px;letter-spacing:.02em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.card{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;text-decoration:none;color:inherit;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:border-color .15s,box-shadow .15s,transform .15s;cursor:pointer;text-align:left;font:inherit}
+.card:hover,.card:focus-visible{border-color:var(--maroon);box-shadow:0 4px 14px rgba(125,26,31,.12);outline:0}
+.card h2{margin:0 0 6px;font-size:16.5px;display:flex;justify-content:space-between;align-items:center}
+.card h2 i{font-style:normal;color:var(--maroon);font-size:15px}
+.card p{margin:0;font-size:13.5px;color:var(--muted);line-height:1.5}
+.card.main{border-color:var(--maroon);background:linear-gradient(180deg,#fff,#fbf5f5)}
+.card.main h2{color:var(--maroon)}
+.akey{display:none;margin-top:12px;gap:8px}
+.akey.on{display:flex;flex-wrap:wrap}
+.akey input{flex:1;min-width:180px;padding:9px 11px;border:1px solid #cfc7c7;border-radius:8px;font:inherit;font-size:13.5px}
+.akey button{padding:9px 14px;border:0;border-radius:8px;background:var(--maroon);color:#fff;font:inherit;font-size:13.5px;cursor:pointer}
+.akey button:hover{background:var(--maroon2)}
+.msg{width:100%;margin:0;font-size:12.5px;color:#b3261e}
+.small{margin-top:10px;font-size:12.5px}
+.small a{color:var(--muted)}
+footer{padding:20px 0 28px;font-size:12.5px;color:var(--muted);text-align:center}
+@media (max-width:560px){main{padding-top:24px}.grid{grid-template-columns:1fr}.top b{font-size:16px}}
+</style>
+</head>
+<body>
+<header><div class="wrap top">
+  <img src="docs/brand.png" alt="호서대학교" onerror="this.style.display='none'"><span class="sep"></span>
+  <div><b>초등방과후 프로그램 운영 관리</b><span>호서대학교 앵커늘봄총괄센터 · AI·SW교육센터</span></div>
+</div></header>
+<main><div class="wrap">
+  <h1>어느 화면으로 들어가시나요?</h1>
+  <p class="lead">학교·기관 접수, 강사 모집·배치, 강사 서류까지 한곳에서 운영합니다.</p>
+
+  <div class="grp">운영 담당자</div>
+  <div class="grid">
+    <div class="card main" id="cAdmin" role="button" tabindex="0">
+      <h2>운영 관리 <i>→</i></h2>
+      <p>접수·승인, 검토·매칭, 운영 목록, 통계, 프로그램 개발, 강사서류(9번 메뉴)</p>
+      <div class="akey" id="akey"><input id="akIn" placeholder="운영자 링크를 붙여 넣어 주세요 (…?a=…)" autocomplete="off"><button type="button" id="akGo">열기</button><p class="msg" id="akMsg"></p></div>
+      <p class="small" id="akClr" hidden><a href="#" id="akClrA">저장된 운영자 링크 지우기</a></p>
+    </div>
+    <a class="card" href="docs/"><h2>강사서류 <i>→</i></h2><p>강사 서류 작성·검토·학교별 발송, 증명서 발급 (운영 관리 안에서도 열립니다)</p></a>
+  </div>
+
+  <div class="grp">강사</div>
+  <div class="grid">
+    <a class="card" href="app.html?r=teacher"><h2>강사 수업 신청 <i>→</i></h2><p>선발된 강사가 수업을 신청하고 내 일정을 확인합니다.</p></a>
+    <a class="card" href="app.html?r=asst"><h2>보조강사 수업 신청 <i>→</i></h2><p>보조강사로 가입하고 수업을 신청합니다.</p></a>
+  </div>
+
+  <div class="grp">학교·기관</div>
+  <div class="grid">
+    <a class="card" href="app.html?join=1"><h2>기관 담당자 페이지 <i>→</i></h2><p>초등학교·학교밖 기관 담당자가 접속을 신청하고, 승인 뒤 운영 정보를 확인합니다.</p></a>
+  </div>
+</div></main>
+<footer><div class="wrap">© 호서대학교 앵커늘봄총괄센터</div></footer>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i);};
+  function key(){ try{ return localStorage.getItem('hsMgKey')||''; }catch(e){ return ''; } }
+  function go(k){ location.href='app.html?a='+encodeURIComponent(k); }
+  function refresh(){ $('akClr').hidden=!key(); }
+  function open_(){
+    var k=key();
+    if(k){ go(k); return; }
+    $('akey').classList.add('on'); $('akIn').focus();
+  }
+  $('cAdmin').addEventListener('click',function(e){ if(e.target.closest('.akey')||e.target.closest('#akClr')) return; open_(); });
+  $('cAdmin').addEventListener('keydown',function(e){ if((e.key==='Enter'||e.key===' ')&&e.target===$('cAdmin')){ e.preventDefault(); open_(); } });
+  function submit(){
+    var v=($('akIn').value||'').trim(), m=/[?&]a=([A-Za-z0-9]+)/.exec(v)||/^([A-Za-z0-9]{20,})$/.exec(v);
+    if(!m){ $('akMsg').textContent='운영자 링크가 아닙니다. 주소에 ?a= 가 들어 있는 링크를 넣어 주세요.'; return; }
+    try{ localStorage.setItem('hsMgKey',m[1]); }catch(e){}
+    go(m[1]);
+  }
+  $('akGo').addEventListener('click',submit);
+  $('akIn').addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
+  $('akClrA').addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); try{ localStorage.removeItem('hsMgKey'); }catch(x){} refresh(); });
+  refresh();
+})();
+</script>
+</body>
+</html>
