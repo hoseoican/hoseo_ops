@@ -53,3 +53,9 @@ python3 src/build.py      # → app.html, index.html
 ## Tampermonkey 스크립트
 - `hoseo-sms-bridge.user.js`(0.1.1): 운영 관리 → i-ONE 캠퍼스 문자. 깃허브 화면 주소를 추가했다.
 - `docs/hoseo-mail-bridge.user.js`(0.3.3): 강사서류 → 호서대 웹메일. 새 주소를 추가했고, 이미 설치한 스크립트는 예전 주소의 파일을 통해 자동 업데이트된다.
+
+## 강사 명단 · 강사 화면 연결 (3단계)
+- 강사서류 「운영 관리에서」: 운영 관리 강사 명단에서 골라 이름·연락처·이메일·주강사/보조강사를 채워 등록(한 방향). 「9 강사서류」 안에서는 운영 관리가 이미 받은 명단을 바로 씀, 따로 열면 `docsInstList`(DOCS_CODE 확인).
+- 강사 수업 신청 화면 「서류 제출」: 운영 관리 서버 `teacherDocsTicket`이 HMAC 확인증(6시간)을 만들고, 강사서류 서버 `lsso`가 그 강사의 유효한 제출 링크를 찾아 `docs/apply.html?t=…#sso=…`로 연다(본인 확인 생략). 서명 키 = DOCS_CODE = 강사서류 ACCESS_CODE.
+- 운영현황 시트는 현행 유지(자동 기록 없음).
+- 강사 화면 속도: `teacherSession_`이 강사 기록을 캐시(`ti_<id>`, 10분, 명단 저장 시 `instv`로 무효화).
