@@ -256,7 +256,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.39';
+const APP_VER = '11.40';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -316,7 +316,7 @@ function adminBoot() {
   const startView = () => (new URLSearchParams(location.search).get('v') === 'docs' && !S.adminOrg) ? 'docs' : 'board';
   const use = d => {
     const first = aUse(d, false);
-    S.ui.view = startView(); S.ui.scope = '';
+    S.ui.view = startView(); S.ui.scope = ''; S.ui.loadH = d.h || '';
     render(); setSave('불러옴 · ' + now());
     showMissing(d.missing); admCachePut(d);
     if (first) { toast('처음 실행입니다. 기본 설정을 저장했습니다. [교육청 목록 업로드]와 기준정보의 [강사 DB 업로드]로 시작하세요'); adminPersist(); }
@@ -327,7 +327,7 @@ function adminBoot() {
     ADM_TIMER = setInterval(() => {
       if (!S || !ADMIN_KEY) return;
       if (saving || dirtyPayload() || S.ui.drawer || typing() || S.ui.pending || S.ui.idbPending) return;
-      run('adminLoad', ADMIN_KEY).then(d2 => { if (saving || dirtyPayload() || typing() || S.ui.drawer) return; aUse(d2, true); render(); setSave('최신 내용 · ' + now()); }).catch(() => {});
+      run('adminLoad', ADMIN_KEY, false, S.ui.loadH || '').then(d2 => { if (d2 && d2.same) { setSave('최신 내용 · ' + now()); return; } if (saving || dirtyPayload() || typing() || S.ui.drawer) return; aUse(d2, true); S.ui.loadH = d2.h || ''; render(); setSave('최신 내용 · ' + now()); }).catch(() => {});
     }, 60000);
   };
   if (ADM_PRELOAD) { const d = ADM_PRELOAD; ADM_PRELOAD = null; use(d); }
