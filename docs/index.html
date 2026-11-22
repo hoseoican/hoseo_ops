@@ -1042,6 +1042,7 @@ if(EMBED) document.documentElement.classList.add('embed');
   <div class="act"><button type="button" id="impClose">확인</button></div>
 </div></div>
 
+<script src="../config.js"></script>
 <script src="cfb.min.js"></script>
 <script src="pako.min.js"></script>
 <script src="jszip.min.js"></script>
@@ -1056,7 +1057,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.22-2';
+var APP_VERSION = '2026.11.22-3';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2963,43 +2964,67 @@ function gasOn(){ return !!(gas.url && gas.code); }
 /* ---------- 입장 접근 코드 (운영현황 구글 시트 연동용 접근 코드와 같은 코드. 한 번 넣으면 이 브라우저에 기억) ---------- */
 var gateTemp=false;   /* 「이 브라우저에 기억」을 끈 경우: 이름·접근 코드는 이 창(탭)에만 */
 function gasKeep(){ return kvPut('gas', gateTemp ? Object.assign({}, gas, { code: '' }) : gas); }
-function gateAsk(msg){
-  var needCode=!gas.code;
+/* 입장: 운영 관리 관리자 계정(접속 구분·관리자·비밀번호)으로 로그인 → 운영 관리 서버가 강사서류 접근 코드를 넘겨줌 */
+function opsRpc(fn, args){
+  if(!window.OPS_API) return Promise.reject(new Error('운영 관리 서버 주소(config.js)를 읽지 못했습니다.'));
+  return fetch(window.OPS_API, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args||[] }) })
+    .then(function(r){ return r.text(); }, function(){ throw new Error('운영 관리 서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.'); })
+    .then(function(t){ var j; try{ j=JSON.parse(t); }catch(e){ throw new Error('운영 관리 서버 응답을 읽지 못했습니다.'); } if(!j.ok) throw new Error(j.error||'처리하지 못했습니다'); return j.r; });
+}
+async function gateApply(r, nm, keep){
+  gas.code = r.code; gasInfo = await gasCall('ping'); gas.acct = true;
+  sy.me = r.master ? (nm || sy.me || '총괄 관리자') : r.name; sy.on = true; gateTemp = !keep;
+  try{ if(keep) sessionStorage.removeItem('docsGate'); else sessionStorage.setItem('docsGate', JSON.stringify({ code: gas.code, me: sy.me })); }catch(x){}
+  await gasKeep(); sySave();
+}
+async function gateAsk(msg){
+  /* 운영 관리 「9 강사서류」 안: 이미 로그인한 운영 접속으로 바로 */
+  if(EMBED){ try{ var top=window.top; if(top.opsDocsAuth){ var r0=await top.opsDocsAuth(); await gateApply(r0, '', true); return true; } }catch(e){ msg = msg || e.message; } }
   return new Promise(function(done){
-    var o=document.createElement('div'), F='width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cfc7c7;border-radius:8px;font:inherit;font-size:15px;margin-top:4px';
+    var o=document.createElement('div'), F='width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cfc7c7;border-radius:8px;font:inherit;font-size:15px;margin-top:4px;background:#fff', L='display:block;font-size:13px;font-weight:600;margin-bottom:10px';
     o.style.cssText='position:fixed;inset:0;z-index:99999;background:#f4f1ee;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
-    o.innerHTML='<form style="background:#fff;border:1px solid #ddd5d5;border-radius:14px;padding:26px 24px;width:100%;max-width:340px;box-shadow:0 6px 24px rgba(0,0,0,.08)">'
-      +'<h2 style="margin:0 0 6px;font-size:18px;color:#7d1a1f">강사서류</h2>'
-      +'<p style="margin:0 0 14px;font-size:13px;color:#6b6262;line-height:1.5">관계자만 들어올 수 있습니다. 한 번만 입력하면 이 브라우저에 기억합니다.</p>'
-      +'<label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">내 이름<input class="gname" autocomplete="name" placeholder="누가 고쳤는지 표시됩니다" style="'+F+'"></label>'
-      +(needCode?'<label style="display:block;font-size:13px;font-weight:600">접근 코드<input class="gcode" type="password" autocomplete="off" placeholder="운영현황 연동 접근 코드" style="'+F+'"></label>':'')
-      +'<label style="display:flex;align-items:center;gap:6px;margin-top:12px;font-size:13px;color:#4a4242;cursor:pointer"><input type="checkbox" class="gkeep" checked style="width:16px;height:16px;margin:0">이 브라우저에 기억하기 (다음부터 바로 열림)</label>'
-      +'<p class="gmsg" style="min-height:18px;margin:8px 0;font-size:12.5px;color:#b3261e"></p>'
-      +'<button type="submit" style="width:100%;padding:10px;border:0;border-radius:8px;background:#7d1a1f;color:#fff;font:inherit;font-size:14.5px;cursor:pointer">들어가기</button></form>';
     document.body.appendChild(o);
-    var f=o.firstChild, nm=f.querySelector('.gname'), inp=f.querySelector('.gcode'), m=f.querySelector('.gmsg'), b=f.querySelector('button');
-    nm.value=sy.me||''; m.textContent=msg||''; (nm.value && inp ? inp : nm).focus();
-    f.onsubmit=async function(e){
-      e.preventDefault(); var n=nm.value.trim(), c=inp ? inp.value.trim() : gas.code;
-      if(!n){ m.textContent='이름을 입력해 주세요.'; nm.focus(); return; }
-      if(!c){ m.textContent='접근 코드를 입력해 주세요.'; inp.focus(); return; }
-      b.disabled=true; b.textContent='확인 중…'; m.textContent='';
-      try{
-        var keep=f.querySelector('.gkeep').checked;
-        if(inp){ gas.code=c; gasInfo=await gasCall('ping'); }
-        sy.me=n; sy.on=true; gateTemp=!keep;
-        try{ if(keep) sessionStorage.removeItem('docsGate'); else sessionStorage.setItem('docsGate', JSON.stringify({ code: gas.code, me: n })); }catch(x){}
-        await gasKeep(); sySave(); o.remove(); done(true);
-      }catch(er){
-        if(inp) gas.code=''; b.disabled=false; b.textContent='들어가기';
-        m.textContent = er.code==='code' ? '접근 코드가 맞지 않습니다.' : er.message; if(inp) inp.select();
-      }
-    };
+    var bizL=[], who='', err=msg||'';
+    try{ who=localStorage.getItem('anc_admwho')||''; }catch(e){}
+    function card(inner){ o.innerHTML='<form style="background:#fff;border:1px solid #ddd5d5;border-radius:14px;padding:26px 24px;width:100%;max-width:340px;box-shadow:0 6px 24px rgba(0,0,0,.08)">'
+      +'<h2 style="margin:0 0 6px;font-size:18px;color:#7d1a1f">강사서류</h2>'
+      +'<p style="margin:0 0 14px;font-size:13px;color:#6b6262;line-height:1.5">운영 관리 관리자 계정으로 들어갑니다.</p>'+inner+'</form>'; return o.firstChild; }
+    function draw(){
+      if(who && !bizL.some(function(b){ return b.k===who; })) who='';
+      var b=bizL.filter(function(x){ return x.k===who; })[0], master=!who;
+      var f=card('<label style="'+L+'">접속 구분<select class="gwho" style="'+F+'"><option value="">총괄 관리자 (모든 사업)</option>'
+        +bizL.map(function(x){ return '<option value="'+esc(x.k)+'"'+(x.k===who?' selected':'')+'>'+esc(x.center)+' · '+esc(x.name)+'</option>'; }).join('')+'</select></label>'
+        +(master ? '<label style="'+L+'">내 이름<input class="gname" autocomplete="name" placeholder="누가 고쳤는지 표시됩니다" style="'+F+'"></label>'
+          : (b && b.admins.length ? '<label style="'+L+'">관리자<select class="gadm" style="'+F+'">'+b.admins.map(function(n){ return '<option'+(n===sy.me?' selected':'')+'>'+esc(n)+'</option>'; }).join('')+'</select></label>' : '<p style="font-size:13px;color:#6b6262">이 사업의 관리자 계정이 없습니다. 운영 관리 「계정 관리」에서 만들어 주세요.</p>'))
+        +'<label style="'+L+'">비밀번호<input class="gpw" type="password" autocomplete="current-password" style="'+F+'"></label>'
+        +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#4a4242;cursor:pointer"><input type="checkbox" class="gkeep" checked style="width:16px;height:16px;margin:0">이 브라우저에 기억하기 (다음부터 바로 열림)</label>'
+        +'<p class="gmsg" style="min-height:18px;margin:8px 0;font-size:12.5px;color:#b3261e"></p>'
+        +'<button type="submit" style="width:100%;padding:10px;border:0;border-radius:8px;background:#7d1a1f;color:#fff;font:inherit;font-size:14.5px;cursor:pointer">들어가기</button>');
+      var m=f.querySelector('.gmsg'), pw=f.querySelector('.gpw'), nm=f.querySelector('.gname'), btn=f.querySelector('button');
+      m.textContent=err; if(nm) nm.value=sy.me||'';
+      f.querySelector('.gwho').onchange=function(e){ who=e.target.value; try{ localStorage.setItem('anc_admwho', who); }catch(x){} err=''; draw(); };
+      (nm && !nm.value ? nm : pw).focus();
+      f.onsubmit=async function(e){
+        e.preventDefault(); m.textContent='';
+        var n = nm ? nm.value.trim() : '', adm = (f.querySelector('.gadm')||{}).value || '';
+        if(master && !n){ m.textContent='이름을 입력해 주세요.'; nm.focus(); return; }
+        if(!master && !adm) return;
+        if(!pw.value){ m.textContent='비밀번호를 입력해 주세요.'; pw.focus(); return; }
+        btn.disabled=true; btn.textContent='확인 중…';
+        try{
+          var r = await opsRpc('docsLogin', [pw.value, who, adm]);
+          await gateApply(r, n, f.querySelector('.gkeep').checked);
+          o.remove(); done(true);
+        }catch(er){ gas.code=''; btn.disabled=false; btn.textContent='들어가기'; m.textContent = er.code==='code' ? '강사서류 접근 코드가 운영 관리 설정(DOCS_CODE)과 다릅니다. 운영 담당자에게 알려 주세요.' : er.message; pw.select(); }
+      };
+    }
+    card('<p style="font-size:13px;color:#6b6262">불러오는 중…</p>');
+    opsRpc('adminGate', ['']).then(function(g){ bizL=g.biz||[]; draw(); }, function(e){ card('<p style="font-size:13px;color:#b3261e;line-height:1.5">'+esc(e.message)+'</p><button type="button" onclick="location.reload()" style="width:100%;padding:10px;border:0;border-radius:8px;background:#7d1a1f;color:#fff;font:inherit;cursor:pointer">다시 시도</button>'); });
   });
 }
 async function gateEnsure(){
-  if(!gas.code || !sy.me){ try{ var t=JSON.parse(sessionStorage.getItem('docsGate')||'null'); if(t && t.code && t.me){ gas.code=t.code; sy.me=t.me; gateTemp=true; } }catch(e){} }
-  if(!gas.code || !sy.me) await gateAsk('');
+  if(!gas.code || !sy.me || !gas.acct){ try{ var t=JSON.parse(sessionStorage.getItem('docsGate')||'null'); if(t && t.code && t.me){ gas.code=t.code; sy.me=t.me; gas.acct=true; gateTemp=true; } }catch(e){} }
+  if(!gas.code || !sy.me || !gas.acct) await gateAsk('');
 }
 async function gasCall(action, extra){
   if(!gasOn()) throw { message: '구글 시트 연동 설정이 없습니다. 「운영현황 → 구글 시트 연동」에서 연동 주소와 접근 코드를 넣어 주세요' };
