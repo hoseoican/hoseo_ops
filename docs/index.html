@@ -1056,7 +1056,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.21-17';
+var APP_VERSION = '2026.11.22-1';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1680,7 +1680,7 @@ function rosterDelete(){
   if(!confirm('선택한 강사 '+sel.length+'명의 자료를 지웁니다.\n'+names.slice(0,12).join(', ')+(names.length>12?' 외 '+(names.length-12)+'명':'')+'\n\n지운 자료는 되돌릴 수 없습니다. 필요하면 먼저 「데이터 백업·복원」으로 백업해 주세요. 계속할까요?')) return;
   var ids={}; sel.forEach(function(p){ ids[p.id]=1; dbDel(p.id); });
   people=people.filter(function(p){ return !ids[p.id]; }); rsSel={};
-  if(!cur || ids[cur.id]) cur = people[0] || newPerson();
+  if(!cur || ids[cur.id]) cur = people[0] || blank();
   renderAll(); toast(sel.length+'명의 자료를 지웠습니다');
 }
 
@@ -1860,7 +1860,7 @@ function askDelete(id){
   var p=people.filter(function(x){return x.id===id;})[0]; if(!p) return;
   if(pendingDel!==id){ pendingDel=id; toast('× 를 한 번 더 누르면 「'+(p.name||'이름 없음')+'」 자료를 지웁니다'); setTimeout(function(){ if(pendingDel===id) pendingDel=null; },3000); return; }
   pendingDel=null; dbDel(id); people=people.filter(function(x){return x.id!==id;});
-  if(cur&&cur.id===id) cur = people[0] || newPerson();
+  if(cur&&cur.id===id) cur = people[0] || blank();
   renderAll();
 }
 function renderForm(){
@@ -2141,7 +2141,7 @@ function bind(){
   $('btnPrev').onclick=function(){ var i=PAGES.indexOf(page); if(i>0) go(PAGES[i-1]); };
   $('btnNext').onclick=function(){ var i=PAGES.indexOf(page); if(i<PAGES.length-1) go(PAGES[i+1]); };
   $('btnAddSchool').onclick=function(){ cur.schools.push(''); renderSchools(); var l=$('schools').querySelectorAll('input'); l[l.length-1].focus(); };
-  $('btnNew').onclick=function(){ cur=newPerson(); renderAll(); go('info'); $('name').focus(); };
+  $('btnNew').onclick=function(){ cur=blank(); renderAll(); go('info'); $('name').focus(); };
   $('btnCopy').onclick=function(){ try{ navigator.clipboard.writeText(subject(cur)).then(function(){ toast('메일 제목을 복사했습니다'); }, function(){ toast('복사가 막혀 있습니다. 제목을 직접 선택해 주세요'); }); }catch(e){ toast('복사가 막혀 있습니다. 제목을 직접 선택해 주세요'); } };
   $('btnMake').onclick=make;
   $('btnDrive').onclick=function(){ driveSave($('btnDrive'), [{ p:cur, only:null }], '강사별', 0); };
@@ -2962,32 +2962,36 @@ var gas = { url: GAS_DEFAULT_URL, code: '', auto: true }, gasInfo = null, gasOps
 function gasOn(){ return !!(gas.url && gas.code); }
 /* ---------- 입장 접근 코드 (운영현황 구글 시트 연동용 접근 코드와 같은 코드. 한 번 넣으면 이 브라우저에 기억) ---------- */
 function gateAsk(msg){
+  var needCode=!gas.code;
   return new Promise(function(done){
-    var o=document.createElement('div');
+    var o=document.createElement('div'), F='width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cfc7c7;border-radius:8px;font:inherit;font-size:15px;margin-top:4px';
     o.style.cssText='position:fixed;inset:0;z-index:99999;background:#f4f1ee;display:flex;align-items:center;justify-content:center;padding:20px;font-family:inherit';
     o.innerHTML='<form style="background:#fff;border:1px solid #ddd5d5;border-radius:14px;padding:26px 24px;width:100%;max-width:340px;box-shadow:0 6px 24px rgba(0,0,0,.08)">'
       +'<h2 style="margin:0 0 6px;font-size:18px;color:#7d1a1f">강사서류</h2>'
-      +'<p style="margin:0 0 14px;font-size:13px;color:#6b6262;line-height:1.5">관계자만 들어올 수 있습니다.<br>접근 코드를 입력해 주세요. (한 번만 입력하면 됩니다)</p>'
-      +'<input type="password" autocomplete="off" placeholder="접근 코드" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cfc7c7;border-radius:8px;font:inherit;font-size:15px">'
+      +'<p style="margin:0 0 14px;font-size:13px;color:#6b6262;line-height:1.5">관계자만 들어올 수 있습니다. 한 번만 입력하면 이 브라우저에 기억합니다.</p>'
+      +'<label style="display:block;font-size:13px;font-weight:600;margin-bottom:10px">내 이름<input class="gname" autocomplete="name" placeholder="누가 고쳤는지 표시됩니다" style="'+F+'"></label>'
+      +(needCode?'<label style="display:block;font-size:13px;font-weight:600">접근 코드<input class="gcode" type="password" autocomplete="off" placeholder="운영현황 연동 접근 코드" style="'+F+'"></label>':'')
       +'<p class="gmsg" style="min-height:18px;margin:8px 0;font-size:12.5px;color:#b3261e"></p>'
       +'<button type="submit" style="width:100%;padding:10px;border:0;border-radius:8px;background:#7d1a1f;color:#fff;font:inherit;font-size:14.5px;cursor:pointer">들어가기</button></form>';
     document.body.appendChild(o);
-    var f=o.firstChild, inp=f.querySelector('input'), m=f.querySelector('.gmsg'), b=f.querySelector('button');
-    m.textContent=msg||''; inp.focus();
+    var f=o.firstChild, nm=f.querySelector('.gname'), inp=f.querySelector('.gcode'), m=f.querySelector('.gmsg'), b=f.querySelector('button');
+    nm.value=sy.me||''; m.textContent=msg||''; (nm.value && inp ? inp : nm).focus();
     f.onsubmit=async function(e){
-      e.preventDefault(); var c=inp.value.trim(); if(!c) return;
+      e.preventDefault(); var n=nm.value.trim(), c=inp ? inp.value.trim() : gas.code;
+      if(!n){ m.textContent='이름을 입력해 주세요.'; nm.focus(); return; }
+      if(!c){ m.textContent='접근 코드를 입력해 주세요.'; inp.focus(); return; }
       b.disabled=true; b.textContent='확인 중…'; m.textContent='';
       try{
-        gas.code=c; var j=await gasCall('ping');
-        await kvPut('gas', gas); gasInfo=j; o.remove(); done(true);
+        if(inp){ gas.code=c; gasInfo=await gasCall('ping'); await kvPut('gas', gas); }
+        sy.me=n; sy.on=true; sySave(); o.remove(); done(true);
       }catch(er){
-        gas.code=''; b.disabled=false; b.textContent='들어가기';
-        m.textContent = er.code==='code' ? '접근 코드가 맞지 않습니다.' : er.message; inp.select();
+        if(inp) gas.code=''; b.disabled=false; b.textContent='들어가기';
+        m.textContent = er.code==='code' ? '접근 코드가 맞지 않습니다.' : er.message; if(inp) inp.select();
       }
     };
   });
 }
-async function gateEnsure(){ if(!gas.code) await gateAsk(''); }
+async function gateEnsure(){ if(!gas.code || !sy.me) await gateAsk(''); }
 async function gasCall(action, extra){
   if(!gasOn()) throw { message: '구글 시트 연동 설정이 없습니다. 「운영현황 → 구글 시트 연동」에서 연동 주소와 접근 코드를 넣어 주세요' };
   var res;
@@ -3025,7 +3029,7 @@ async function gasPing(quiet){
 /* ---------- 강사 자료 공유 (공유드라이브 + 나눠 읽기) ----------
    people.json(강사 입력값)은 바뀐 강사만 받고, 스캔본·사진·서명은 그 강사를 열 때만 받는다.
    sy.dirty: 아직 올리지 않은 강사 {id: 1 | {del:1}} · sy.conf: 충돌 {id: 공유 자료} · sy.dup: 같은 이름이 이미 공유돼 올리지 않은 강사 id */
-var sy = { on: false, me: '', rev: 0, dirty: {}, conf: {}, dup: [], last: 0, started: false, notes: {}, nInit: false }, syBusy = false, syAgain = false, syTimer = null, syPushT = null, syMsg = '';
+var sy = { on: true, me: '', rev: 0, dirty: {}, conf: {}, dup: [], last: 0, started: false, notes: {}, nInit: false }, syBusy = false, syAgain = false, syTimer = null, syPushT = null, syMsg = '';
 function syReady(){ return sy.on && gasOn() && gasInfo && gasInfo.data; }
 function sySave(){ kvPut('sync', { on: sy.on, me: sy.me, rev: sy.rev, dirty: sy.dirty, conf: sy.conf, dup: sy.dup, last: sy.last, started: sy.started, notes: sy.notes||{}, nInit: !!sy.nInit }); }
 function syMark(id){ if(!id) return; if(!(sy.dirty[id] && sy.dirty[id].del)) sy.dirty[id] = 1; sySave(); syKick(); }
@@ -3099,7 +3103,7 @@ async function syPull(){
   r.people.forEach(function(x){
     var old = people.filter(function(p){ return p.id === x.id; })[0], dirty = sy.dirty[x.id];
     if(x.deleted){
-      if(old && !dirty){ people = people.filter(function(p){ return p !== old; }); dbDel(x.id, true); listChanged = true; if(cur === old){ cur = people[0] || newPerson(); curChanged = true; } }
+      if(old && !dirty){ people = people.filter(function(p){ return p !== old; }); dbDel(x.id, true); listChanged = true; if(cur === old){ cur = people[0] || blank(); curChanged = true; } }
       return;
     }
     if(old && old._rev === x.rev) return;
@@ -3197,7 +3201,7 @@ function bindSync(){
     var id = b.dataset.syk || b.dataset.syr || b.dataset.syd || b.dataset.syu;
     if(b.dataset.syk){ delete sy.conf[id]; sy.dirty[id] = 1; syPushOne.force[id] = 1; sySave(); syRun(true); }
     else if(b.dataset.syr){ var c = sy.conf[id], old = people.filter(function(x){ return x.id === id; })[0]; delete sy.conf[id]; delete sy.dirty[id]; if(c && c.data){ var p = syFromRemote(c, old); if(syReplace(p, old)){ renderAll(); syLoadCur(p); } else renderList(); } sySave(); syRender(); }
-    else if(b.dataset.syd){ var p2 = people.filter(function(x){ return x.id === id; })[0]; if(!p2 || !confirm('이 브라우저의 「'+p2.name+'」 자료를 지우고 공유 자료를 씁니다. 계속할까요?')) return; sy.dup = sy.dup.filter(function(x){ return x !== id; }); dbDel(id, true); delete sy.dirty[id]; people = people.filter(function(x){ return x !== p2; }); if(cur === p2) cur = people[0] || newPerson(); sySave(); renderAll(); syRender(); }
+    else if(b.dataset.syd){ var p2 = people.filter(function(x){ return x.id === id; })[0]; if(!p2 || !confirm('이 브라우저의 「'+p2.name+'」 자료를 지우고 공유 자료를 씁니다. 계속할까요?')) return; sy.dup = sy.dup.filter(function(x){ return x !== id; }); dbDel(id, true); delete sy.dirty[id]; people = people.filter(function(x){ return x !== p2; }); if(cur === p2) cur = people[0] || blank(); sySave(); renderAll(); syRender(); }
     else if(b.dataset.syu){ sy.dup = sy.dup.filter(function(x){ return x !== id; }); sy.dirty[id] = 1; sySave(); syRun(true); }
   });
   syRender();
@@ -3581,16 +3585,17 @@ openDb().then(async function(){
   var sl=await kvGet('smsLog'); if(sl) smsLog=sl;
   var mc=await kvGet('mailCfg'); if(mc){ delete mc.html; delete mc.notice; delete mc.oldBody; if(!mc.ver || mc.ver<DEFAULT_MAIL.ver){ if(!mc.body || mc.body===DEFAULT_MAIL.notice || mc.body===MAIL_V6.body) mc.body=DEFAULT_MAIL.body; if(!mc.subject || mc.subject===MAIL_V6.subject) mc.subject=DEFAULT_MAIL.subject; if(mc.ver<9 && mc.body && mc.body.indexOf('범죄경력조회 동의서만 보내 드리는 이유')>=0){ mc.bodyOut=mc.body.replace('■ 부탁드리는 사항','■ 협조사항'); mc.subjectOut=mc.subject; mc.body=DEFAULT_MAIL.body; mc.subject=DEFAULT_MAIL.subject; } else if(mc.ver<7){ delete mc.bodyOut; delete mc.subjectOut; } if(mc.ver<10){ ['  - 그 밖의 서류(이력서, 신분증·통장 사본, 개인정보 동의서, 서약서 등)는 기관마다 쓰는 양식과 필요한 서류가 달라 센터에서 일괄로 작성해 드리지 않습니다.','  - 개인정보는 필요한 범위에서만 주고받는 것이 원칙이므로(개인정보 보호법), 기관에 필요한 서류는 강사님께 직접 받아 주시기 바랍니다.'].forEach(function(l){ if(mc.bodyOut) mc.bodyOut=mc.bodyOut.replace('\n'+l,''); }); if(mc.body) mc.body=mc.body.replace('  - 검토하시고 보완이 필요한 서류가 있으면 회신 부탁드립니다.','  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.'); } mc.ver=DEFAULT_MAIL.ver; } mailCfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_MAIL)), mc); }
   var gs=await kvGet('gas'); if(gs) gas=Object.assign(gas, gs); if(!gas.url) gas.url=GAS_DEFAULT_URL;
-  await gateEnsure();
   var cc=await kvGet('certCfg'); if(cc) applyCertCfg(cc, false);
   var cl=await kvGet('certLog'); if(cl) certLog=cl;
   var cpp=await kvGet('certPeople'); if(cpp) certSaved=cpp;
   var crc=await kvGet('certRecent'); if(crc) certRecent=crc;
   var syv=await kvGet('sync'); if(syv) sy=Object.assign(sy, syv);
+  await gateEnsure();
   bindGas();
   people = await dbAll();
+  people = people.filter(function(p){ var e = !String(p.name||'').trim() && !p.rrn && !p.phone && !p.email && !p.address && !Object.keys(p.imgs||{}).length && !Object.keys(p.pdfs||{}).length; if(e) dbDel(p.id, true); return !e; });
   people.forEach(function(p){ p.imgs=p.imgs||{}; p.pdfs=p.pdfs||{}; p.schools=p.schools||['']; if(normRowDates(p)) dbPut(p, true); });
-  cur = people.sort(function(a,b){return (b.updated||0)-(a.updated||0);})[0] || newPerson();
+  cur = people.sort(function(a,b){return (b.updated||0)-(a.updated||0);})[0] || blank();
   renderAll(); go(page, true); syLoadCur(cur); syRender();
   bkInit();
   if(gasOn()) gasPing(true).then(function(ok){ if(ok) syStart(); if(ok && gas.auto!==false) loadOpsLinks(true); else if(page==='cert') renderCert(); });
