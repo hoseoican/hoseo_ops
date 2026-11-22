@@ -227,7 +227,7 @@ function showAdminLogin(pwSet, after, bizL) {
     const b = bizL.find(x => x.k === who), master = !who;
     box.innerHTML = `<form class="admcard stack" autocomplete="on">
     <span class="logo-h" role="img" aria-label="호서대학교"></span>
-    <div><h2>초등방과후 프로그램 운영 관리</h2><div class="small muted" style="margin-top:4px">센터(사업)를 고르고 관리자 비밀번호를 입력해 주세요.</div></div>
+    <div><h2>초등방과후 프로그램 운영 관리</h2></div>
     <label class="f">접속 구분<select id="adm-who">${pwSet || !master ? '' : ''}<option value="" ${master ? 'selected' : ''}>총괄 관리자 (모든 사업)</option>${bizL.map(x => `<option value="${x.k}" ${x.k === who ? 'selected' : ''}>${x.center} · ${x.name}</option>`).join('')}</select></label>
     ${master ? '' : (b && b.admins.length ? `<label class="f">관리자<select id="adm-name">${b.admins.map(n => `<option ${n === AN ? 'selected' : ''}>${n}</option>`).join('')}</select></label>` : '<div class="notice small">이 사업의 관리자 계정이 아직 없습니다. 총괄 관리자가 「기준정보 → 관리자 계정」에서 만들어 주세요.</div>')}
     <input type="text" name="username" value="${master ? '총괄 관리자' : (b ? b.center : '')}" autocomplete="username" hidden>
@@ -235,7 +235,7 @@ function showAdminLogin(pwSet, after, bizL) {
     ${master && !pwSet ? '<div class="small muted">처음 접속입니다. 총괄 관리자 비밀번호(8자 이상)를 정해 주세요.</div><label class="f">비밀번호 한 번 더<input type="password" id="adm-pw2" autocomplete="new-password" required></label>' : ''}
     <button class="btn pri" type="submit" ${!master && !(b && b.admins.length) ? 'disabled' : ''}>${master && !pwSet ? '비밀번호 정하고 들어가기' : '들어가기'}</button>
     <div class="small lv-crit" id="adm-msg" role="alert"></div>
-    <div class="small muted">이 링크와 비밀번호는 운영 담당자만 알고 있어야 합니다.</div></form>`;
+    <div class="small muted">비밀번호는 운영 담당자만 알고 있어야 합니다.</div></form>`;
     const pw = box.querySelector('#adm-pw'), msg = box.querySelector('#adm-msg'), btn = box.querySelector('button');
     box.querySelector('#adm-who').addEventListener('change', e => { who = e.target.value; try { localStorage.setItem('anc_admwho', who); } catch (er) {} draw(); });
     setTimeout(() => pw.focus(), 50);
@@ -256,7 +256,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.38';
+const APP_VER = '11.39';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -319,7 +319,7 @@ function adminBoot() {
     S.ui.view = startView(); S.ui.scope = '';
     render(); setSave('불러옴 · ' + now());
     showMissing(d.missing); admCachePut(d);
-    if (first) { toast('처음 실행입니다. 기본 설정을 저장했습니다. [교육청 목록 올리기]와 기준정보의 [강사 DB 올리기]로 시작하세요'); adminPersist(); }
+    if (first) { toast('처음 실행입니다. 기본 설정을 저장했습니다. [교육청 목록 업로드]와 기준정보의 [강사 DB 업로드]로 시작하세요'); adminPersist(); }
     tick();
   };
   const tick = () => {
@@ -539,7 +539,7 @@ document.addEventListener('click', e => {
       const fmt = v => v instanceof Date ? `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}` : v;
       const aoa = B.aoa.map((r, i) => r.map((v, c) => i > 0 && (c === 28 || c === 29) && typeof v === 'number' ? hm(Math.round(v * 1440)) : fmt(v)));
       msg.textContent = '구글 시트를 만드는 중…';
-      run('adminExportToSheet', ADMIN_KEY, aoa, `${season().name} 호서대 운영 목록`).then(url => { msg.innerHTML = `만들었습니다. <a href="${esc(url)}" target="_blank" rel="noopener">구글 시트 열기</a> → [파일 > 다운로드 > Microsoft Excel]`; }).catch(err => msg.textContent = errMsg(err));
+      run('adminExportToSheet', ADMIN_KEY, aoa, `${season().name} 호서대 운영현황`).then(url => { msg.innerHTML = `만들었습니다. <a href="${esc(url)}" target="_blank" rel="noopener">구글 시트 열기</a> → [파일 > 다운로드 > Microsoft Excel]`; }).catch(err => msg.textContent = errMsg(err));
       return;
     }
     if (a === 'regen') {
@@ -548,7 +548,7 @@ document.addEventListener('click', e => {
       return;
     }
     if (a === 'univlink') { stop(); el.disabled = true; run('adminUnivLink', ADMIN_KEY, el.dataset.o, !!el.dataset.regen).then(L => { S.univLinks = L || []; render(); toast(el.dataset.regen ? '새 링크를 만들었습니다. 이전 링크는 더 이상 열리지 않습니다' : '희망 강사 선택 링크를 만들었습니다'); }).catch(err => { el.disabled = false; toast(errMsg(err)); }); return; }
-    if (a === 'univview') { stop(); const L = (S.univLinks || []).find(x => x.org === el.dataset.o); if (L && L.link) window.open(L.link, '_blank', 'noopener'); else toast('먼저 「링크 만들기」를 눌러 주세요'); return; }
+    if (a === 'univview') { stop(); const L = (S.univLinks || []).find(x => x.org === el.dataset.o); if (L && L.link) window.open(L.link, '_blank', 'noopener'); else toast('먼저 「링크 생성」를 눌러 주세요'); return; }
     if (a === 'jok') {
       stop(); el.disabled = true;
       run('adminJoinDecide', ADMIN_KEY, id, true, '').then(res => { joinApplied(res); toast(`${res.req.school} 승인 · 새 확인 링크를 만들었습니다`); if (S.joinAutoMail !== false) joinSend(res.req.id, true); }).catch(err => { el.disabled = false; toast(errMsg(err)); });

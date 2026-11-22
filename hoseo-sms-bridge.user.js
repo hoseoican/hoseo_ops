@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         호서대 늘봄 문자 보내기 (i-ONE 캠퍼스 연결)
 // @namespace    hoseo-anchor-sms
-// @version      0.1.1
+// @version      0.1.2
 // @description  「초등방과후 프로그램 운영 관리」에서 고른 문자를 i-ONE 캠퍼스 「메시지전송(문자)」 화면에 받는 사람·제목·내용까지 채워 줍니다. 보내기는 담당자가 직접 누릅니다.
 // @match        https://hoseoican.github.io/hoseo_ops/*
 // @match        https://script.google.com/macros/*
@@ -96,7 +96,7 @@
       box.innerHTML = head + '<div style="margin:6px 0 10px">모든 문자를 처리했습니다.</div><button data-hs="close" style="' + bs(1) + '">닫기</button>';
       return;
     }
-    var st = steps.map(function (s) { return '<div>' + (s[0] ? '✅' : '⚠️') + ' ' + s[1] + '</div>'; }).join('');
+    var st = steps.map(function (s) { return '<div>' + (s[0] ? '완료' : '확인') + ' ' + s[1] + '</div>'; }).join('');
     box.innerHTML = head +
       '<div style="padding:8px 10px;background:#fbf1f1;border-radius:8px;margin-bottom:8px"><b>' + esc(j.name || '(이름 없음)') + '</b> <span style="font-family:monospace">' + esc(fmt(j.phone)) + '</span>' + (j.state === 'sent' ? ' <span style="color:#1f8a63">· 보냄</span>' : '') + '</div>' +
       (onSmsPage() ? '' : '<div style="color:#b3261e;margin-bottom:8px">「UMS서비스 → 메시지관리 → 메시지전송(문자)」 화면을 열어 주세요. 열리면 자동으로 채웁니다.</div>') +

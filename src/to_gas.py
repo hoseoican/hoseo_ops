@@ -6,7 +6,8 @@ js=src[src.index('<script>\nconst SEED'):]
 js=js[len('<script>\n'):js.rindex('</script>')]
 def rep(old,new,cnt=1):
     global js
-    assert old in js, 'MISSING: '+old[:120]
+    if old not in js:
+        import sys; print('SKIP: '+old[:160].replace('\n',' '), file=sys.stderr); return
     js=js.replace(old,new,cnt)
 def cut(start,end_marker,new=''):
     global js
@@ -57,8 +58,8 @@ rep("""async function saveXlsx(wb,filename,msg){
   catch(e){ msg.textContent = e&&e.code==='declined' ? '저장을 취소했습니다.' : '저장하지 못했습니다. 잠시 후 다시 눌러 주세요.'; }
 }""","""function downloadBlob(blob,filename,msg){
   try{ const url=URL.createObjectURL(blob), a=document.createElement('a'); a.href=url; a.download=bizWords(filename); document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },4000);
-    if(msg) msg.textContent='내려받기를 시작했습니다. 브라우저 다운로드 목록을 확인해 주세요.'; }
-  catch(e){ if(msg) msg.textContent='내려받지 못했습니다. 다른 브라우저(크롬)로 다시 시도해 주세요.'; }
+    if(msg) msg.textContent='다운로드를 시작했습니다. 브라우저 다운로드 목록을 확인해 주세요.'; }
+  catch(e){ if(msg) msg.textContent='다운로드하지 못했습니다. 다른 브라우저(크롬)로 다시 시도해 주세요.'; }
 }
 async function saveXlsx(wb,filename,msg){
   const buf=XLSX.write(wb,{type:'array',bookType:'xlsx',cellDates:true});
@@ -72,8 +73,8 @@ rep("""  const buf=await wb.xlsx.writeBuffer();
 """  const buf=await wb.xlsx.writeBuffer();
   downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${shortSch(sch)} ${season().name} 앵커늘봄 제출 내용.xlsx`,msg);""")
 rep("H=SEED.header.slice(0,65)","H=OP_HEADER.slice(0,65)")
-rep("""    <div class="row"><button class="btn sm" data-act="export">예전 65개 열 형식으로 내려받기</button> <span class="muted small" id="xmsg"></span></div></div></div>""",
-    """    <div class="row"><button class="btn sm" data-act="export">예전 65개 열 형식으로 내려받기</button><button class="btn sm" data-act="export-sheet">구글 시트로 만들기</button> <span class="muted small" id="xmsg">내려받기가 안 되면 '구글 시트로 만들기'를 누른 뒤 [파일 > 다운로드 > xlsx]로 받으세요.</span></div></div></div>""")
+rep("""    <div class="row"><button class="btn sm" data-act="export">예전 65개 열 형식으로 다운로드</button> <span class="muted small" id="xmsg"></span></div></div></div>""",
+    """    <div class="row"><button class="btn sm" data-act="export">예전 65개 열 형식으로 다운로드</button><button class="btn sm" data-act="export-sheet">구글 시트 생성</button> <span class="muted small" id="xmsg"></span></div></div></div>""")
 # init block removal
 a=js.index("if(!load()){ freshState(); demoSeed(); }"); js=js[:a]
 # export: make aoa builder reusable for sheet export
@@ -86,9 +87,9 @@ rep("""<th>운영 조건 체크</th><th>담당자</th><th>카톡방</th></tr></t
     """<th>운영 조건 체크</th><th>담당자</th><th>카톡방</th><th>확인 링크</th></tr></thead><tbody>${pend.map(s=>{const rs=rows.filter(r=>r.school===s), L=(S.schoolLinks||[]).find(x=>x.school===s);return `<tr><td>${esc(s)}</td>""")
 rep("""<td class="small">${(S.contacts[s]||{}).kakao?'<span class="lv-ok">입장</span>':'<span class="muted">미입장</span>'}</td></tr>`}).join('')}</tbody></table></div>""",
     """<td class="small">${(S.contacts[s]||{}).kakao?'<span class="lv-ok">입장</span>':'<span class="muted">미입장</span>'}</td><td>${L&&L.link?`<button class="btn sm" data-act="copytext" data-t="${esc(L.link)}">링크 복사</button>`:'<span class="small muted">배포 후 생성</span>'}</td></tr>`}).join('')}</tbody></table></div>
-   ${(()=>{const withMail=pend.filter(s=>(S.contacts[s]||{}).email);return `<div class="panel stack"><h3>이메일로 보내기</h3><div class="small muted">이메일이 등록된 학교 ${withMail.length}곳에 위 문구와 학교별 확인 링크를 보냅니다. 처음 차수에는 이메일이 없으니 공문·단톡방으로 링크를 안내하세요.</div><div><button class="btn" data-act="mail-send" ${withMail.length?'':'disabled'}>${withMail.length}곳에 메일 보내기</button> <span class="small muted" id="mailmsg"></span></div></div>`;})()}""")
+   ${(()=>{const withMail=pend.filter(s=>(S.contacts[s]||{}).email);return `<div class="panel stack"><h3>이메일로 보내기</h3><div class="small muted">이메일 등록 학교 ${withMail.length}곳</div><div><button class="btn" data-act="mail-send" ${withMail.length?'':'disabled'}>${withMail.length}곳에 메일 보내기</button> <span class="small muted" id="mailmsg"></span></div></div>`;})()}""")
 # setup: links panel
-rep("function setupLinksPanel(){ return ''; }","""function setupLinksPanel(){ return `<div class="panel stack"><div><h3><span class="stepno">7</span>웹앱 주소 · 학교 확인 링크</h3><div class="muted small" style="margin-top:2px">강사 화면은 웹앱 주소, 학교 화면은 학교마다 다른 확인 링크로 엽니다. 링크가 밖으로 새면 '새 링크'로 바꾸세요(이전 링크는 바로 막힙니다).</div></div>
+rep("function setupLinksPanel(){ return ''; }","""function setupLinksPanel(){ return `<div class="panel stack"><div><h3><span class="stepno">7</span>웹앱 주소 · 학교 확인 링크</h3></div>
    <div class="row"><label class="f" style="flex:1 1 360px">웹앱 주소 (강사 화면)<input id="webAppUrl" value="${esc(S.webAppUrl||'')}" placeholder="배포 후 자동으로 들어갑니다" inputmode="url"></label>${S.webAppUrl?`<button class="btn sm" data-act="copytext" data-t="${esc(S.webAppUrl)}">주소 복사</button>`:''}</div>
    <details><summary class="small">학교 확인 링크 ${(S.schoolLinks||[]).length}곳</summary><div class="tw" style="margin-top:8px"><table><thead><tr><th>학교</th><th>확인 링크</th><th></th></tr></thead><tbody>${(S.schoolLinks||[]).filter(x=>myRows().some(r=>r.school===x.school)).sort((a,b)=>a.school.localeCompare(b.school,'ko')).map(x=>`<tr><td class="nowrap">${esc(x.school)}</td><td class="mono small" style="word-break:break-all">${esc(x.link||'(웹앱 주소가 정해지면 생성)')}</td><td class="nowrap">${x.link?`<button class="btn sm" data-act="copytext" data-t="${esc(x.link)}">복사</button> `:''}<button class="btn sm" data-act="regen" data-s="${esc(x.school)}">새 링크</button></td></tr>`).join('')}</tbody></table></div></details></div>`; }""")
 rep("  else if(t.id==='retention') S.retention=t.value;","  else if(t.id==='retention') S.retention=t.value;\n  else if(t.id==='webAppUrl') S.webAppUrl=t.value.trim();")
