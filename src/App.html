@@ -244,8 +244,9 @@ function showAdminLogin(pwSet, after, bizL) {
       if (master && !pwSet) { const p2 = box.querySelector('#adm-pw2').value; if (pw.value.length < 8) { msg.textContent = '8자 이상으로 정해 주세요.'; return; } if (pw.value !== p2) { msg.textContent = '두 비밀번호가 다릅니다.'; return; } }
       btn.disabled = true; btn.textContent = '확인 중…';
       const nm = (box.querySelector('#adm-name') || {}).value || '';
-      run('adminLogin', ADMIN_LINK, pw.value, master ? '' : who, nm).then(r => {
-        ADMIN_KEY = r.key; try { sessionStorage.setItem(ADM_SS, r.key); } catch (e) {}
+      /* 로그인과 자료 불러오기를 한 번에 (서버가 예전 버전이면 따로) */
+      run('adminLoginLoad', ADMIN_LINK, pw.value, master ? '' : who, nm).catch(e => /알 수 없는 요청/.test(errMsg(e)) ? run('adminLogin', ADMIN_LINK, pw.value, master ? '' : who, nm) : Promise.reject(e)).then(r => {
+        ADMIN_KEY = r.key; ADM_PRELOAD = r.data || null; try { sessionStorage.setItem(ADM_SS, r.key); } catch (e) {}
         box.remove(); if (after) after();
       }).catch(e => { btn.disabled = false; btn.textContent = '들어가기'; msg.textContent = errMsg(e); pw.select(); });
     });
@@ -255,7 +256,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.35';
+const APP_VER = '11.36';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -288,7 +289,7 @@ function adminLogoutGo() {
     const k = ADMIN_KEY;
     run('adminLogout', k).catch(() => {}).then(() => {
       if (ADM_TIMER) { clearInterval(ADM_TIMER); ADM_TIMER = null; }
-      try { sessionStorage.removeItem(ADM_SS); } catch (e) {}
+      try { sessionStorage.removeItem(ADM_SS); sessionStorage.removeItem('anc_admdata'); } catch (e) {}
       ADMIN_KEY = '';
       const w = document.getElementById('admWho'); if (w) { w.innerHTML = ''; delete w.dataset.who; }
       document.getElementById('tabs').innerHTML = ''; document.getElementById('seasonLbl').textContent = ''; setSave(''); docsShow(false);
@@ -305,24 +306,46 @@ function showMissing(L) {
   if (!el) { el = document.createElement('div'); el.id = 'missBar'; el.className = 'notice bad'; el.style.cssText = 'margin:10px auto;max-width:1400px'; const a = document.getElementById('app'); a.parentNode.insertBefore(el, a); }
   el.textContent = '연결하지 못한 데이터: ' + L.map(x => x.name).join(', ') + ' — 접근 권한이 없어 이 데이터는 빼고 보여 줍니다. 해당 시트 파일을 운영 관리 배포 계정과 공유한 뒤, 앱스 스크립트 편집기에서 checkSheets 를 실행하면 다시 연결됩니다.';
 }
+/* 지난 화면 자료: 이 탭에만(sessionStorage) 두었다가 새로고침 때 먼저 보여 주고, 최신 자료가 오면 바꿈. 로그아웃하면 지움 */
+const ADM_CACHE = 'anc_admdata';
+function admCachePut(d) { try { sessionStorage.setItem(ADM_CACHE, JSON.stringify(d)); } catch (e) { try { sessionStorage.removeItem(ADM_CACHE); } catch (_) {} } }
+function admCacheGet() { try { return JSON.parse(sessionStorage.getItem(ADM_CACHE) || 'null'); } catch (e) { return null; } }
+let ADM_PRELOAD = null;   /* 로그인과 함께 받은 자료 */
 function adminBoot() {
   /* 새로 열면 항상: 공개 중인 시기 · 학교 · 목록 업로드 화면 */
-  run('adminLoad', ADMIN_KEY, true).then(d => {
+  const startView = () => (new URLSearchParams(location.search).get('v') === 'docs' && !S.adminOrg) ? 'docs' : 'board';
+  const use = d => {
     const first = aUse(d, false);
-    S.ui.view = (new URLSearchParams(location.search).get('v') === 'docs' && !S.adminOrg) ? 'docs' : 'board'; S.ui.scope = '';
+    S.ui.view = startView(); S.ui.scope = '';
     render(); setSave('불러옴 · ' + now());
-    showMissing(d.missing);
+    showMissing(d.missing); admCachePut(d);
     if (first) { toast('처음 실행입니다. 기본 설정을 저장했습니다. [교육청 목록 올리기]와 기준정보의 [강사 DB 올리기]로 시작하세요'); adminPersist(); }
+    tick();
+  };
+  const tick = () => {
     if (ADM_TIMER) clearInterval(ADM_TIMER);
     ADM_TIMER = setInterval(() => {
       if (!S || !ADMIN_KEY) return;
       if (saving || dirtyPayload() || S.ui.drawer || typing() || S.ui.pending || S.ui.idbPending) return;
       run('adminLoad', ADMIN_KEY).then(d2 => { if (saving || dirtyPayload() || typing() || S.ui.drawer) return; aUse(d2, true); render(); setSave('최신 내용 · ' + now()); }).catch(() => {});
     }, 60000);
-  }).catch(e => {
-    if (ADMIN_LINK && /만료/.test(errMsg(e))) { try { sessionStorage.removeItem(ADM_SS); } catch (_) {} ADMIN_KEY = ''; adminAskLogin(adminBoot); return; }
-    fatal(e);
-  });
+  };
+  if (ADM_PRELOAD) { const d = ADM_PRELOAD; ADM_PRELOAD = null; use(d); }
+  else {
+    /* 새로고침: 지난 자료를 먼저 보여 줌. 최신 자료가 오면(고치는 중이 아니면) 바꿈 */
+    const old = admCacheGet(); let shown = false;
+    if (old) { try { aUse(old, false); S.ui.view = startView(); S.ui.scope = ''; render(); setSave('지난 내용 표시 · 최신 내용 불러오는 중…'); showMissing(old.missing); shown = true; } catch (e) { shown = false; } }
+    run('adminLoad', ADMIN_KEY, true).then(d => {
+      if (!shown) { use(d); return; }
+      const keep = saving || dirtyPayload() || typing() || S.ui.drawer;
+      if (keep) { admCachePut(d); tick(); setSave('지난 내용 표시 중 · 곧 최신 내용으로 바뀝니다'); return; }
+      const ui = S.ui; use(d); Object.assign(S.ui, { view: ui.view, scope: ui.scope }); render();
+    }).catch(e => {
+      if (/만료/.test(errMsg(e))) { try { sessionStorage.removeItem(ADM_SS); sessionStorage.removeItem(ADM_CACHE); } catch (_) {} ADMIN_KEY = ''; S = null; document.getElementById('app').innerHTML = ''; adminAskLogin(adminBoot); return; }
+      if (shown) { setSave('최신 내용을 불러오지 못했습니다', true); toast(errMsg(e)); return; }
+      fatal(e);
+    });
+  }
   window.addEventListener('beforeunload', e => { if (typeof kitFlush === 'function' && typeof KIT_DIRTY !== 'undefined' && (KIT_DIRTY.kit.size || KIT_DIRTY.dev.size)) { kitFlush(); e.preventDefault(); e.returnValue = ''; } if (saving || dirtyPayload()) { e.preventDefault(); e.returnValue = ''; } });
 }
 
