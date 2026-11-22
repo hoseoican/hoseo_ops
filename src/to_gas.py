@@ -6,8 +6,7 @@ js=src[src.index('<script>\nconst SEED'):]
 js=js[len('<script>\n'):js.rindex('</script>')]
 def rep(old,new,cnt=1):
     global js
-    if old not in js:
-        import sys; print('SKIP: '+old[:160].replace('\n',' '), file=sys.stderr); return
+    assert old in js, 'MISSING: '+old[:120]
     js=js.replace(old,new,cnt)
 def cut(start,end_marker,new=''):
     global js
@@ -80,8 +79,6 @@ a=js.index("if(!load()){ freshState(); demoSeed(); }"); js=js[:a]
 # export: make aoa builder reusable for sheet export
 # end of aoa builder: split at ws creation
 # remind panel: links & mail
-rep("""   <div class="muted small">아직 확인하지 않은 학교 ${pend.length}곳입니다. 실제 시스템에서는 문자·알림톡으로 학교별 링크가 한 번에 나갑니다. 이 시연에서는 문구만 복사됩니다.</div>""",
-    """   <div class="muted small">아직 확인하지 않은 학교 ${pend.length}곳입니다. 문구를 복사해 공문·단톡방에 쓰고, 학교별 확인 링크는 아래 표에서 복사하세요. 이메일이 등록된 학교에는 바로 메일을 보낼 수 있습니다.</div>""")
 rep("확인 링크: (학교별 링크가 자동으로 들어갑니다)","확인 링크: (학교별 링크)")
 rep("""<th>운영 조건 체크</th><th>담당자</th><th>카톡방</th></tr></thead><tbody>${pend.map(s=>{const rs=rows.filter(r=>r.school===s);return `<tr><td>${esc(s)}</td>""",
     """<th>운영 조건 체크</th><th>담당자</th><th>카톡방</th><th>확인 링크</th></tr></thead><tbody>${pend.map(s=>{const rs=rows.filter(r=>r.school===s), L=(S.schoolLinks||[]).find(x=>x.school===s);return `<tr><td>${esc(s)}</td>""")
