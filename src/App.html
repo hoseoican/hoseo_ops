@@ -2,6 +2,8 @@
 <html lang="ko">
 <head>
 <base target="_top">
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>초등방과후 프로그램 운영 관리</title>
@@ -199,7 +201,18 @@ function adminStart() {
 }
 function adminAskLogin(after) {
   if (document.getElementById('admlogin')) return;
-  run('adminGate', ADMIN_LINK).then(g => showAdminLogin(g.pwSet, after, g.biz || [])).catch(fatal);
+  /* 로그인 화면은 지난번 정보로 바로 띄우고, 서버 확인은 뒤에서 (달라졌으면 다시 그림) */
+  let cg = null; try { cg = JSON.parse(localStorage.getItem('anc_gate') || 'null'); } catch (e) {}
+  const show = g => showAdminLogin(g.pwSet, after, g.biz || []);
+  if (cg && cg.pwSet && !ADMIN_LINK) show(cg);
+  run('adminGate', ADMIN_LINK).then(g => {
+    try { localStorage.setItem('anc_gate', JSON.stringify(g)); } catch (e) {}
+    const el = document.getElementById('admlogin');
+    if (!el) { if (!ADMIN_KEY) show(g); return; }
+    if (JSON.stringify(g) === JSON.stringify(cg)) return;
+    const pw = el.querySelector('#adm-pw'); if (pw && pw.value) return;
+    el.remove(); show(g);
+  }).catch(e => { if (!document.getElementById('admlogin')) fatal(e); });
 }
 function showAdminLogin(pwSet, after, bizL) {
   bizL = bizL || [];
@@ -242,7 +255,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.34';
+const APP_VER = '11.35';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;

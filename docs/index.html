@@ -1057,7 +1057,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.22-3';
+var APP_VERSION = '2026.11.22-4';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -3019,7 +3019,8 @@ async function gateAsk(msg){
       };
     }
     card('<p style="font-size:13px;color:#6b6262">불러오는 중…</p>');
-    opsRpc('adminGate', ['']).then(function(g){ bizL=g.biz||[]; draw(); }, function(e){ card('<p style="font-size:13px;color:#b3261e;line-height:1.5">'+esc(e.message)+'</p><button type="button" onclick="location.reload()" style="width:100%;padding:10px;border:0;border-radius:8px;background:#7d1a1f;color:#fff;font:inherit;cursor:pointer">다시 시도</button>'); });
+    var cached=false; try{ var cg=JSON.parse(localStorage.getItem('anc_gate')||'null'); if(cg && cg.biz){ bizL=cg.biz; cached=true; draw(); } }catch(e){}
+    opsRpc('adminGate', ['']).then(function(g){ try{ localStorage.setItem('anc_gate', JSON.stringify(g)); }catch(e){} if(JSON.stringify(g.biz||[])!==JSON.stringify(bizL) || !cached){ var a=document.activeElement, typing=a && a.classList && a.classList.contains('gpw') && a.value; bizL=g.biz||[]; if(!typing) draw(); } }, cached ? function(){} : function(e){ card('<p style="font-size:13px;color:#b3261e;line-height:1.5">'+esc(e.message)+'</p><button type="button" onclick="location.reload()" style="width:100%;padding:10px;border:0;border-radius:8px;background:#7d1a1f;color:#fff;font:inherit;cursor:pointer">다시 시도</button>'); });
   });
 }
 async function gateEnsure(){
@@ -3594,7 +3595,7 @@ function bindCert(){
 /* ---------- 시작 ---------- */
 mailCfg=JSON.parse(JSON.stringify(DEFAULT_MAIL));
 buildRows(); buildImgs(); buildPdfs(); bind(); bindImport(); bindOpsMail(); bindBackup(); bindSms(); bindCert(); bindSync(); bindDrv();
-var startPage='info'; try{ var sp=localStorage.getItem('lecDocsPage'); if(PAGES.indexOf(sp)>=0) startPage=sp; }catch(e){}
+var startPage='ops';   /* 처음 열면 항상 운영현황 (새로고침은 주소의 #메뉴 유지) */
 var hp=(location.hash||'').slice(1); if(PAGES.indexOf(hp)>=0) startPage=hp;
 page=startPage;
 try{ history.replaceState({ page: startPage }, '', '#'+startPage); }catch(e){}
