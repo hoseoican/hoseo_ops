@@ -1475,6 +1475,28 @@ function seasonAddPanel(){ const d=S.ui.sAdd||(S.ui.sAdd={...vacNext(),sem:false
     <span class="small muted">학기 운영</span><span class="st-seg"><button class="${d.sem?'':'on'}" data-act="sa-sem" data-v="">안 함 (방학만)</button><button class="${d.sem?'on':''}" data-act="sa-sem" data-v="1">함께 운영 (${d.v==='w'?d.y+1:d.y} ${semL})</button></span>
     ${qt(['학기 운영을 함께 하면 방학과 이어지는 학기 수업도 같은 시기에서 관리',`겨울방학 → 다음 해 1학기(3월부터), 여름방학 → 2학기(9월부터)`,'운영시트·재단 보고 파일의 방학/학기 운영차시는 수업일로 나눠 채움','만든 뒤에도 시기 줄의 「학기 운영」에서 바꿀 수 있음'])}</div>
    <div class="row" style="gap:8px;align-items:center"><span>만들 시기: <b>${esc(semName(d.y,d.v,d.sem?semL:''))}</b></span>${dup?'<span class="iss lv-warn">이미 있는 시기입니다</span>':''}<button class="btn sm pri" data-act="sa-ok" ${dup?'disabled':''}>만들기</button><button class="btn sm" data-act="seasonadd">닫기</button></div></div>`; }
+/* 시기별 운영현황 구글 시트: 강사서류 서버의 운영현황 시트 목록(강사서류 「구글 시트 연동」과 같은 목록)을 여기서도 고침. 구분 이름 = 시기 이름 */
+const dopsName = () => (curBiz()!=='anchor'?bizName()+' ':'')+season().name;
+const dopsHit = (x, nm) => { const sp=v=>String(v||'').replace(/\s/g,''), a=sp(x.label), b=sp(season().name); if(!b||a.indexOf(b)<0) return false; const others=bizListC().filter(z=>z.k!==curBiz()&&z.k!=='anchor').map(z=>sp(z.name)); if(curBiz()==='anchor') return !others.some(o=>o&&a.indexOf(o)>=0); return a.indexOf(sp(bizName()))>=0; };
+const dopsUrl = id => 'https:\/\/docs.google.com/spreadsheets/d/'+id+'/edit';
+function docsCall(action, extra){
+  if(!window.DOCS_API||!window.opsDocsAuth) return Promise.reject(new Error('강사서류 서버 주소가 없습니다'));
+  return (S.ui.docsCode?Promise.resolve(S.ui.docsCode):window.opsDocsAuth().then(r=>(S.ui.docsCode=r.code)))
+    .then(code=>fetch(window.DOCS_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({code,action},extra||{}))}))
+    .then(r=>r.json()).then(j=>{ if(!j.ok){ if(j.error==='code') S.ui.docsCode=''; throw new Error(j.message||'강사서류 서버에서 처리하지 못했습니다'); } return j; });
+}
+function dopsLoad(force){ if(!window.ON_PAGES||!window.opsDocsAuth||S.adminOrg) return; if(S.ui.docsOps!==undefined&&!force) return; S.ui.docsOps=null;
+  setTimeout(()=>docsCall('ping').then(j=>{ S.ui.docsOps=j.ops||[]; render(); }).catch(e=>{ S.ui.docsOps={err:e.message}; render(); }),0); }
+function dopsBar(){ if(!window.ON_PAGES||!window.opsDocsAuth||S.adminOrg) return ''; dopsLoad();
+  const L=S.ui.docsOps, o=Array.isArray(L)?L.find(x=>dopsHit(x)):null;
+  const st=L===null||L===undefined?'<span class="small muted">확인 중…</span>':!Array.isArray(L)?`<span class="small lv-warn" title="${esc(L.err)}">불러오지 못함</span>`:o?`<a class="btn sm" href="${esc(dopsUrl(o.id))}" target="_blank" rel="noopener">열기 ↗</a>`:'<span class="small muted">없음</span>';
+  return `<span class="sb-l" style="margin-left:10px">운영현황 시트</span>${st}${Array.isArray(L)?`<button class="btn sm" data-act="dops-edit">${o?'바꾸기':'연결…'}</button>`:''}${qt(['이 시기의 운영현황 구글 시트(학교·학급·강사 운영 현황)','강사서류 「구글 시트 연동」의 운영현황 시트 목록과 같은 목록 · 여기서 넣으면 강사서류에도 바로 반영','구분 이름에 시기 이름(예: 2027 1학기)이 들어 있는 시트를 이 시기 시트로 봄','시트는 강사서류 앱스 스크립트 계정이 열 수 있어야 함'])}`; }
+function dopsPanel(){ if(!S.ui.dopsOpen||!Array.isArray(S.ui.docsOps)) return ''; const o=S.ui.docsOps.find(x=>dopsHit(x));
+  return `<div class="panel stack" style="margin:-4px 0 12px"><b>${esc(dopsName())} 운영현황 시트</b>
+   <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><input id="dops-url" style="flex:1;min-width:260px" placeholder="구글 시트 링크 (…/spreadsheets/d/…)" value="${o?esc(dopsUrl(o.id)):''}"><button class="btn sm pri" data-act="dops-save">저장</button>${o?'<button class="btn sm" data-act="dops-del">연결 해제</button>':''}<button class="btn sm" data-act="dops-edit">닫기</button></div>
+   <div class="small muted">강사서류에 등록된 운영현황 시트 ${S.ui.docsOps.length}개 : ${S.ui.docsOps.map(x=>esc(x.label)).join(', ')||'없음'}</div></div>`; }
+function dopsSave(url){ const nm=dopsName(), list=S.ui.docsOps.filter(x=>!dopsHit(x)).map(x=>({label:x.label,id:x.id})); if(url) list.push({label:nm,url});
+  toast('저장 중…'); return docsCall('setops',{list}).then(j=>{ S.ui.docsOps=j.ops||[]; S.ui.dopsOpen=false; render(); toast(url?'운영현황 시트를 연결했습니다 (강사서류에도 반영)':'연결을 해제했습니다'); }).catch(e=>toast(e.message)); }
 function seasonBar(sc){
   const L=S.seasons||[], cur=curSK(), pub=S.season, ny=nextSeason(), yf=(S.yearFiles||{})[String(parseInt(cur,10))];
   const ys=[...new Set(L.map(x=>parseInt(x.k,10)))].sort((a,b)=>b-a);
@@ -1485,8 +1507,10 @@ function seasonBar(sc){
    ${noScope()?`${/-(w|s)$/.test(cur)?`<span class="small muted">학기 운영</span><button class="btn sm" data-act="seasonsem" title="이 시기에 학기 운영을 함께 하는지 바꾸기">${semOf(season())?'함께 ('+esc(semOf(season()))+')':'안 함'} ⇄</button>`:''}<button class="btn sm" data-act="seasonadd" title="새 시기 만들기">+ 새 시기 만들기…</button>`:`<button class="btn sm" data-act="seasonadd" title="다음 시기 만들기">+ ${esc(ny.name)} 만들기</button>`}
    ${canDel?(S.ui.sdelAsk?`<button class="btn sm danger" data-act="seasondel2">${esc(season().name)} 삭제</button><button class="btn sm" data-act="seasondel">취소</button>`:'<button class="btn sm" data-act="seasondel" title="학급이 없는 시기만 지울 수 있음">이 시기 삭제…</button>'):''}
    ${qt(['시기마다 학급·학교 링크·접속 승인·프로그램·신청 기간을 따로 관리','「공개 중」 시기만 학교 접속 신청과 강사 신청 화면에 보임','강사 명단은 모든 시기 공통','구글 시트: 연도마다 파일 하나, 같은 연도는 「시기」 열로 구분','학급이 없고 공개 중이 아닌 시기는 삭제 가능'],'r')}
+   ${dopsBar()}
    ${sc?scopeBar(true):''}${yf?`<a class="btn sm" href="${esc(yf)}" target="_blank" rel="noopener" style="margin-left:auto">${parseInt(cur,10)}년 시트 열기 ↗</a>`:''}</div>
    ${noScope()&&S.ui.sAddOpen?seasonAddPanel():''}
+   ${dopsPanel()}
    ${cur!==pub?`<div class="notice small row" style="gap:8px;align-items:center;margin:-4px 0 12px"><span><b>${esc(season().name)}</b>은(는) 아직 학교·강사에게 공개되지 않았습니다. 지금 공개 중: <b>${esc(((L.find(x=>x.k===pub))||{}).name||'-')}</b></span>${S.ui.spubAsk?`<button class="btn sm pri" data-act="seasonpub2">${esc(season().name)} 공개로 바꾸기</button><button class="btn sm" data-act="seasonpub">취소</button>`:`<button class="btn sm" data-act="seasonpub">이 시기를 공개 시기로…</button>`} ${qt(['공개 시기를 바꾸면 학교 접속 신청 화면과 강사 신청 화면이 이 시기로 바뀜','이전 시기 학교 링크는 계속 열림','강사 화면에는 바로 앞 시기의 배정 수업(끝나지 않은 것)도 함께 보임'])}</div>`:''}`;
 }
 /* 시기 바꾸기 (웹앱에서는 App.html이 서버에서 그 시기 자료를 불러오도록 다시 정의) */
@@ -2032,7 +2056,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.33';
+const LIB_VER='11.34';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6123,6 +6147,9 @@ document.addEventListener('click',async e=>{
     case 'seasonsem': { const x=(S.seasons||[]).find(z=>z.k===curSK()); if(!x) return; const m=/^(\d{4})-(\w)$/.exec(x.k); if(!m) return; x.sem=x.sem?'':(m[2]==='w'?'1학기':'2학기'); x.name=semName(+m[1],m[2],x.sem); S.seasons=[...S.seasons]; toast(x.sem?`${x.name}: 학기 운영을 함께 관리합니다`:`${x.name}: 방학만 운영합니다`); break; }
     case 'seasonadd': if(noScope()){ S.ui.sAddOpen=!S.ui.sAddOpen; if(S.ui.sAddOpen) S.ui.sAdd=null; break; } { const n=nextSeason(); if((S.seasons||[]).some(x=>x.k===n.k)) return; S.seasons=[...(S.seasons||[]),n]; toast(`${n.name}을(를) 만들었습니다. 「시기」에서 골라 들어가세요`); break; }
     case 'seasondel': S.ui.sdelAsk=!S.ui.sdelAsk; break;
+    case 'dops-edit': S.ui.dopsOpen=!S.ui.dopsOpen; break;
+    case 'dops-save': { const v=((document.getElementById('dops-url')||{}).value||'').trim(); if(!v){ toast('구글 시트 링크를 넣어 주세요'); return; } dopsSave(v); return; }
+    case 'dops-del': dopsSave(''); return;
     case 'seasondel2': { const k=curSK(), nm=season().name; if(k===S.season||S.rows.some(r=>rowSeason(r)===k)){ toast('학급이 있거나 공개 중인 시기는 지울 수 없습니다'); return; } S.ui.sdelAsk=false; seasonGo(S.season,()=>{ S.seasons=(S.seasons||[]).filter(x=>x.k!==k); toast(`${nm}을(를) 삭제했습니다`); render(); }); return; }
     case 'seasonpub': S.ui.spubAsk=!S.ui.spubAsk; break;
     case 'seasonpub2': S.season=curSK(); S.ui.spubAsk=false; toast(`${season().name}을(를) 학교·강사 공개 시기로 바꿨습니다`); break;
