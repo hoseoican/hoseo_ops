@@ -256,7 +256,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.36';
+const APP_VER = '11.37';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -644,6 +644,17 @@ document.addEventListener('click', e => {
     if (a === 'aapply') { stop(); const c = document.getElementById('asc-' + id); if (!c || !c.checked) { toast('수업일 참여 확인에 체크해 주세요'); return; } const note = ((document.getElementById('asn-' + id) || {}).value || '').trim(); S.ui.taAsk = ''; teacherCall(run('teacherApplyAsst', TK, id, note), '보조강사로 신청했습니다'); return; }
     if (a === 'aunapply') { stop(); teacherCall(run('teacherUnapplyAsst', TK, id), '보조강사 신청을 취소했습니다'); return; }
     if (a === 'tlogout') { stop(); teacherOut(''); return; }
+    if (a === 'tdocs') {
+      /* 서류 제출: 운영 관리 로그인 확인증 → 강사서류 서버에서 내 제출 링크 찾기 → 강사서류 제출 화면(새 탭) */
+      stop(); const w = window.open('', '_blank'); el.disabled = true;
+      run('teacherDocsTicket', TK).then(r => fetch(window.DOCS_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'lsso', sso: r.ticket }) }).then(x => x.json()).then(j => {
+        if (!j.ok) throw new Error(j.message || '서류 제출 화면을 열지 못했습니다');
+        const L = j.links || [], pick = L.find(x => (document.body.dataset.trole === 'asst') === /보조/.test(x.role)) || L[0];
+        const url = 'docs/apply.html?t=' + encodeURIComponent(pick.t) + '#sso=' + encodeURIComponent(r.ticket);
+        if (w) w.location.href = url; else location.href = url;
+      })).catch(e => { if (w) w.close(); toast(errMsg(e)); }).finally(() => { el.disabled = false; });
+      return;
+    }
   }
 }, true);
 

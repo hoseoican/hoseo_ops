@@ -2067,7 +2067,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.36';
+const LIB_VER='11.37';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -3349,7 +3349,7 @@ function tInfoRead(){ const t=S.instructors.find(x=>x.id===S.ui.tAuth), nd=tNeed
   return {t,nd,info:{manual:nd.manual?g.manual===true:false,email:nd.email?g.email:'',fields:nd.fields?g.fields:[],kind:nd.kind?g.kind:'',years:nd.years?+g.years:'',car:nd.car?g.car:''}}; }
 function tHead(t){
   return `<div class="row between"><div class="titled"><span class="emb" role="img" aria-label="호서대학교"></span><div><h2>${esc(t.name)} 강사님 ${t.example?'<span class="ex">예시 강사</span>':''}${t.isNew&&!t.reviewed?' <span class="pill st-wait">신규 등록 · 이력 검토 중</span>':''}</h2><div class="muted small">${esc(t.phone||'')} · ${esc(t.region)}${t.senior?' · 경력 강사':''}</div></div></div>
-    <div class="row"><button class="btn sm" data-act="trefresh">새로 고침</button><button class="btn sm" data-act="tlogout">로그아웃</button></div></div>`; }
+    <div class="row">${window.ON_PAGES&&window.DOCS_API?'<button class="btn sm pri" data-act="tdocs" title="센터에서 서류 제출을 요청했을 때 강사 서류를 내고 보완합니다">서류 제출</button>':''}<button class="btn sm" data-act="trefresh">새로 고침</button><button class="btn sm" data-act="tlogout">로그아웃</button></div></div>`; }
 function tOffBanner(t){ const n=tLive().filter(r=>fi(r)===t.id&&r.status!=='cancel').flatMap(r=>(r.offLog||[]).filter(x=>(r.sc.off||[]).includes(x.d)&&!x.tSeen)).length; return n?`<div class="notice bad row between"><span><b>학교 휴강 알림 ${n}건</b>을 아직 확인하지 않으셨습니다.</span><button class="btn sm pri" data-act="tgo" data-v="tmine">확인하러 가기</button></div>`:''; }
 /* 보조강사 모집: 운영기관이 고른 배치 확정 학급. 다른 강사의 신청 수는 보여 주지 않음 */
 function tAsstBox(r,t,inTable){
@@ -6947,7 +6947,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.36';
+const APP_VER = '11.37';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -7335,6 +7335,17 @@ document.addEventListener('click', e => {
     if (a === 'aapply') { stop(); const c = document.getElementById('asc-' + id); if (!c || !c.checked) { toast('수업일 참여 확인에 체크해 주세요'); return; } const note = ((document.getElementById('asn-' + id) || {}).value || '').trim(); S.ui.taAsk = ''; teacherCall(run('teacherApplyAsst', TK, id, note), '보조강사로 신청했습니다'); return; }
     if (a === 'aunapply') { stop(); teacherCall(run('teacherUnapplyAsst', TK, id), '보조강사 신청을 취소했습니다'); return; }
     if (a === 'tlogout') { stop(); teacherOut(''); return; }
+    if (a === 'tdocs') {
+      /* 서류 제출: 운영 관리 로그인 확인증 → 강사서류 서버에서 내 제출 링크 찾기 → 강사서류 제출 화면(새 탭) */
+      stop(); const w = window.open('', '_blank'); el.disabled = true;
+      run('teacherDocsTicket', TK).then(r => fetch(window.DOCS_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'lsso', sso: r.ticket }) }).then(x => x.json()).then(j => {
+        if (!j.ok) throw new Error(j.message || '서류 제출 화면을 열지 못했습니다');
+        const L = j.links || [], pick = L.find(x => (document.body.dataset.trole === 'asst') === /보조/.test(x.role)) || L[0];
+        const url = 'docs/apply.html?t=' + encodeURIComponent(pick.t) + '#sso=' + encodeURIComponent(r.ticket);
+        if (w) w.location.href = url; else location.href = url;
+      })).catch(e => { if (w) w.close(); toast(errMsg(e)); }).finally(() => { el.disabled = false; });
+      return;
+    }
   }
 }, true);
 
