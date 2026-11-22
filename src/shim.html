@@ -15,10 +15,11 @@
   function rpc(fn, args){
     if(typeof window.__opsLocal==='function') return window.__opsLocal(fn, args);
     if(!API) return Promise.reject(new Error('운영 관리 서버 주소가 설정되지 않았습니다 (config.js 의 OPS_API).'));
-    return fetch(API, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), redirect:'follow' })
-      .then(function(r){ return r.text(); })
+    var t0=Date.now(), body=JSON.stringify({ fn: fn, args: args });
+    function once(){ return fetch(API, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body: body, redirect:'follow' }).then(function(r){ return r.text(); }); }
+    return once().catch(function(e){ return /^admin(Gate|Load)$/.test(fn) ? once() : Promise.reject(e); })
       .then(function(t){ var j; try { j=JSON.parse(t); } catch(e){ throw new Error('서버 응답을 읽을 수 없습니다. 앱스 스크립트 Code.gs 가 최신인지, 「배포 관리 → 연필 → 새 버전 → 배포」를 했는지 확인해 주세요.'); } if(!j.ok) throw new Error(j.error||'요청을 처리하지 못했습니다'); return j.r; },
-            function(e){ throw new Error('서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.'); });
+            function(e){ throw new Error('서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요. (' + fn + ', ' + Math.round((Date.now()-t0)/1000) + '초, ' + (e && e.message || e) + ')'); });
   }
   function mk(ok, fail){
     return new Proxy({}, { get: function(_, k){
