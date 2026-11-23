@@ -41,7 +41,10 @@
   .bar { height: 8px; background: #F1EBEA; border-radius: 99px; overflow: hidden; margin: 6px 0 10px; } .bar b { display: block; height: 100%; background: var(--ok); width: 0; transition: width .3s; }
   .rows { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
   .rows h3 { margin: 0 0 8px; font-size: 14px; } .rows .r { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 8px 0; border-top: 1px dashed #EEE6E5; } .rows .r:first-of-type { border-top: 0; padding-top: 0; }
-  .doc { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .doc { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; transition: border-color .12s, background-color .12s, box-shadow .12s; }
+  .doc.drag { border-color: #89171A !important; background: #FBEDED !important; box-shadow: 0 0 0 3px rgba(137,23,26,.15); }
+  .dnd { display: none; font-size: 12px; color: #7A6E6F; margin-top: 6px; }
+  @media (hover: hover) and (pointer: fine) { .dnd { display: block; } }
   .doc.need { border-color: #F2C3BE; background: #FFFAF9; } .doc.fix { border-color: #F0D29A; background: #FFFCF5; } .doc.done { border-color: #CFE3D7; }
   .doc .hd { display: flex; justify-content: space-between; gap: 8px; align-items: center; } .doc .hd b { font-size: 15px; }
   .st { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
@@ -254,8 +257,8 @@ function renderDocs(){
     if (d.multi && files.length) h += '<ul class="files">' + files.map(function(n, i){ return '<li><span>' + esc(n) + '</span><span style="display:flex;gap:4px"><button type="button" class="ghost sm" data-view="' + d.k + '" data-i="' + i + '">보기</button><button type="button" class="ghost sm" data-del="' + i + '">삭제</button></span></li>'; }).join('') + '</ul>';
     else if (files.length && (me.files[d.k] || []).length) h += '<ul class="files"><li><span>올린 파일' + (at[0] ? ' · ' + new Date(at[0]).toLocaleDateString('ko-KR') : '') + '</span><button type="button" class="ghost sm" data-view="' + d.k + '" data-i="0">보기</button></li></ul>';
     if (d.k === 'sign' && ok && useOldSign) h += '<p style="margin:0 0 6px"><b>기존 서명을 사용합니다.</b></p><div class="acts"><button type="button" class="ghost sm" id="signNew" style="flex:1">새로 서명하기</button></div></div>';
-    else if (d.k === 'sign') h += (ok ? '<p style="margin:0 0 6px">올린 서명이 있습니다. 그대로 쓰려면 「기존 서명 사용하기」, 바꾸려면 아래에 다시 서명하세요.</p>' : '') + '<canvas id="pad"></canvas><div class="acts" style="margin-top:8px"><button type="button" class="ghost sm" id="padClear">초기화</button>' + (ok ? '<button type="button" class="sm" id="signOld">기존 서명 사용하기</button>' : '') + '<button type="button" class="' + (ok ? 'ghost ' : '') + 'sm" id="padOk" style="flex:1">서명 업로드</button></div><div class="acts" style="margin-top:6px"><button type="button" class="ghost sm" data-pick="sign">서명 사진 업로드</button></div><div class="prog" data-prog="sign"></div></div>';
-    else h += '<div class="acts"><button type="button" class="' + (ok && !d.multi ? 'ghost ' : '') + 'sm" data-cam="' + d.k + '">사진 찍기</button><button type="button" class="ghost sm" data-pick="' + d.k + '">' + (d.img ? '사진 선택' : '파일 선택') + '</button></div><div class="prog" data-prog="' + d.k + '"></div></div>';
+    else if (d.k === 'sign') h += (ok ? '<p style="margin:0 0 6px">올린 서명이 있습니다. 그대로 쓰려면 「기존 서명 사용하기」, 바꾸려면 아래에 다시 서명하세요.</p>' : '') + '<canvas id="pad"></canvas><div class="acts" style="margin-top:8px"><button type="button" class="ghost sm" id="padClear">초기화</button>' + (ok ? '<button type="button" class="sm" id="signOld">기존 서명 사용하기</button>' : '') + '<button type="button" class="' + (ok ? 'ghost ' : '') + 'sm" id="padOk" style="flex:1">서명 업로드</button></div><div class="acts" style="margin-top:6px"><button type="button" class="ghost sm" data-pick="sign">서명 사진 업로드</button></div><div class="dnd">서명 사진 파일을 이 칸에 끌어다 놓아도 됩니다</div><div class="prog" data-prog="sign"></div></div>';
+    else h += '<div class="acts"><button type="button" class="' + (ok && !d.multi ? 'ghost ' : '') + 'sm" data-cam="' + d.k + '">사진 찍기</button><button type="button" class="ghost sm" data-pick="' + d.k + '">' + (d.img ? '사진 선택' : '파일 선택') + '</button></div><div class="dnd">파일을 이 칸에 끌어다 놓아도 됩니다</div><div class="prog" data-prog="' + d.k + '"></div></div>';
     return h;
   }).join('');
   Array.prototype.forEach.call(document.querySelectorAll('[data-cam],[data-pick]'), function(b){ b.onclick = function(){ pick(b.dataset.cam || b.dataset.pick, !!b.dataset.cam); }; });
@@ -263,6 +266,7 @@ function renderDocs(){
   Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function(b){ b.onclick = function(){ viewFile(b.dataset.view, +b.dataset.i, b); }; });
   if ($('signOld')) $('signOld').onclick = function(){ useOldSign = true; renderDocs(); toast('기존 서명을 사용합니다'); };
   if ($('signNew')) $('signNew').onclick = function(){ useOldSign = false; renderDocs(); };
+  bindDrop();
   initPad();
   if ($('examDate')) $('examDate').onchange = function(){ saveText(false, true); };
   if ($('tbIn41')) $('tbIn41').onchange = function(){ saveText(false, true); };
@@ -320,9 +324,12 @@ function pick(k, cam){
   if (cam) fi.setAttribute('capture', 'environment'); else fi.removeAttribute('capture');
   fi.click();
 }
-$('fileIn').onchange = async function(){
-  var files = Array.prototype.slice.call(this.files || []), k = pickKey; if (!files.length) return;
-  var d = DOCS.filter(function(x){ return x.k === k; })[0];
+$('fileIn').onchange = function(){ takeFiles(pickKey, Array.prototype.slice.call(this.files || [])); };
+/* 파일 선택·끌어다 놓기 공통 */
+async function takeFiles(k, files){
+  if (!files.length) return;
+  var d = DOCS.filter(function(x){ return x.k === k; })[0]; if (!d) return;
+  if (d.img) { files = files.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|heic|webp)$/i.test(f.name); }); if (!files.length) { toast('사진 파일(JPG·PNG)을 놓아 주세요'); return; } }
   try {
     if (d.img) { var im = await shrink(files[0], k === 'photo' ? 1200 : 2000); await upload(k, im.bytes, im.ext, files[0].name, im); }
     else {
@@ -333,7 +340,21 @@ $('fileIn').onchange = async function(){
       else toast('PDF나 사진 파일을 골라 주세요');
     }
   } catch (e) { console.error(e); toast(e.message || '올리지 못했습니다'); prog(k, ''); }
-};
+}
+/* 서류 칸에 파일을 끌어다 놓으면 그 서류로 올림 */
+function bindDrop(){
+  Array.prototype.forEach.call(document.querySelectorAll('.doc[data-doc]'), function(card){
+    var n = 0, k = card.dataset.doc;
+    card.ondragenter = function(e){ if (!hasFiles(e)) return; e.preventDefault(); n++; card.classList.add('drag'); };
+    card.ondragover = function(e){ if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
+    card.ondragleave = function(){ n = Math.max(0, n - 1); if (!n) card.classList.remove('drag'); };
+    card.ondrop = function(e){ e.preventDefault(); e.stopPropagation(); n = 0; card.classList.remove('drag'); takeFiles(k, Array.prototype.slice.call(e.dataTransfer.files || [])); };
+  });
+}
+function hasFiles(e){ var t = e.dataTransfer && e.dataTransfer.types; return !!t && Array.prototype.indexOf.call(t, 'Files') >= 0; }
+/* 서류 칸 밖에 놓으면 브라우저가 파일을 열어 버리지 않게 */
+window.addEventListener('dragover', function(e){ if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener('drop', function(e){ if (hasFiles(e) && !(e.target.closest && e.target.closest('.doc[data-doc]'))) { e.preventDefault(); toast('올릴 서류 칸 위에 놓아 주세요'); } });
 function prog(k, t){ var el = document.querySelector('[data-prog="' + k + '"]'); if (el) el.textContent = t; }
 async function upload(k, bytes, ext, name, im){
   if (bytes.length > 15 * 1024 * 1024) throw new Error('파일이 너무 큽니다 (15MB까지). 사진은 화질을 낮춰 다시 골라 주세요.');
