@@ -1177,6 +1177,67 @@ const mgOf = p => p.mg||(p.mg=mgCompute(p));
 const mgHasOld = p => S.rows.some(r=>rowSeason(r)===curSK()&&rowBiz(r)===curBiz()&&(p.mixed||(p.out?isOut(r):!isOut(r)))&&r.src);
 const mgRowTxt = r => `${esc(r.school)} <span class="muted">· ${esc((prog(r.prog)||{}).name||r.src.prog||'')}${r.label?' · '+esc(r.label):''}</span>`;
 const mgWhen = r => `${md(r.start)}~${md(r.end)} · ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)}`;
+/* ---------- 학급 직접 추가 (업로드 없이 한 학급씩 넣기: 추가는 기존 목록을 건드리지 않음) ---------- */
+function manualPanel(O){
+  const W=O?'기관':'학교';
+  const same=S.rows.filter(r=>rowSeason(r)===curSK()&&rowBiz(r)===curBiz()&&isOut(r)===!!O);
+  const schools=[...new Set(same.map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const progs=[...new Set(S.programs.map(p=>p.name))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const fld=(id,l,ph,type,list)=>`<label class="stack small" style="gap:3px"><span>${l}</span><input id="${id}" type="${type||'text'}" placeholder="${ph||''}"${list?` list="${list}"`:''}></label>`;
+  const days=['월','화','수','목','금','토'].map((d,i)=>`<label class="row small" style="gap:3px"><input type="checkbox" data-mn-day="${i+1}"> ${d}</label>`).join('');
+  return `<div class="notice stack" style="gap:8px">
+    <div class="row between"><b>학급 직접 추가 · ${W}</b><button class="btn sm" data-act="man-close">닫기</button></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">
+      ${fld('mn-school',W+' 이름','',"text",'mn-schools')}
+      ${fld('mn-prog','프로그램','',"text",'mn-progs')}
+      ${fld('mn-room','학급(교실)','예: 1반')}
+      ${fld('mn-region','지역 (선택)')}
+      ${fld('mn-start','시작일','','date')}
+      ${fld('mn-end','마지막일','','date')}
+      ${fld('mn-t1','시작 시간','14:00','time')}
+      ${fld('mn-t2','종료 시간','15:20','time')}
+      ${fld('mn-grade','학년 (선택)')}
+      ${fld('mn-total','총 차시 (선택)','','number')}
+      ${fld('mn-exp','인원 (선택)','','number')}
+      ${fld('mn-note','메모 (선택)')}
+    </div>
+    <div class="row" style="gap:10px"><span class="small">요일</span>${days}</div>
+    <datalist id="mn-schools">${schools.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+    <datalist id="mn-progs">${progs.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+    <label class="row small"><input type="checkbox" id="mn-fixed" ${curBiz()!=='anchor'?'checked':''}> <b>이미 확정된 학급</b>으로 넣기 (학교 확인 단계 없이 운영 확정)</label>
+    <div class="row" style="gap:8px"><button class="btn pri sm" data-act="man-add">학급 추가</button><span class="small muted">추가한 학급은 매칭과 강사 배치 목록에 바로 나타납니다.</span></div>
+  </div>`;
+}
+function manualAdd(){
+  const m=S.ui.manual||{}, O=!!m.out, W=O?'기관':'학교';
+  const v=id=>String((document.getElementById(id)||{}).value||'').trim();
+  const school=v('mn-school'), prog=v('mn-prog'), room=v('mn-room'), s0=v('mn-start'), e0=v('mn-end'), t1=v('mn-t1'), t2=v('mn-t2');
+  const DW=['','월','화','수','목','금','토'];
+  const days=[...document.querySelectorAll('[data-mn-day]')].filter(x=>x.checked).map(x=>DW[+x.dataset.mnDay]).join('');
+  const miss=[!school&&W+' 이름',!prog&&'프로그램',!s0&&'시작일',!e0&&'마지막일',!t1&&'시작 시간',!t2&&'종료 시간',!days&&'요일'].filter(Boolean);
+  if(miss.length){ toast(miss.join(', ')+'을(를) 입력해 주세요'); return; }
+  if(e0<s0){ toast('마지막일이 시작일보다 빠릅니다'); return; }
+  if(t2<=t1){ toast('종료 시간이 시작 시간보다 늦어야 합니다'); return; }
+  const same=S.rows.find(r=>r.school===school&&rowSeason(r)===curSK()&&rowBiz(r)===curBiz()&&isOut(r)===O);
+  const region=v('mn-region')||(same&&same.region)||'';
+  const ex=O?{out:true,org:(same&&same.org)||undefined}:undefined;
+  const raw=['',region,school,prog,s0,e0,v('mn-grade'),t1+'~'+t2,days,v('mn-total'),v('mn-exp'),room,v('mn-note')];
+  if(ex) raw.push(ex);
+  const n=buildRows([raw],{out:O})[0];
+  const pre=O?'o':'r', used=new Set(S.rows.map(r=>r.id)), B=Date.now().toString(36), at=now();
+  let k=S.rows.reduce((mx,r)=>{ const x=/^[a-z]+(\d+)$/.exec(r.id||''); return x?Math.max(mx,+x[1]):mx; },0);
+  do{ k++; }while(used.has(`${pre}${k}-${B}`));
+  n.id=`${pre}${k}-${B}`; n.addedAt=at; n.addedFile='직접 추가'; n.label='';
+  const grp=S.rows.filter(r=>r.school===n.school&&r.origProg===n.origProg&&r.status!=='cancel');
+  if(grp.length) n.label=`${grp.length+1}학급`;
+  if(document.getElementById('mn-fixed')&&document.getElementById('mn-fixed').checked){ n.status='fixed'; n.reviewedAt=at; n.preFixed=true; }
+  n.thread=[{who:'시스템',text:'학급 직접 추가',at}];
+  S.rows.push(n);
+  ['mn-room','mn-t1','mn-t2','mn-total','mn-exp','mn-note'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.querySelectorAll('[data-mn-day]').forEach(x=>{ x.checked=false; });
+  toast(`추가했습니다 · ${n.school} ${clsName(n)}`);
+  render();
+}
 function mergePanel(){
   const u=S.ui, p=u.pending, M=mgOf(p), mode=p.mode||'merge', O=!!p.out, W=O?'기관':'학교';
   const nA=M.selA.filter(Boolean).length, nC=M.selC.filter(Boolean).length, nG=M.selG.filter(Boolean).length, kept=M.old.length-M.gone.length, prog0=M.old.filter(r=>!mgFresh(r)).length;
@@ -2056,7 +2117,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.42';
+const LIB_VER='11.43';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2200,6 +2261,7 @@ function viewBoard(){
   const pct=s=>rows.length?cnt[s]/rows.length*100:0;
   return `<div class="stack">
   ${S.demo?`<div class="notice">교육청 목록은 실제 파일입니다. 학교 확인 내용, 담당자, 강사 명단과 강사 신청은 화면 시연용 <span class="ex">예시</span> 입니다. <button class="btn sm" data-act="clean">예시 지우고 처음 상태로</button></div>`:''}
+  ${S.ui.manual&&S.ui.manual.open&&!!S.ui.manual.out===!!O?manualPanel(O):''}
   ${u.pending&&mgHasOld(u.pending)?mergePanel():u.pending&&u.pending.hub?`<div class="notice"><b>${esc(u.pending.file)}</b> · 늘봄허브 신청 목록 ${qt(['신청취소는 뺌','매칭확정: 계약정보(학급별 일정·학년·인원)로 학급을 만듦','신청완료: 신청 내용으로 학급을 만들고 학교 확인 때 정함','학교가 아닌 신청 기관(거점형 늘봄센터 등)은 「학교밖」으로 들어감','담당자 연락처(전화·휴대폰)는 학교 담당자 정보에 미리 넣음'])}
      <div class="small" style="margin-top:4px">신청 ${u.pending.info.apps}건 (매칭확정 ${u.pending.info.matched} · 신청완료 ${u.pending.info.applied}) → <b>${u.pending.info.classes}학급</b> · 학교·기관 ${new Set(u.pending.rows.map(r=>r[2])).size}곳 · <span class="muted">신청취소 ${u.pending.info.cancel}건 제외</span></div>
      <div class="small" style="margin-top:4px">${esc(season().name)} 학급을 이 목록으로 새로 시작합니다. 학교 운영 건과 학교밖 운영 건을 함께 바꿉니다.</div>
@@ -2211,7 +2273,7 @@ function viewBoard(){
      <div class="row" style="margin-top:8px"><button class="btn pri sm" data-act="up-ok">${u.pending.out?'학교밖 목록 바꾸기':'새로 시작'}</button><button class="btn sm" data-act="up-no">취소</button></div></div>`:''}
   <div class="row between">
     <div><h2>${esc(season().name)} 진행 현황</h2><div class="small" style="margin:2px 0 4px">${O?'학교밖 운영현황':curBiz()==='anchor'?'교육청 목록':'운영현황'} 업로드 → 접속 승인·링크 전달 → 학교 확인·제출 → 검토·매칭 ${qt(['목록을 올리면 학교마다 확인 링크가 생김','링크 전달: 「3 접속 승인」 또는 「확인 요청 보내기」','학교가 제출하면 「4 검토 · 매칭」에서 검토'])}</div><div class="muted small">호서대 운영 ${rows.length}학급 · 학교 ${schools.length}곳 · 다른 대학 배분 ${others}건${(O?S.fileOut:S.file)?` · 원본: ${esc(O?S.fileOut:S.file)}`:''}</div></div>
-    <div class="row" ${S.adminOrg&&!O?'hidden':''}><label class="btn" for="up">${O?'학교밖 운영현황 업로드':curBiz()==='anchor'?'교육청 목록 업로드':'운영현황 업로드'}</label><input id="up" type="file" accept=".xlsx,.xls" hidden>
+    <div class="row" ${S.adminOrg&&!O?'hidden':''}><label class="btn" for="up">${O?'학교밖 운영현황 업로드':curBiz()==='anchor'?'교육청 목록 업로드':'운영현황 업로드'}</label><input id="up" type="file" accept=".xlsx,.xls" hidden><button class="btn" data-act="man-open" data-out="${O?1:0}">학급 직접 추가</button>
       <button class="btn" data-act="remind">확인 요청 보내기 (${pend.length}곳)</button></div>
   </div>
   ${O?outRulesPanel():''}
@@ -6155,6 +6217,9 @@ document.addEventListener('click',async e=>{
     case 'seasonpub2': S.season=curSK(); S.ui.spubAsk=false; toast(`${season().name}을(를) 학교·강사 공개 시기로 바꿨습니다`); break;
     case 'scope': S.ui.scope=el.dataset.v==='out'?'out':''; S.ui.st=''; S.ui.q=''; S.ui.sel=''; S.ui.mDrawer=''; S.ui.drawer=''; S.ui.asOpen=false; S.ui.afAsk=false; S.ui.spAsk=false; break;
     case 'up-no': S.ui.pending=null; S.ui.mgOpen=''; break;
+    case 'man-open': S.ui.manual={open:true,out:el.dataset.out==='1'}; break;
+    case 'man-close': S.ui.manual=null; break;
+    case 'man-add': manualAdd(); break;
     case 'mgmode': S.ui.pending.mode=el.dataset.v; break;
     case 'mgopen': S.ui.mgOpen=el.dataset.v; break;
     case 'up-merge': mgApply(); break;
