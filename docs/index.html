@@ -166,6 +166,8 @@
 
   .plist .prow { display: grid; grid-template-columns: 54px 1fr auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--line); }
   .plist .prow:last-child { border-bottom: 0; }
+  .plist .prow.pdrop { border-radius: 8px; transition: background .12s; }
+  .plist .prow.over { background: var(--hs-100); outline: 2px dashed var(--hs); outline-offset: -2px; }
   .plist .pno { font-weight: 800; color: var(--hs); font-size: 13px; }
   .plist .pnm { font-weight: 600; }
   .plist .pst { font-size: 12px; color: var(--mute); margin-top: 2px; word-break: break-all; }
@@ -845,7 +847,7 @@ if(EMBED) document.documentElement.classList.add('embed');
   <section data-sec="pdf" hidden>
     <div class="card plist">
       <h3>증빙서류(PDF)
-        <span class="hint tip" tabindex="0"><i class="ti">i</i><span class="tipbody">PDF 파일 이름은 「번호. 서류명_성명.pdf」로 바꿔서 ZIP 맨 위 폴더에 넣습니다.<br><b>4-1 채용신체검사서</b>: 출강일 기준 1년 이내, 흉부 X-ray 포함. 보건소 건강진단서·보건증은 안 됩니다. 국민건강검진결과서·공무원 채용 신체검사서는 됩니다.<br><b>4-2 잠복결핵</b>: 평생 1회, 혈액검사(IGRA) 양성/음성 표기 필수.<br><b>6번</b>은 해당자만, 여러 개 올릴 수 있습니다.</span></span></h3>
+        <span class="hint tip" tabindex="0"><i class="ti">i</i><span class="tipbody">PDF 파일 이름은 「번호. 서류명_성명.pdf」로 바꿔서 ZIP 맨 위 폴더에 넣습니다.<br><b>4-1 채용신체검사서</b>: 출강일 기준 1년 이내, 흉부 X-ray 포함. 보건소 건강진단서·보건증은 안 됩니다. 국민건강검진결과서·공무원 채용 신체검사서는 됩니다.<br><b>4-2 잠복결핵</b>: 평생 1회, 혈액검사(IGRA) 양성/음성 표기 필수.<br><b>6번</b>은 해당자만, 여러 개 올릴 수 있습니다.<br>파일을 서류 줄에 끌어다 놓으면 그 서류로 바로 들어갑니다. 같은 칸에 이미 있는 파일은 건너뜁니다.</span></span></h3>
       <div id="pdfs"></div>
     </div>
     <div class="card">
@@ -1068,7 +1070,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-8';
+var APP_VERSION = '2026.11.23-9';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1159,7 +1161,7 @@ function buildImgs(){
 }
 function buildPdfs(){
   $('pdfs').innerHTML = PDFS.map(function(p){
-    return '<div class="prow" data-pdf="'+p.k+'"><div class="pno">'+p.no+'</div><div><div class="pnm">'+p.t+(p.need?'':'<span class="tag">해당자</span>')+'</div><div class="pst"></div>'+
+    return '<div class="prow pdrop" data-pdf="'+p.k+'"><div class="pno">'+p.no+'</div><div><div class="pnm">'+p.t+(p.need?'':'<span class="tag">해당자</span>')+'</div><div class="pst"></div>'+
       (p.k==='exam' ? '<div class="pex"><label class="row" style="margin:6px 0 0;gap:4px;font-size:12.5px"><input type="checkbox" id="tbIn41"> 잠복결핵 검사 확인서 포함 파일</label> <button type="button" class="ghost sm" id="btnSplit" hidden>쪽 나누기</button></div>' : '')+
       '</div><div><input type="file" accept="application/pdf,.pdf,.jpg,.jpeg,.png" multiple hidden><button type="button" class="ghost sm up">파일 추가</button> <button type="button" class="del sm clr" hidden>전체 삭제</button></div></div>';
   }).join('');
@@ -1167,20 +1169,42 @@ function buildPdfs(){
     var k=row.dataset.pdf, inp=row.querySelector('input[type=file]');
     row.querySelector('.up').onclick=function(){ inp.click(); };
     row.querySelector('.clr').onclick=function(){ var n=(cur.pdfs[k]||[]).length; if(n>1 && !confirm('이 서류의 파일 '+n+'개를 모두 삭제합니다.')) return; delete cur.pdfs[k]; clearFix(cur, k); if(k==='exam') clearFix(cur, 'tb'); save(); renderPdfs(); refresh(); renderList(); };
-    inp.onchange=async function(){
-      var list=[];
-      for(var i=0;i<inp.files.length;i++){ var f=inp.files[i]; var pe=await toPdfEntry({name:f.name, type:f.type, data:new Uint8Array(await f.arrayBuffer())}); pe.at=Date.now(); list.push(pe); }
-      var meta=PDFS.filter(function(p){return p.k===k;})[0];
-      inp.value=''; toast('PDF 변환·용량 줄이는 중…');
-      await shrinkPdfList(list);
-      cur.pdfs[k] = (cur.pdfs[k]||[]).concat(list);
-      clearFix(cur, k); if(k==='exam' && cur.tbIn41) clearFix(cur, 'tb'); save(); renderPdfs(); refresh(); renderList(); toast('파일 '+list.length+'개를 추가했습니다');
-    };
+    inp.onchange=function(){ var l=Array.prototype.slice.call(inp.files); inp.value=''; addPdfFiles(k, l); };
+    // 칸마다 끌어다 놓기: 놓은 파일은 이 서류로 바로 추가(전체 화면 불러오기로 넘기지 않음)
+    var dep=0;
+    row.addEventListener('dragenter', function(e){ if(!dragHasFiles(e)) return; e.preventDefault(); dep++; row.classList.add('over'); $('overlay').classList.remove('on'); });
+    row.addEventListener('dragover', function(e){ if(!dragHasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect='copy'; row.classList.add('over'); });
+    row.addEventListener('dragleave', function(){ dep=Math.max(0,dep-1); if(!dep) row.classList.remove('over'); });
+    row.addEventListener('drop', function(e){ e.preventDefault(); e.stopPropagation(); dep=0; row.classList.remove('over'); $('overlay').classList.remove('on');
+      var l=Array.prototype.slice.call(e.dataTransfer.files||[]); if(l.length) addPdfFiles(k, l); });
   });
   $('tbIn41').onchange=function(){ cur.tbIn41=$('tbIn41').checked; save(); renderPdfs(); refresh(); };
   $('btnSplit').onclick=openSplit;
   $('splitCancel').onclick=function(){ $('splitDlg').classList.remove('on'); };
   $('splitDo').onclick=async function(){ if(await splitTbPages($('splitPages').value)) $('splitDlg').classList.remove('on'); };
+}
+
+function dragHasFiles(e){ return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types||[], 'Files')>=0; }
+var PDF_OK=/\.(pdf|jpe?g|png|webp|bmp|gif)$/i;
+// 증빙서류 한 칸에 파일 추가(파일 추가 버튼·끌어다 놓기 공통). 같은 칸에 이미 있는 파일은 건너뜀
+async function addPdfFiles(k, files){
+  if(!cur){ toast('강사를 먼저 선택해 주십시오'); return; }
+  var meta=PDFS.filter(function(p){ return p.k===k; })[0]||{t:k}, bad=[], dup=[], list=[], have=cur.pdfs[k]||[];
+  var seen={}; have.forEach(function(f){ seen[f.src||f.name]=1; seen[f.name]=1; });
+  files.forEach(function(f){ if(!PDF_OK.test(f.name)) bad.push(f.name); });
+  files=files.filter(function(f){ return PDF_OK.test(f.name); });
+  if(!files.length){ toast(bad.length?'PDF·사진 파일만 넣을 수 있습니다: '+bad.join(', '):'넣을 파일이 없습니다'); return; }
+  toast('PDF 변환·용량 줄이는 중…');
+  for(var i=0;i<files.length;i++){ var f=files[i], src=f.name+'|'+f.size, pdfName=f.name.replace(/\.(jpe?g|png|webp|bmp|gif)$/i,'.pdf');
+    if(seen[src]||seen[pdfName]){ dup.push(f.name); continue; }
+    var pe=await toPdfEntry({name:f.name, type:f.type, data:new Uint8Array(await f.arrayBuffer())}); pe.at=Date.now(); pe.src=src; seen[src]=1; seen[pe.name]=1; list.push(pe); }
+  if(list.length){
+    await shrinkPdfList(list);
+    cur.pdfs[k]=(cur.pdfs[k]||[]).concat(list);
+    clearFix(cur, k); if(k==='exam' && cur.tbIn41) clearFix(cur, 'tb'); save(); renderPdfs(); refresh(); renderList();
+  }
+  var msg=[]; if(list.length) msg.push((meta.no?meta.no+'번 ':'')+meta.t+'에 파일 '+list.length+'개를 추가했습니다'); if(dup.length) msg.push('이미 있는 파일 '+dup.length+'개는 건너뜀'); if(bad.length) msg.push('PDF·사진이 아닌 파일 '+bad.length+'개 제외');
+  toast(msg.join(' · ')||'추가한 파일이 없습니다');
 }
 
 /* ---------- 이미지 → PDF ---------- */
@@ -2952,10 +2976,10 @@ function bindImport(){
   $('impClose').onclick=function(){ $('impDlg').classList.remove('on'); };
   var depth=0, ov=$('overlay');
   function hasFiles(e){ return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types||[], 'Files')>=0; }
-  document.addEventListener('dragenter', function(e){ if(!hasFiles(e)) return; depth++; if(!e.target.closest || !e.target.closest('.drop')) ov.classList.add('on'); });
-  document.addEventListener('dragover', function(e){ if(!hasFiles(e)) return; e.preventDefault(); var inZone=e.target.closest && e.target.closest('.drop'); ov.classList.toggle('on', !inZone); });
+  document.addEventListener('dragenter', function(e){ if(!hasFiles(e)) return; depth++; if(!e.target.closest || !e.target.closest('.drop,.pdrop')) ov.classList.add('on'); });
+  document.addEventListener('dragover', function(e){ if(!hasFiles(e)) return; e.preventDefault(); var inZone=e.target.closest && e.target.closest('.drop,.pdrop'); ov.classList.toggle('on', !inZone); });
   document.addEventListener('dragleave', function(){ depth=Math.max(0,depth-1); if(!depth) ov.classList.remove('on'); });
-  document.addEventListener('drop', function(e){ depth=0; ov.classList.remove('on'); if(!hasFiles(e)) return; if(e.target.closest && e.target.closest('.drop')) return; e.preventDefault();
+  document.addEventListener('drop', function(e){ depth=0; ov.classList.remove('on'); if(!hasFiles(e)) return; if(e.target.closest && e.target.closest('.drop,.pdrop')) return; e.preventDefault();
     // 폴더가 섞여 있으면 폴더 안 파일까지 모두 읽는다(entry 는 drop 이벤트 안에서 바로 받아 둬야 한다)
     var ents=Array.prototype.map.call(e.dataTransfer.items||[], function(it){ return it.kind==='file' && it.webkitGetAsEntry ? it.webkitGetAsEntry() : null; });
     var hasDir=ents.some(function(en){ return en && en.isDirectory; });
