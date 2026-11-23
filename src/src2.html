@@ -1178,6 +1178,13 @@ const mgHasOld = p => S.rows.some(r=>rowSeason(r)===curSK()&&rowBiz(r)===curBiz(
 const mgRowTxt = r => `${esc(r.school)} <span class="muted">· ${esc((prog(r.prog)||{}).name||r.src.prog||'')}${r.label?' · '+esc(r.label):''}</span>`;
 const mgWhen = r => `${md(r.start)}~${md(r.end)} · ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)}`;
 /* ---------- 학급 직접 추가 (업로드 없이 한 학급씩 넣기: 추가는 기존 목록을 건드리지 않음) ---------- */
+/* 담당자가 요청한 학교·기관 이름 수정 */
+function nameFixNotice(O){
+  const names=[...new Set(S.rows.filter(r=>rowSeason(r)===curSK()&&rowBiz(r)===curBiz()&&isOut(r)===!!O&&r.status!=='cancel').map(r=>r.school))];
+  const L=names.map(n=>[n,((S.contacts||{})[n]||{}).nameFix]).filter(([n,f])=>f&&f!==n);
+  if(!L.length) return '';
+  return `<div class="notice stack" style="gap:6px"><b>${O?'기관':'학교'} 이름 수정 요청 ${L.length}건</b>${L.map(([n,f])=>`<div class="row" style="gap:8px">${esc(n)} → <b>${esc(f)}</b><button class="btn sm pri" data-act="sch-rename" data-s="${esc(n)}" data-to="${esc(f)}">반영</button><button class="btn sm" data-act="sch-rename-no" data-s="${esc(n)}">반려</button></div>`).join('')}</div>`;
+}
 function manualPanel(O){
   const W=O?'기관':'학교';
   const same=S.rows.filter(r=>rowSeason(r)===curSK()&&rowBiz(r)===curBiz()&&isOut(r)===!!O);
@@ -2117,7 +2124,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.43';
+const LIB_VER='11.44';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2261,7 +2268,7 @@ function viewBoard(){
   const pct=s=>rows.length?cnt[s]/rows.length*100:0;
   return `<div class="stack">
   ${S.demo?`<div class="notice">교육청 목록은 실제 파일입니다. 학교 확인 내용, 담당자, 강사 명단과 강사 신청은 화면 시연용 <span class="ex">예시</span> 입니다. <button class="btn sm" data-act="clean">예시 지우고 처음 상태로</button></div>`:''}
-  ${S.ui.manual&&S.ui.manual.open&&!!S.ui.manual.out===!!O?manualPanel(O):''}
+  ${S.ui.manual&&S.ui.manual.open&&!!S.ui.manual.out===!!O?manualPanel(O):''}${nameFixNotice(O)}
   ${u.pending&&mgHasOld(u.pending)?mergePanel():u.pending&&u.pending.hub?`<div class="notice"><b>${esc(u.pending.file)}</b> · 늘봄허브 신청 목록 ${qt(['신청취소는 뺌','매칭확정: 계약정보(학급별 일정·학년·인원)로 학급을 만듦','신청완료: 신청 내용으로 학급을 만들고 학교 확인 때 정함','학교가 아닌 신청 기관(거점형 늘봄센터 등)은 「학교밖」으로 들어감','담당자 연락처(전화·휴대폰)는 학교 담당자 정보에 미리 넣음'])}
      <div class="small" style="margin-top:4px">신청 ${u.pending.info.apps}건 (매칭확정 ${u.pending.info.matched} · 신청완료 ${u.pending.info.applied}) → <b>${u.pending.info.classes}학급</b> · 학교·기관 ${new Set(u.pending.rows.map(r=>r[2])).size}곳 · <span class="muted">신청취소 ${u.pending.info.cancel}건 제외</span></div>
      <div class="small" style="margin-top:4px">${esc(season().name)} 학급을 이 목록으로 새로 시작합니다. 학교 운영 건과 학교밖 운영 건을 함께 바꿉니다.</div>
@@ -2794,6 +2801,7 @@ function viewSchool(){
     ${c.consent==='yes'?`<div class="fgrid"><label class="f">담당자 이름 *<input id="c-name" data-c="name" value="${esc(c.name)}" autocomplete="off"></label><label class="f">내선번호 (업무 전화) *<input id="c-phone" data-c="phone" value="${esc(c.phone)}" placeholder="041-000-0000" inputmode="tel" autocomplete="off"></label><label class="f">휴대폰번호 *<input id="c-mobile" data-c="mobile" value="${esc(c.mobile||'')}" placeholder="010-0000-0000" inputmode="tel" autocomplete="off"></label><label class="f">이메일 *<input id="c-email" data-c="email" type="email" value="${esc(c.email)}" placeholder="name@school.kr" inputmode="email" autocomplete="off"></label></div>`
      :c.consent==='no'?`<div class="fgrid"><label class="f">학교 대표번호 *<input id="c-phone" data-c="phone" value="${esc(c.phone)}" placeholder="041-000-0000" inputmode="tel" autocomplete="off"></label><label class="f">학교 대표 이메일 *<input id="c-email" data-c="email" type="email" value="${esc(c.email)}" inputmode="email" autocomplete="off"></label></div>`:''}
    </div>`}
+   ${(()=>{ const c=contactOf(S.ui.school), W=schIsOut()?'기관(센터)':'학교', nf=c.nameFix&&c.nameFix!==S.ui.school; return `<div class="panel stack" style="gap:6px"><h3>${W} 이름</h3><input id="c-namefix" data-c="nameFix" value="${esc(c.nameFix||S.ui.school)}" ${open?'':'disabled'} aria-label="${W} 이름">${nf?`<div class="small muted">수정 요청: ${esc(S.ui.school)} → ${esc(c.nameFix)} · 운영기관 확인 후 반영됩니다</div>`:''}</div>`; })()}
    ${schIsOut()?(()=>{ const c=contactOf(S.ui.school); return `<div class="panel stack" style="gap:6px"><h3>기관 주소 <span class="lv-crit small">*</span></h3><input id="c-addr" data-c="addr" value="${esc(c.addr||'')}" placeholder="예: 충남 천안시 동남구 ○○로 12, 3층" autocomplete="street-address" ${open?'':'disabled'} aria-label="기관 주소"></div>`; })():''}
    <div><h3><span class="stepno">2</span>학급별 운영 정보 확인 <span class="muted small" style="font-weight:400">· ${rs.length}학급</span></h3><div class="muted small" style="margin-top:2px">${open?`학급마다 인원·교실·일정 확인, 운영 조건에 답하기 ${qt(['예: 태블릿 제공 여부','입력한 내용은 자동으로 임시 저장'])}`:`제출한 내용과 진행 상황 ${qt('강사 배치가 끝나면 학급 카드 아래에 확정 내용과 배치 강사가 나옴')}`}</div></div>
    ${props.length?`<div class="notice"><b>운영안이 도착했습니다.</b> 학급별로 프로그램, 기간, 요일·시간, 인원을 보고 수락하거나 조정을 요청해 주세요. 수락하면 운영이 확정되고 강사 배치가 시작됩니다.</div>`:''}
@@ -6219,6 +6227,7 @@ document.addEventListener('click',async e=>{
     case 'up-no': S.ui.pending=null; S.ui.mgOpen=''; break;
     case 'man-open': S.ui.manual={open:true,out:el.dataset.out==='1'}; break;
     case 'man-close': S.ui.manual=null; break;
+    case 'sch-rename-no': { const c=(S.contacts||{})[el.dataset.s]; if(c){ c.nameFix=''; save(); } toast('이름 수정 요청을 반려했습니다'); break; }
     case 'man-add': manualAdd(); break;
     case 'mgmode': S.ui.pending.mode=el.dataset.v; break;
     case 'mgopen': S.ui.mgOpen=el.dataset.v; break;
@@ -6635,7 +6644,7 @@ document.addEventListener('input',e=>{
   const SQ={tq:v=>{ tF().q=v; },'jq-done':v=>{ S.ui.jq=v; },'as-q':v=>{ S.ui.asQ=v; },iq:v=>{ S.ui.if={...(S.ui.if||{}),q:v}; },uq:v=>{ S.ui.uq=v; },mq:v=>{ S.ui.mq=v; },q:v=>{ S.ui.q=v.trim(); }};
   if(SQ[t.id]){ SQ[t.id](t.value); liveSearch(t.id); return; }
   if(e.isComposing) return;
-  if(t.dataset.c&&t.type!=='radio'&&t.type!=='checkbox'){ const c=contactOf(S.ui.school); c[t.dataset.c]=t.value; delete c.example; save(); return; }
+  if(t.dataset.c&&t.type!=='radio'&&t.type!=='checkbox'){ const c=contactOf(S.ui.school); c[t.dataset.c]=t.value; if(t.dataset.c==='nameFix'){ const v=t.value.replace(/\s+/g,' ').trim(); c.nameFix=v&&v!==S.ui.school?v:''; } delete c.example; save(); return; }
   if(t.dataset.r&&t.dataset.f&&t.tagName!=='SELECT'){ R(t.dataset.r).sc[t.dataset.f]=t.value; save(); return; }
   if(t.dataset.treg&&S.ui.tReg){ S.ui.tReg[t.dataset.treg]=t.value; return; }
   if(t.dataset.jf&&t.type!=='radio'&&t.type!=='checkbox'){ (S.ui.jf=S.ui.jf||{})[t.dataset.jf]=t.value; return; }

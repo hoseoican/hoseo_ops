@@ -257,7 +257,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.43';
+const APP_VER = '11.44';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -541,6 +541,16 @@ document.addEventListener('click', e => {
       const aoa = B.aoa.map((r, i) => r.map((v, c) => i > 0 && (c === 28 || c === 29) && typeof v === 'number' ? hm(Math.round(v * 1440)) : fmt(v)));
       msg.textContent = '구글 시트를 만드는 중…';
       run('adminExportToSheet', ADMIN_KEY, aoa, `${season().name} 호서대 운영현황`).then(url => { msg.innerHTML = `만들었습니다. <a href="${esc(url)}" target="_blank" rel="noopener">구글 시트 열기</a> → [파일 > 다운로드 > Microsoft Excel]`; }).catch(err => msg.textContent = errMsg(err));
+      return;
+    }
+    if (a === 'sch-rename') {
+      stop(); const from = el.dataset.s, to = el.dataset.to;
+      if (!confirm(`「${from}」 이름을 「${to}」(으)로 바꿉니다.\n학급·담당자 정보·링크는 그대로 옮겨집니다.`)) return;
+      el.disabled = true;
+      run('adminRenameSchool', ADMIN_KEY, from, to).then(x => {
+        toast(`이름을 바꿨습니다 · ${x.from} → ${x.to} (${x.rows}학급)`);
+        return run('adminLoad', ADMIN_KEY, false, '').then(d2 => { aUse(d2, true); S.ui.loadH = d2.h || ''; render(); });
+      }).catch(err => { el.disabled = false; toast(errMsg(err)); });
       return;
     }
     if (a === 'regen') {
