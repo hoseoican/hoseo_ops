@@ -81,10 +81,17 @@
     if (/이력서/.test(n)) return 'resume';
     return 'other';
   }
-  function pdfSlot(path) {
+  function pdfSlot(path, ext) {
     var s = path.replace(/\s+/g, '');
     var b = base(path).replace(/\s+/g, '');
+    var isImg = /^(jpe?g|png)$/i.test(ext || '');
     if (/이력서/.test(b)) return { skip: '이력서' };
+    // 사진 파일은 이름으로 서명·증명사진·신분증·통장 칸에 바로 넣는다
+    if (isImg && /신분증/.test(b) && /통장/.test(b)) return { skip: '신분증·통장 사본(한 장에 함께 있음)' };
+    if (isImg && /신분증|주민등록증|운전면허/.test(b)) return { img: 'idcard' };
+    if (isImg && /통장/.test(b)) return { img: 'bank' };
+    if (isImg && /증명사진|반명함|여권사진|^\d*\.?사진/.test(b)) return { img: 'photo' };
+    if (isImg && /서명|사인/.test(b)) return { img: 'sign' };
     if (/신분증|통장/.test(b)) return { skip: '신분증·통장 사본' };
     if (/동의서|서약서/.test(b)) return { skip: '동의서·서약서' };
     if (/신체검사|채용신체|건강검진|검진결과/.test(b) && /결핵|IGRA/i.test(b)) return { k: 'exam', both: true };
@@ -193,7 +200,11 @@
         continue;
       }
       if (ext === 'pdf' || ext === 'jpg' || ext === 'jpeg' || ext === 'png') {
-        var slot = pdfSlot(f.path);
+        var slot = pdfSlot(f.path, ext);
+        if (slot.img) {
+          if (!r.imgs[slot.img]) { r.imgs[slot.img] = picOut({ bytes: f.bytes, ext: ext === 'png' ? 'png' : 'jpg', w: 25, h: 33 }); r.notes.push('「' + base(f.path) + '」: ' + ({ idcard: '신분증', bank: '통장 사본', photo: '증명사진', sign: '서명' })[slot.img] + ' 이미지로 넣었습니다'); }
+          continue;
+        }
         if (slot.skip) { r.notes.push('「' + base(f.path) + '」: ' + slot.skip + ' 파일이 ' + ext.toUpperCase() + '라 내용을 읽을 수 없습니다. 직접 입력해 주세요'); continue; }
         var data = f.bytes, name = base(f.path);
         if (ext !== 'pdf') {
@@ -222,7 +233,7 @@
     if (!r.name) r.name = cleanName(hint.replace(/\(.*?\)|_?주강사|_?보조강사|보조|\d+/g, ''));
     if (!r.birth && r.rrn) r.birth = '';
     if (!kinds.resume) r.notes.push('한글 이력서가 없어 이력 칸은 비워 둡니다');
-    if (!kinds.f2) r.notes.push('한글 신분증·통장 사본이 없어 이미지를 못 가져왔습니다');
+    if (!kinds.f2 && !(r.imgs.idcard && r.imgs.bank)) r.notes.push('신분증·통장 사본(한글 파일이나 「신분증」「통장」 이름의 사진 파일)이 없어 이미지를 못 가져왔습니다');
     return r;
   }
   function isPhotoShape(p) { var ratio = p.h / (p.w || 1); return p.w > 12 && p.w < 45 && ratio > 1.15 && ratio < 1.7; }
