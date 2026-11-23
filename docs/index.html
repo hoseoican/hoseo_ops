@@ -1086,7 +1086,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-10';
+var APP_VERSION = '2026.11.23-11';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1177,7 +1177,7 @@ function buildImgs(){
 }
 function buildPdfs(){
   $('pdfs').innerHTML = PDFS.map(function(p){
-    return '<div class="prow pdrop" data-pdf="'+p.k+'"><div class="pno">'+p.no+'</div><div><div class="pnm">'+p.t+(p.need?'':'<span class="tag">해당자</span>')+'</div><div class="pst"></div>'+
+    return '<div class="prow pdrop" data-pdf="'+p.k+'"><div class="pno">'+p.no+'</div><div><div class="pnm">'+p.t+'<span class="tag"'+(p.need?' hidden':'')+'>해당자</span></div><div class="pst"></div>'+
       (p.k==='exam' ? '<div class="pex"><label class="row" style="margin:6px 0 0;gap:4px;font-size:12.5px"><input type="checkbox" id="tbIn41"> 잠복결핵 검사 확인서 포함 파일</label> <button type="button" class="ghost sm" id="btnSplit" hidden>쪽 나누기</button></div>' : '')+
       '</div><div><input type="file" accept="application/pdf,.pdf,.jpg,.jpeg,.png" multiple hidden><button type="button" class="ghost sm up">파일 추가</button> <button type="button" class="del sm clr" hidden>전체 삭제</button></div></div>';
   }).join('');
@@ -1560,6 +1560,10 @@ function fixDocs(p){
 }
 function clearFix(p, k){ if(p && p.fix && p.fix[k]){ delete p.fix[k]; return true; } return false; }
 function fixLabel(f){ return fixName(f.k)+' 보완: '+f.why; }
+// 보조강사만 맡은 강사(운영 목록 기준, 없으면 강사 정보의 구분). 주강사·겸임은 false
+function asstOnly(p){ if(!p) return false; var o=(typeof opsLoaded==='function' && opsLoaded()) ? opsPersonOf(p.name) : null; var roles=(o && o.roles && o.roles.length) ? o.roles : [p.role==='보조강사'?'보조강사':'주강사']; return roles.indexOf('주강사')<0; }
+// 증빙서류 필수 여부: 5번 최종학력 졸업증명서는 보조강사만 맡은 강사에게 선택
+function pdfNeed(p, m){ return !!m.need && !(m.k==='grad' && asstOnly(p)); }
 // 강사마다 제출해야 할 서류 중 아직 없는 것(서류 이름 키 목록)
 function missingDocs(p){
   if(!p) return [];
@@ -1569,7 +1573,7 @@ function missingDocs(p){
   IMG_KEYS.forEach(function(m){ if(!im[m.k]) out.push(m.k); });
   if(!(pd.exam||[]).length) out.push('exam');
   if(!(pd.tb||[]).length && !(p.tbIn41 && (pd.exam||[]).length)) out.push('tb');
-  if(!(pd.grad||[]).length) out.push('grad');
+  if(!(pd.grad||[]).length && !asstOnly(p)) out.push('grad');
   return out;
 }
 function missText(k){ return MISS_NAMES[k]||k; }
@@ -1967,7 +1971,8 @@ function renderPdfs(){
     var row=document.querySelector('[data-pdf="'+p.k+'"]'), v=cur.pdfs[p.k], st=row.querySelector('.pst'), clr=row.querySelector('.clr');
     if(v&&v.length){ st.className='pst has'; st.innerHTML=v.map(function(f, i){ return '<div class="pfile"><a href="#" class="popen" data-po="'+p.k+'" data-pi="'+i+'" title="눌러서 열어 보기">'+esc(f.name)+'</a>'+(/\.pdf$/i.test(f.name)?'':' <b style="color:var(--warn)">(PDF 아님)</b>')+' <button type="button" class="pdel" data-pdk="'+p.k+'" data-pdi="'+i+'" title="이 파일 삭제" aria-label="이 파일 삭제">삭제</button></div>'; }).join('')+(cur.fix&&cur.fix[p.k]?' · <span class="fixmark">보완 필요: '+esc(cur.fix[p.k].why||'사유 미입력')+'</span>':''); clr.hidden=v.length<2; }
     else if(p.k==='tb' && cur.tbIn41 && (cur.pdfs.exam||[]).length){ st.className='pst has'; st.textContent='4-1 파일에 포함'; clr.hidden=true; }
-    else { st.className='pst'; st.textContent = p.need?'미제출':'해당자만'; clr.hidden=true; }
+    else { st.className='pst'; st.textContent = pdfNeed(cur,p)?'미제출':(p.need?'미제출 · 필수 아님':'해당자만'); clr.hidden=true; }
+    var tg=row.querySelector('.pnm .tag'); if(tg){ tg.hidden=pdfNeed(cur,p); tg.textContent=p.need?'보조강사 선택':'해당자'; }
   });
   each('[data-pdk]', function(b){ b.onclick=function(e){ e.preventDefault(); e.stopPropagation(); var k=b.dataset.pdk, a=cur.pdfs[k]||[], f=a[+b.dataset.pdi]; if(!f) return;
     a.splice(+b.dataset.pdi, 1); if(!a.length){ delete cur.pdfs[k]; clearFix(cur, k); if(k==='exam') clearFix(cur, 'tb'); }
@@ -2101,7 +2106,7 @@ function checks(p){
   if(p.role==='주강사' && settings.include1112) p.programs ? add('school','ok','운영 프로그램명') : add('school','warn','운영 프로그램명이 비어 있습니다 (11번)');
   (p.edu||[]).some(function(r){return r&&r.school;}) ? add('cv','ok','학력') : add('cv','warn','학력이 비어 있습니다');
   IMG_KEYS.forEach(function(m){ p.imgs[m.k] ? add('imgs','ok', m.t+' 이미지') : add('imgs', m.k==='sign'||m.k==='photo'?'err':'warn', m.t+' 이미지가 없습니다'); });
-  PDFS.forEach(function(m){ if(!m.need) return; if(m.k==='tb' && p.tbIn41 && (p.pdfs.exam||[]).length){ add('pdf','ok', m.t+' (4-1 파일에 포함)'); return; } (p.pdfs[m.k]||[]).length ? add('pdf','ok', m.t) : add('pdf','warn', m.t+' PDF가 없습니다'); });
+  PDFS.forEach(function(m){ if(!pdfNeed(p, m)) return; if(m.k==='tb' && p.tbIn41 && (p.pdfs.exam||[]).length){ add('pdf','ok', m.t+' (4-1 파일에 포함)'); return; } (p.pdfs[m.k]||[]).length ? add('pdf','ok', m.t) : add('pdf','warn', m.t+' PDF가 없습니다'); });
   var e = examState(p); if(e) add('pdf', e.lv, e.t);
   var fx=p.fix||{}; FIX_DOCS.forEach(function(d){ if(fx[d[0]] && docFiles(p, d[0]).length) add(IMG_KEYS.some(function(m){ return m.k===d[0]; })?'imgs':'pdf', 'warn', d[1]+' 보완 필요: '+(fx[d[0]].why||'조건에 맞지 않음')); });
   return out;

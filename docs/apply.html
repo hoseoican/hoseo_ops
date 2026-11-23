@@ -193,11 +193,14 @@ var DOCS = [
   { k: 'cert', t: '자격증 사본·경력증명서', need: false, multi: true, s: '해당하는 분만, 여러 개 올릴 수 있습니다', use: '이력서 자격·경력 확인' }
 ];
 function has(k){ if (k === 'tb' && me.tbIn41 && me.files.exam.length) return true; return (me.files[k] || []).length > 0; }
-function needOf(k){ return (me.need || []).filter(function(x){ return x.k === k; })[0] || null; }
+// 보조강사만 맡은 강사는 5번 최종학력 졸업증명서가 선택(보완 요청은 그대로 보임)
+function asstOnly(){ var c = me.cls || []; return c.length ? c.every(function(x){ return x.role === '보조강사'; }) : me.role === '보조강사'; }
+function optDoc(k){ return k === 'grad' && asstOnly(); }
+function needOf(k){ var n = (me.need || []).filter(function(x){ return x.k === k; })[0] || null; return (n && optDoc(k) && n.st !== 'fix') ? null : n; }
 // 확인할 항목 전체: 필수 항목은 완료/미제출/보완으로, 그 밖의 보완(자격증 등)도 함께
 var CHECK = [['rrn','주민등록번호'],['phone','연락처'],['address','주소'],['sign','서명'],['photo','증명사진'],['idcard','신분증 사본'],['bank','통장 사본'],['exam','채용신체검사서'],['examDate','채용신체검사서 검진일'],['tb','잠복결핵 검사 확인서'],['grad','최종학력 졸업증명서']];
 function todoList(){
-  var L = CHECK.filter(function(c){ return c[0] !== 'examDate' || has('exam'); }).map(function(c){ var n = needOf(c[0]); return { k: c[0], t: c[1], ok: !n, st: n ? n.st : '', why: n ? n.why : '' }; });
+  var L = CHECK.filter(function(c){ return (c[0] !== 'examDate' || has('exam')) && (!optDoc(c[0]) || needOf(c[0])); }).map(function(c){ var n = needOf(c[0]); return { k: c[0], t: c[1], ok: !n, st: n ? n.st : '', why: n ? n.why : '' }; });
   (me.need || []).forEach(function(n){ if (!CHECK.some(function(c){ return c[0] === n.k; })) L.push({ k: n.k, t: n.t, ok: false, st: n.st, why: n.why }); });
   return L;
 }
@@ -241,8 +244,8 @@ function buildRows(){
 }
 function renderDocs(){
   $('docs').innerHTML = DOCS.map(function(d){
-    var n = needOf(d.k), ok = has(d.k), fx = n && n.st === 'fix', cls = fx ? 'fix' : ok ? 'done' : d.need ? 'need' : '', files = me.files[d.k] || [];
-    var st = fx ? '<span class="st fx">보완 필요</span>' : ok ? '<span class="st ok">올림</span>' : d.need ? '<span class="st no">미제출</span>' : '<span class="st op">해당자</span>';
+    var n = needOf(d.k), ok = has(d.k), fx = n && n.st === 'fix', dneed = d.need && !optDoc(d.k), cls = fx ? 'fix' : ok ? 'done' : dneed ? 'need' : '', files = me.files[d.k] || [];
+    var st = fx ? '<span class="st fx">보완 필요</span>' : ok ? '<span class="st ok">올림</span>' : dneed ? '<span class="st no">미제출</span>' : '<span class="st op">' + (d.need ? '보조강사 선택' : '해당자') + '</span>';
     var dn = d.date ? needOf('examDate') : null;
     var h = '<div class="doc ' + cls + '" data-doc="' + d.k + '"><div class="hd"><b>' + d.t + '</b>' + st + '</div><p><span class="use">용도: ' + esc(d.use) + '</span><br>' + esc(d.s) + (fx ? '<br><span class="why">보완 사유: ' + esc(n.why) + '</span>' : '') + (dn ? '<br><span class="why" style="color:var(--danger)">' + esc(dn.why) + '</span>' : '') + '</p>';
     if (d.date) h += '<label class="f" style="margin-bottom:8px"><span style="font-weight:500;font-size:12.5px">검진일</span><input type="date" id="examDate" value="' + esc(me.examDate || '') + '"></label>';
