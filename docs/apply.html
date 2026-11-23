@@ -130,6 +130,7 @@
 'use strict';
 var API = 'https://script.google.com/macros/s/AKfycby5iQBKK3NIYigURP54G6ri-Do76lYIQVnflA2lqmpBLYkPZhN-g0ZflYaZFsT4ClDOMg/exec';
 var qs = new URLSearchParams(location.search), T = qs.get('t') || '', A = '', ASK = '', me = null, busy = false;
+var useOldSign = false; /* 서명 카드: 이미 올린 서명을 그대로 쓰기로 함 */
 /* 운영 관리 강사 화면에서 넘어온 경우: 주소 #sso= 의 로그인 확인증으로 본인 확인을 대신함(이 탭에만 기억) */
 var SSO = (/[#&]sso=([^&]+)/.exec(location.hash) || [])[1] || '';
 try { if (SSO) sessionStorage.setItem('lsso_' + T, decodeURIComponent(SSO)); SSO = sessionStorage.getItem('lsso_' + T) || ''; } catch (e) { SSO = SSO ? decodeURIComponent(SSO) : ''; }
@@ -249,13 +250,16 @@ function renderDocs(){
     var at = (me.fat || {})[d.k] || [];
     if (d.multi && files.length) h += '<ul class="files">' + files.map(function(n, i){ return '<li><span>' + esc(n) + '</span><span style="display:flex;gap:4px"><button type="button" class="ghost sm" data-view="' + d.k + '" data-i="' + i + '">보기</button><button type="button" class="ghost sm" data-del="' + i + '">삭제</button></span></li>'; }).join('') + '</ul>';
     else if (files.length && (me.files[d.k] || []).length) h += '<ul class="files"><li><span>올린 파일' + (at[0] ? ' · ' + new Date(at[0]).toLocaleDateString('ko-KR') : '') + '</span><button type="button" class="ghost sm" data-view="' + d.k + '" data-i="0">보기</button></li></ul>';
-    if (d.k === 'sign') h += (ok ? '<p style="margin:0 0 6px">올린 서명이 있습니다. 바꾸려면 아래에 다시 서명하세요.</p>' : '') + '<canvas id="pad"></canvas><div class="acts" style="margin-top:8px"><button type="button" class="ghost sm" id="padClear">초기화</button><button type="button" class="sm" id="padOk" style="flex:1">서명 업로드</button></div><div class="acts" style="margin-top:6px"><button type="button" class="ghost sm" data-pick="sign">서명 사진 업로드</button></div><div class="prog" data-prog="sign"></div></div>';
+    if (d.k === 'sign' && ok && useOldSign) h += '<p style="margin:0 0 6px"><b>기존 서명을 사용합니다.</b></p><div class="acts"><button type="button" class="ghost sm" id="signNew" style="flex:1">새로 서명하기</button></div></div>';
+    else if (d.k === 'sign') h += (ok ? '<p style="margin:0 0 6px">올린 서명이 있습니다. 그대로 쓰려면 「기존 서명 사용하기」, 바꾸려면 아래에 다시 서명하세요.</p>' : '') + '<canvas id="pad"></canvas><div class="acts" style="margin-top:8px"><button type="button" class="ghost sm" id="padClear">초기화</button>' + (ok ? '<button type="button" class="sm" id="signOld">기존 서명 사용하기</button>' : '') + '<button type="button" class="' + (ok ? 'ghost ' : '') + 'sm" id="padOk" style="flex:1">서명 업로드</button></div><div class="acts" style="margin-top:6px"><button type="button" class="ghost sm" data-pick="sign">서명 사진 업로드</button></div><div class="prog" data-prog="sign"></div></div>';
     else h += '<div class="acts"><button type="button" class="' + (ok && !d.multi ? 'ghost ' : '') + 'sm" data-cam="' + d.k + '">사진 찍기</button><button type="button" class="ghost sm" data-pick="' + d.k + '">' + (d.img ? '사진 선택' : '파일 선택') + '</button></div><div class="prog" data-prog="' + d.k + '"></div></div>';
     return h;
   }).join('');
   Array.prototype.forEach.call(document.querySelectorAll('[data-cam],[data-pick]'), function(b){ b.onclick = function(){ pick(b.dataset.cam || b.dataset.pick, !!b.dataset.cam); }; });
   Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function(b){ b.onclick = async function(){ if (!confirm('이 파일을 지울까요?')) return; try { afterSave(await call('lfile', { k: 'cert', del: true, i: +b.dataset.del })); toast('지웠습니다'); } catch (e) { toast(e.message); } }; });
   Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function(b){ b.onclick = function(){ viewFile(b.dataset.view, +b.dataset.i, b); }; });
+  if ($('signOld')) $('signOld').onclick = function(){ useOldSign = true; renderDocs(); toast('기존 서명을 사용합니다'); };
+  if ($('signNew')) $('signNew').onclick = function(){ useOldSign = false; renderDocs(); };
   initPad();
   if ($('examDate')) $('examDate').onchange = function(){ saveText(false, true); };
   if ($('tbIn41')) $('tbIn41').onchange = function(){ saveText(false, true); };
