@@ -1055,7 +1055,7 @@ if(EMBED) document.documentElement.classList.add('embed');
           <div class="ph-list" id="smPh"></div>
           <div class="row" style="margin:0"><button type="button" class="ghost sm" id="smReset">기본값 초기화</button></div>
         </div></details>
-        <div class="bulkbar" style="margin-top:12px"><span id="smSelInfo"></span><span style="flex:1"></span><button type="button" class="ghost sm" id="smCopyAll">전체 내용 복사</button><button type="button" class="ghost sm" id="smCsv">CSV 다운로드</button><button type="button" class="ghost sm" id="smLink" title="고른 강사마다 본인만 열 수 있는 제출 링크를 만들어 문자에 넣습니다 (14일 동안 사용)">제출 링크 생성</button><button type="button" class="sm" id="smMark">요청함 처리</button></div>
+        <div class="bulkbar" style="margin-top:12px"><span id="smSelInfo"></span><span style="flex:1"></span><button type="button" class="ghost sm" id="smCopyAll">전체 내용 복사</button><button type="button" class="ghost sm" id="smCsv">CSV 다운로드</button><button type="button" class="ghost sm" id="smLink" title="고른 강사마다 본인만 열 수 있는 제출 링크를 만들어 문자에 넣습니다 (14일 동안 사용)">제출 링크 생성</button><button type="button" class="sm" id="smMark">요청함 처리</button><button type="button" class="save sm" id="smSendAll">선택 강사 문자 보내기</button></div>
         <div class="smsprev" id="smPrev"></div>
       </div>
     </div>
@@ -1137,6 +1137,18 @@ if(EMBED) document.documentElement.classList.add('embed');
   <div class="row" style="margin:0;gap:8px"><button type="button" class="ghost" id="bkRestoreBtn">백업 파일 선택</button><input type="file" id="bkFile" accept=".zip,.json" hidden><span class="hint" id="bkRestoreInfo"></span></div>
   <div class="row" style="justify-content:flex-end;margin:14px 0 0"><button type="button" class="ghost" id="bkClose">닫기</button></div>
 </div></div>
+<div class="modal" id="smsBrDlg"><div class="box">
+  <h3>i-ONE 캠퍼스 문자 보내기 설정 (처음 한 번)</h3>
+  <p class="hint" style="margin:4px 0 8px">설치하면 「문자 보내기」 한 번으로 i-ONE 캠퍼스 「메시지전송(문자)」 화면에 수신자·내용이 채워집니다. 전송 버튼은 담당자가 직접 누릅니다.</p>
+  <ol style="line-height:1.9;padding-left:20px;margin:8px 0 12px">
+    <li><a href="https://chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener"><b>Tampermonkey</b></a>를 Chrome에 추가합니다.</li>
+    <li>Chrome 주소창에 <code>chrome://extensions</code> → Tampermonkey <b>세부정보</b> → <b>「사용자 스크립트 허용」</b>을 켭니다.</li>
+    <li><a href="../hoseo-sms-bridge.user.js" target="_blank" rel="noopener"><b>문자 보내기 스크립트 설치</b></a>를 열고 「설치」를 누릅니다. (운영 관리에서 이미 설치했다면 건너뜁니다)</li>
+    <li>같은 Chrome에서 <b>i-ONE 캠퍼스</b>에 로그인해 둡니다.</li>
+    <li>이 화면을 새로고침합니다.</li>
+  </ol>
+  <div class="row" style="justify-content:flex-end;margin:0"><button type="button" class="ghost" id="smsBrClose">닫기</button></div>
+</div></div>
 <div class="modal" id="bridgeDlg"><div class="box">
   <h3>학교 메일로 바로 보내기 설정 (처음 한 번)</h3>
   <ol style="line-height:1.9;padding-left:20px;margin:8px 0 12px">
@@ -1191,7 +1203,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-17';
+var APP_VERSION = '2026.11.23-18';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2087,6 +2099,20 @@ function smsMatch(x){
   if(rq.charAt(0)==='d' && !(lg && reqDays(lg)>=+rq.slice(1))) return false;
   return true;
 }
+/* ---------- i-ONE 캠퍼스 문자 보내기: 운영 관리와 같은 Tampermonkey 스크립트(hoseo-sms-bridge) ----------
+ * 이 화면 → 스크립트: hs-sms-send {req,label,jobs:[{key,name,phone,title,body}]} · 스크립트 → 이 화면: hs-sms-hello / hs-sms-sent {key,at} */
+var SMS_BR={ on:false, ver:'' };
+function smsBrPost(m){ var ws=[window]; try{ if(window.top!==window) ws.unshift(window.top); }catch(e){} ws.forEach(function(w){ try{ w.postMessage(m, '*'); }catch(e){} }); }
+window.addEventListener('message', function(e){ var d=e.data; if(!d || typeof d!=='object') return;
+  if(d.type==='hs-sms-hello' && !SMS_BR.on){ SMS_BR.on=true; SMS_BR.ver=d.ver||''; if(page==='sms') renderSmsPreview(); }
+  if(d.type==='hs-sms-sent' && d.key && String(d.key).indexOf('lec:')===0){ var id=String(d.key).slice(4), x=smsTargets().filter(function(y){ return y.p.id===id; })[0]; if(x){ smsLogSet(id, x); kvPut('smsLog', smsLog); if(page==='sms') renderSms(); toast(x.name+' 강사 문자 전송을 요청함으로 기록했습니다'); } } });
+setTimeout(function(){ smsBrPost({ type:'hs-sms-ping' }); }, 1200); setInterval(function(){ if(!SMS_BR.on) smsBrPost({ type:'hs-sms-ping' }); }, 6000);
+function smsBrSend(list){
+  var jobs=(list||[]).filter(Boolean).map(function(x){ return { key:'lec:'+x.p.id, name:x.name, phone:phoneOf(x.p), title:'강사 서류 제출·보완 요청', body:smsText(x) }; }).filter(function(j){ return /^01\d{8,9}$/.test(j.phone) && j.body; });
+  if(!jobs.length){ toast('휴대폰번호가 있는 강사가 없습니다'); return; }
+  if(!SMS_BR.on){ $('smsBrDlg').classList.add('on'); smsBrPost({ type:'hs-sms-ping' }); return; }
+  smsBrPost({ type:'hs-sms-send', req:'l'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), label:'강사 서류 요청', jobs:jobs });
+  toast('i-ONE 캠퍼스 문자 화면을 엽니다 · '+jobs.length+'건. 새 탭에서 확인 후 「전송」을 눌러 주세요'); }
 function renderSms(){
   var all=smsTargets(), ids={}; all.forEach(function(x){ ids[x.p.id]=1; });
   Object.keys(smsPick).forEach(function(id){ if(!ids[id]) delete smsPick[id]; });
@@ -2119,13 +2145,15 @@ function renderSmsPreview(){
   var pk=smsPicked();
   $('smSelInfo').innerHTML = pk.length ? '<b>'+pk.length+'명</b> 선택'+(pk.some(function(x){ return phoneOf(x.p).length<10; })?' · 연락처 없는 강사 '+pk.filter(function(x){ return phoneOf(x.p).length<10; }).length+'명':'') : '선택한 강사 없음';
   ['smCopyAll','smCsv','smMark','smNone','smLink'].forEach(function(id){ $(id).disabled=!pk.length; });
+  var nSend=pk.filter(function(x){ return phoneOf(x.p).length>=10; }).length; $('smSendAll').disabled=!nSend; $('smSendAll').textContent='선택 강사 문자 보내기'+(nSend?' ('+nSend+'명)':'')+(SMS_BR.on?'':' · 설치 필요');
   $('smPrev').innerHTML = pk.length ? pk.map(function(x){
     var p=x.p, t=smsText(x), ph=phoneOf(p), b=smsBytes(t), lg=smsLog[p.id];
     return '<div class="smsitem"><div class="hd"><b>'+esc(x.name)+'</b><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+(function(){ var l=linkState(p); return l.st==='ok' ? '<span class="badge ok" title="'+esc(linkOf(p))+'">링크 ~'+dotDate(p.lnk.exp)+'</span>' : l.st==='none' ? '' : '<span class="badge err" title="「제출 링크 생성」를 누르면 새 링크를 만듭니다">링크 '+(l.st==='lock'?'잠김':'기간 지남')+'</span>'; })()+'<span class="by">'+b+'바이트 · '+(b<=90?'단문':'장문')+'</span></div>'+
-      '<pre>'+esc(t)+'</pre><div class="ft"><button type="button" class="ghost sm" data-smcopy="'+esc(p.id)+'">문자 내용 복사</button>'+(ph.length>=10?'<button type="button" class="ghost sm" data-smtel="'+esc(p.id)+'">전화번호 복사</button><a href="sms:'+ph+'?body='+encodeURIComponent(t)+'">휴대폰 문자 열기</a>':'')+
+      '<pre>'+esc(t)+'</pre><div class="ft">'+(ph.length>=10?'<button type="button" class="save sm" data-smsend="'+esc(p.id)+'">문자 보내기</button>':'')+'<button type="button" class="ghost sm" data-smcopy="'+esc(p.id)+'">문자 내용 복사</button>'+(ph.length>=10?'<button type="button" class="ghost sm" data-smtel="'+esc(p.id)+'">전화번호 복사</button><a href="sms:'+ph+'?body='+encodeURIComponent(t)+'">휴대폰 문자 열기</a>':'')+
       '<span style="flex:1"></span>'+(lg?'<button type="button" class="ghost sm" data-smunreq="'+esc(p.id)+'">요청 기록 삭제</button>':'')+'<button type="button" class="ghost sm" data-smreq="'+esc(p.id)+'">'+(lg?(lg.date===today()?'오늘 요청함':'다시 요청함 처리'):'요청함 처리')+'</button></div></div>';
   }).join('') : '<p class="hint" style="margin:6px 0">선택한 강사가 없습니다.</p>';
   var byId={}; pk.forEach(function(x){ byId[x.p.id]=x; });
+  each('[data-smsend]', function(b){ b.onclick=function(){ smsBrSend([byId[b.dataset.smsend]]); }; }, $('smPrev'));
   each('[data-smcopy]', function(b){ b.onclick=function(){ copyText(smsText(byId[b.dataset.smcopy]), '문자 내용을 복사했습니다'); }; }, $('smPrev'));
   each('[data-smtel]', function(b){ b.onclick=function(){ copyText(Forms.fmtPhone(phoneOf(byId[b.dataset.smtel].p)), '전화번호를 복사했습니다'); }; }, $('smPrev'));
   each('[data-smreq]', function(b){ b.onclick=function(){ var x=byId[b.dataset.smreq]; smsLogSet(x.p.id, x); kvPut('smsLog', smsLog); renderSms(); }; }, $('smPrev'));
@@ -2156,6 +2184,8 @@ function bindSms(){
   $('smCopyAll').onclick=function(){ var pk=smsPicked(); copyText(pk.map(function(x){ var ph=phoneOf(x.p); return x.name+' '+(ph.length>=10?Forms.fmtPhone(ph):'(연락처 없음)')+'\n'+smsText(x); }).join('\n\n'), pk.length+'명의 문자 내용을 복사했습니다'); };
   $('smCsv').onclick=smsCsv;
   $('smLink').onclick=function(){ makeLinks($('smLink')); };
+  $('smSendAll').onclick=function(){ smsBrSend(smsPicked()); };
+  $('smsBrClose').onclick=function(){ $('smsBrDlg').classList.remove('on'); };
   $('smMark').onclick=function(){ var pk=smsPicked(); pk.forEach(function(x){ smsLogSet(x.p.id, x); }); kvPut('smsLog', smsLog); renderSms(); toast(pk.length+'명을 요청함으로 기록했습니다 ('+dotDate(today())+')'); };
   // 강사 목록 화면
   $('rvQ').addEventListener('input', renderReview);
