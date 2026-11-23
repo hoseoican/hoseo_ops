@@ -336,6 +336,48 @@
   .fchips button.on { background: var(--hs); border-color: var(--hs); color: #fff; }
   .fchips button.on b { color: #fff; }
   .fchips .sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+  /* 서류 검토 */
+  .rvwrap { overflow: auto; max-height: calc(100vh - 230px); border: 1px solid var(--line); border-radius: 10px; }
+  table.rvt { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+  table.rvt th { position: sticky; top: 0; z-index: 2; background: #F7F2F1; font-weight: 700; font-size: 12px; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; text-align: center; }
+  table.rvt th.nm, table.rvt td.nm { position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; min-width: 170px; }
+  table.rvt th.nm { z-index: 3; background: #F7F2F1; }
+  table.rvt td { padding: 7px 6px; border-bottom: 1px solid #F0E8E7; text-align: center; white-space: nowrap; }
+  table.rvt td.nm b { display: block; } table.rvt td.nm small { color: var(--mute); font-size: 11.5px; white-space: normal; }
+  table.rvt tbody tr { cursor: pointer; } table.rvt tbody tr:hover td { background: var(--hs-50); }
+  .rvc { font-size: 12px; font-weight: 700; } .rvc small { display: block; font-weight: 500; color: var(--mute); font-size: 11px; }
+  .rvc.ok { color: var(--ok); } .rvc.ok .ck { font-style: normal; font-size: 14px; }
+  .rvc.miss { color: var(--danger); background: #FFF6F5; } .rvc.fix { color: #9A5B00; background: #FFF7E6; } .rvc.warn { color: #9A5B00; }
+  .rvc.opt, .rvc.na { color: #B8AEAD; font-weight: 500; }
+  span.rvc { padding: 1px 8px; border-radius: 99px; }
+  .rvdlg { display: none; position: fixed; inset: 0; z-index: 90; background: rgba(40,20,20,.35); }
+  .rvdlg.on { display: block; }
+  .rvpane { position: absolute; top: 0; right: 0; bottom: 0; width: min(980px, 96vw); background: #fff; display: flex; flex-direction: column; box-shadow: -8px 0 24px rgba(0,0,0,.18); }
+  .rvhd { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  .rvhd b { font-size: 17px; } .rvnav { display: flex; gap: 6px; align-items: center; }
+  .rvbody { flex: 1; overflow: auto; padding: 14px 18px 20px; }
+  .rvft { display: flex; gap: 8px; align-items: center; padding: 10px 18px; border-top: 1px solid var(--line); background: #FBF8F7; }
+  .rvnote { padding: 9px 12px; border-radius: 8px; background: #F3F6FB; color: #2C5282; font-size: 13px; margin: 0 0 10px; }
+  .rvsum { padding: 9px 12px; border-radius: 8px; background: #FFF6F5; border: 1px solid #F6D3CE; font-size: 13px; margin: 0 0 12px; line-height: 1.6; }
+  .rvsum b { color: var(--danger); margin-right: 6px; }
+  .rvsec { margin: 0 0 16px; } .rvsec h4 { margin: 0 0 8px; font-size: 14px; color: var(--hs-d); }
+  table.rvkv { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.rvkv th { width: 110px; text-align: left; color: var(--mute); font-weight: 600; padding: 5px 8px 5px 0; vertical-align: top; }
+  table.rvkv td { padding: 5px 0; border-bottom: 1px dashed #F0E8E7; }
+  .rvno { color: var(--danger); font-weight: 600; }
+  .rvimgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .rvimg { border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .rvimg.fx, .rvpd.fx { border-color: #F0C46A; background: #FFFCF5; }
+  .rvimg .t { font-size: 12.5px; font-weight: 700; }
+  .rvimg img { width: 100%; height: 150px; object-fit: contain; background: repeating-conic-gradient(#f3f3f3 0 25%, #fff 0 50%) 0 0/12px 12px; border-radius: 6px; }
+  .rvph { height: 150px; display: flex; align-items: center; justify-content: center; color: var(--danger); background: #FFF6F5; border-radius: 6px; font-size: 13px; font-weight: 600; }
+  .rvpd { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin: 0 0 10px; }
+  .rvph2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13.5px; margin: 0 0 6px; }
+  .rvf { font-size: 13px; padding: 2px 0; } .rvf a { color: var(--hs-d); }
+  iframe.rvpdf { width: 100%; height: 520px; border: 1px solid var(--line); border-radius: 6px; margin-top: 6px; }
+  .rvfx { color: #9A5B00; font-size: 12.5px; font-weight: 700; }
+  .rvhl { outline: 3px solid var(--hs); outline-offset: 2px; border-radius: 8px; transition: outline-color 1s; }
+  @media (max-width: 760px){ .rvimgs { grid-template-columns: repeat(2, 1fr); } }
   .stats .st2.ok b { color: var(--ok); } .stats .st2.err b { color: var(--danger); } .stats .st2 { cursor: default; }
   .bar { height: 8px; border-radius: 99px; background: #F1EBEA; overflow: hidden; display: flex; margin: 2px 0 14px; max-width: 1080px; }
   .bar i { display: block; height: 100%; }
@@ -580,6 +622,7 @@ if(EMBED) document.documentElement.classList.add('embed');
     <label data-page="ops"><input type="radio" name="page" value="ops">운영현황<i class="st" data-sec="ops"></i></label>
     <label data-page="roster"><input type="radio" name="page" value="roster">강사 목록<i class="st" data-sec="roster"></i></label>
     <label data-page="status"><input type="radio" name="page" value="status">서류 구비·발송 현황<i class="st" data-sec="status"></i></label>
+    <label data-page="review"><input type="radio" name="page" value="review">서류 검토<i class="st" data-sec="review"></i></label>
     <div class="navg"><span>①</span>강사 정보</div>
     <div class="sidebox">
       <div class="sidecap">강사 목록 <span style="display:flex;gap:4px"><button type="button" id="btnFromOps" title="운영 관리 강사 명단에서 골라 이름·연락처·이메일을 채웁니다">운영 관리에서</button><button type="button" id="btnNew">강사 등록</button></span></div>
@@ -643,6 +686,17 @@ if(EMBED) document.documentElement.classList.add('embed');
   </section>
 
   <!-- ⓪ 기준정보: 서류 구비·발송 현황 -->
+  <section data-sec="review" hidden>
+    <div class="card" style="max-width:1400px">
+      <h3>배치 강사 서류 <small id="rvBasis"></small></h3>
+      <div class="row" style="margin:0 0 10px;gap:8px;justify-content:space-between;align-items:center">
+        <div class="fchips" id="rvFilter" style="margin:0"></div>
+        <input type="text" id="rvQ" placeholder="이름·학교 찾기" autocomplete="off" style="width:180px">
+      </div>
+      <div class="rvwrap"><table class="rvt" id="rvTable"></table></div>
+    </div>
+    <div class="rvdlg" id="rvDlg"><div class="rvpane" id="rvPane" role="dialog" aria-label="강사 서류 검토"></div></div>
+  </section>
   <section data-sec="status" hidden>
     <div class="card" id="stEmpty" hidden><h3>운영현황이 없습니다</h3></div>
     <div class="card" style="max-width:1180px">
@@ -1086,20 +1140,21 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-11';
+var APP_VERSION = '2026.11.23-12';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
 var FORMS = Forms.FORMS;
 ['verSide','verFoot'].forEach(function(id){ $(id).textContent = '버전 ' + APP_VERSION; });
 
-var PAGES = ['ops','roster','status','info','school','cv','imgs','pdf','out','mail','sms','cert','certlog'];
-var SHARED_PAGES = { ops: 1, roster: 1, status: 1, mail: 1, sms: 1, cert: 1, certlog: 1 };   // 강사 한 명이 아니라 전체에 대한 화면
+var PAGES = ['ops','roster','status','review','info','school','cv','imgs','pdf','out','mail','sms','cert','certlog'];
+var SHARED_PAGES = { ops: 1, roster: 1, status: 1, review: 1, mail: 1, sms: 1, cert: 1, certlog: 1 };   // 강사 한 명이 아니라 전체에 대한 화면
 var PAGE_META = {
   cert:    ['⑤ 증명서', '경력·출강증명서 발급', '운영현황에서 강사의 수업을 골라 경력증명서·출강증명서(한글)를 만듭니다. 구글 시트 연동이 되어 있으면 날인대장에 자동으로 기록하고 문서번호를 매깁니다.'],
   certlog: ['⑤ 증명서', '발급 내역', '날인대장(앵커늘봄 탭)에 쌓인 증명서 발급 내역을 봅니다.'],
   roster: ['⓪ 기준정보', '강사 목록', '등록한 강사 전체를 부족 서류·발송 상태와 함께 봅니다. 운영현황에는 있는데 아직 등록하지 않은 강사도 「미등록」으로 함께 보입니다. 여러 명을 골라 등록·서류 다운로드·삭제·제출 요청을 한 번에 합니다.'],
   sms:    ['④ 제출', '서류 제출·보완 요청', '부족 서류가 있는 강사와 아직 서류를 내지 않은 미등록 강사를 골라 제출 요청 문자를 만듭니다. 문자 내용·전화번호 복사, 휴대폰 문자 열기, 대량 문자용 CSV 다운로드를 제공합니다.'],
+  review: ['⓪ 기준정보', '서류 검토', '적용 학기 배치 강사의 서류를 한 표로 보고, 칸을 누르면 그 강사의 인적사항·사진·증빙서류를 한 화면에서 확인합니다. 보완 필요 표시와 검토 완료를 여기서 바로 합니다. 이전·다음은 키보드 ←·→, 닫기는 Esc.'],
   status: ['⓪ 기준정보', '서류 구비·발송 현황', '운영현황의 강사마다 서류가 준비됐는지, 학교에 보냈는지 한눈에 봅니다.'],
   ops:    ['⓪ 기준정보', '운영현황', '확정 운영현황 엑셀을 넣으면 학교·기관별 운영 현황(프로그램·분야·강사)을 정리하고 강사 기준정보를 만듭니다.'],
   info:   ['① 강사 정보', '인적사항', '구분과 인적사항을 넣으면 여러 서류의 같은 칸에 함께 들어갑니다.'],
@@ -1264,6 +1319,157 @@ async function openSplit(){
   var n=1; try{ n=(await PDFLib.PDFDocument.load(src.data)).getPageCount(); }catch(e){}
   $('splitInfo').textContent='4-1 파일 전체 '+n+'쪽'; $('splitPages').value=n>1?String(n):''; $('splitDlg').classList.add('on'); $('splitPages').focus();
 }
+
+/* ---------- 서류 검토 (적용 학기 배치 강사 전체) ---------- */
+// 칸: 인적사항·이미지·PDF·이력서. 칸을 누르면 그 강사의 서류를 한 화면에서 보고 보완 표시·검토 완료를 한다
+var RV_COLS=[['rrn','주민번호'],['phone','연락처'],['addr','주소'],['cv','이력'],['sign','서명'],['photo','사진'],['idcard','신분증'],['bank','통장'],['exam','4-1 검사서'],['tb','4-2 결핵'],['grad','5 학력'],['cert','6 자격·경력']];
+var RV_FILTERS=[['all','전체'],['todo','검토 전'],['miss','미제출 있음'],['fix','보완 필요'],['done','검토 완료'],['chg','검토 후 수정'],['unreg','미등록'],['|'],['main','주강사'],['sub','보조강사']];
+var rvF='todo', rvList=[], rvIdx=-1, rvUrls=[];
+function rvState(p){ if(!p || !p.rv || !p.rv.at) return 'todo'; return (p.updated||0) > p.rv.at+3000 ? 'chg' : 'done'; }
+function rvCell(x, k){
+  var p=x.p; if(x.unreg) return {lv:'na', t:'미등록'};
+  var fx=(p.fix||{})[k], pd=p.pdfs||{}, im=p.imgs||{};
+  if(fx) return {lv:'fix', t:'보완', why:fx.why||''};
+  switch(k){
+    case 'rrn': return (p.rrn||'').replace(/\D/g,'').length===13 ? {lv:'ok'} : {lv:'miss', t:'없음'};
+    case 'phone': return (p.phone||'').replace(/\D/g,'').length>=10 ? {lv:'ok'} : {lv:'miss', t:'없음'};
+    case 'addr': return p.address ? {lv:'ok'} : {lv:'warn', t:'없음'};
+    case 'cv': return (p.edu||[]).some(function(r){ return r&&r.school; }) ? {lv:'ok'} : {lv:'warn', t:'학력 없음'};
+    case 'sign': case 'photo': case 'idcard': case 'bank': return im[k] ? {lv:'ok'} : {lv:'miss', t:'없음'};
+    case 'exam':
+      if(!(pd.exam||[]).length) return {lv:'miss', t:'없음'};
+      var es=examState(p); if(es && es.lv==='err') return {lv:'fix', t:'기한 지남', why:es.t};
+      if(!p.examDate) return {lv:'warn', t:'검진일 없음'};
+      if(x.exp) return {lv:'warn', t:x.exp.late?'기한 지남':'기한 임박', why:x.exp.t};
+      return {lv:'ok'};
+    case 'tb': return (pd.tb||[]).length ? {lv:'ok'} : (p.tbIn41 && (pd.exam||[]).length) ? {lv:'ok', t:'4-1 포함'} : {lv:'miss', t:'없음'};
+    case 'grad': return (pd.grad||[]).length ? {lv:'ok'} : asstOnly(p) ? {lv:'opt', t:'선택'} : {lv:'miss', t:'없음'};
+    case 'cert': return (pd.cert||[]).length ? {lv:'ok', t:(pd.cert.length>1?pd.cert.length+'개':'')} : {lv:'opt', t:'해당자'};
+  }
+  return {lv:'na'};
+}
+function rvBuild(){
+  var on=typeof opsLoaded==='function' && opsLoaded(), reg=people.filter(function(p){ return p.name.trim() && (!on || opsPersonOf(p.name)); }).map(rosterInfo);
+  var un=on ? unregList() : [];
+  return reg.concat(un).sort(function(a,b){ return natSort(a.name||'힣', b.name||'힣'); });
+}
+function rvMatch(x, f, q){
+  if(q){ var s=(x.name+' '+x.schools.join(' ')).replace(/\s/g,''); if(s.indexOf(q.replace(/\s/g,''))<0) return false; }
+  if(f==='all') return true;
+  if(f==='unreg') return !!x.unreg;
+  if(f==='main') return roleKind(x)!=='sub';
+  if(f==='sub') return roleKind(x)!=='main';
+  if(x.unreg) return f==='todo' || f==='miss';
+  var st=rvState(x.p);
+  if(f==='todo') return st!=='done';
+  if(f==='done') return st==='done';
+  if(f==='chg') return st==='chg';
+  if(f==='miss') return x.miss.length>0;
+  if(f==='fix') return x.fix.length>0 || RV_COLS.some(function(c){ return rvCell(x, c[0]).lv==='fix'; });
+  return true;
+}
+function rvBadge(x){
+  if(x.unreg) return '<span class="badge no">미등록</span>';
+  var st=rvState(x.p), r=x.p.rv||{};
+  if(st==='done') return '<span class="badge ok" title="'+esc(new Date(r.at).toLocaleString('ko-KR')+(r.by?' · '+r.by:''))+'">검토 완료</span>';
+  if(st==='chg') return '<span class="badge wait" title="검토 완료 뒤에 내용이 바뀌었습니다">검토 후 수정</span>';
+  return lsubWait(x.p) ? '<span class="badge sent">강사 제출</span>' : '<span class="badge no">검토 전</span>';
+}
+function renderReview(){
+  var all=rvBuild(), q=$('rvQ').value||'', cnt={};
+  RV_FILTERS.forEach(function(f){ if(f[0]!=='|') cnt[f[0]]=all.filter(function(x){ return rvMatch(x, f[0], ''); }).length; });
+  $('rvBasis').textContent='대상 '+all.length+'명 · 검토 완료 '+cnt.done+'명'+(cnt.unreg?' · 미등록 '+cnt.unreg+'명':'');
+  $('rvFilter').innerHTML=RV_FILTERS.map(function(f){ return f[0]==='|' ? '<span class="sep"></span>' : '<button type="button" data-rvf="'+f[0]+'" class="'+(rvF===f[0]?'on':'')+'">'+f[1]+'<b>'+cnt[f[0]]+'</b></button>'; }).join('');
+  each('[data-rvf]', function(b){ b.onclick=function(){ rvF=b.dataset.rvf; renderReview(); }; }, $('rvFilter'));
+  rvList=all.filter(function(x){ return rvMatch(x, rvF, q); });
+  $('rvTable').innerHTML='<thead><tr><th class="nm">강사</th>'+RV_COLS.map(function(c){ return '<th>'+c[1]+'</th>'; }).join('')+'<th>검토</th></tr></thead><tbody>'+(rvList.length ? rvList.map(function(x, i){
+    return '<tr data-rvi="'+i+'"><td class="nm"><b>'+esc(x.name||'(이름 없음)')+'</b><small>'+(x.unreg?esc(x.p.role||''):roleLabel(x))+' · '+esc(x.schools.join(', ')||'배치 학교 없음')+'</small></td>'+
+      RV_COLS.map(function(c){ var v=rvCell(x, c[0]); return '<td class="rvc '+v.lv+'" data-rvk="'+c[0]+'"'+(v.why?' title="'+esc(v.why)+'"':'')+'>'+(v.lv==='ok'?'<i class="ck">✓</i>'+(v.t?'<small>'+esc(v.t)+'</small>':''):esc(v.t||'–'))+'</td>'; }).join('')+
+      '<td class="nw">'+rvBadge(x)+'</td></tr>'; }).join('') : '<tr><td colspan="'+(RV_COLS.length+2)+'" class="hint" style="text-align:center;padding:18px">'+(all.length?'해당하는 강사가 없습니다':'운영현황을 불러오면 적용 학기 배치 강사가 나옵니다')+'</td></tr>')+'</tbody>';
+  each('[data-rvi]', function(tr){ tr.onclick=function(e){ var td=e.target.closest('[data-rvk]'); rvOpen(+tr.dataset.rvi, td?td.dataset.rvk:''); }; }, $('rvTable'));
+  var dot=document.querySelector('#nav .st[data-sec="review"]'); if(dot) dot.className='st '+(!all.length?'':cnt.todo?'warn':'ok');
+}
+function rvFreeUrls(){ rvUrls.forEach(function(u){ URL.revokeObjectURL(u); }); rvUrls=[]; }
+function rvUrl(h, mime){ var u=URL.createObjectURL(new Blob([h.data], {type:mime})); rvUrls.push(u); return u; }
+function rvClose(){ $('rvDlg').classList.remove('on'); rvFreeUrls(); rvIdx=-1; if(page==='review') renderReview(); }
+async function rvOpen(i, focus){
+  var x=rvList[i]; if(!x) return; rvIdx=i; $('rvDlg').classList.add('on');
+  if(x.unreg){ rvPaint(x, focus); return; }
+  if(syMissing(x.p).length){ rvPaint(x, focus, true); var ok=await syEnsure(x.p); if(rvIdx!==i) return; if(!ok) toast('스캔본을 공유 폴더에서 받지 못했습니다. 연동 상태를 확인해 주십시오'); }
+  rvPaint(x, focus);
+}
+function rvFixCtl(p, k){
+  var f=(p.fix||{})[k];
+  return f ? '<span class="rvfx">보완 필요: '+esc(f.why||'사유 미입력')+'</span> <button type="button" class="ghost sm" data-rvunfix="'+k+'">보완 해제</button>'
+           : '<button type="button" class="ghost sm" data-rvfix="'+k+'">보완 필요</button>';
+}
+function rvPaint(x, focus, loading){
+  rvFreeUrls();
+  var p=x.p, n=rvList.length, h='';
+  h+='<div class="rvhd"><div><b>'+esc(x.name)+'</b> <span class="hint">'+(x.unreg?esc(p.role||''):roleLabel(x))+' · '+esc(x.schools.join(', ')||'배치 학교 없음')+'</span> '+rvBadge(x)+'</div>'+
+     '<div class="rvnav"><span class="hint">'+(rvIdx+1)+' / '+n+'</span><button type="button" class="ghost sm" id="rvPrev"'+(rvIdx<=0?' disabled':'')+'>이전</button><button type="button" class="ghost sm" id="rvNext"'+(rvIdx>=n-1?' disabled':'')+'>다음</button>'+
+     (x.unreg?'':'<button type="button" class="ghost sm" id="rvEdit">강사 화면에서 수정</button>')+'<button type="button" class="ghost sm" id="rvX" aria-label="닫기">닫기</button></div></div>';
+  if(x.unreg){
+    h+='<div class="rvbody"><div class="rvnote">서류가 등록되지 않은 강사입니다. 「강사 목록」에서 등록하거나 「서류 제출·보완 요청」으로 제출을 요청해 주십시오.</div></div>';
+    $('rvPane').innerHTML=h; rvWire(x); return;
+  }
+  var miss=x.miss.map(missText), fix=fixDocs(p).map(function(f){ return fixName(f.k)+'('+f.why+')'; }), errs=checks(p).filter(function(c){ return c.lv==='err' && !/주민등록번호|연락처|서명|증명사진/.test(c.t); }).map(function(c){ return c.t; });
+  h+='<div class="rvbody">';
+  if(loading) h+='<div class="rvnote">공유 폴더에서 스캔본을 받는 중입니다…</div>';
+  if(lsubWait(p)) h+='<div class="rvnote">강사가 제출 링크로 입력·업로드했습니다 ('+esc((p.lsub.items||[]).join(', '))+'). 검토 완료하면 강사 제출 검토도 함께 완료됩니다.</div>';
+  if(miss.length||fix.length||errs.length) h+='<div class="rvsum">'+(miss.length?'<div><b>미제출</b> '+esc(miss.join(', '))+'</div>':'')+(fix.length?'<div><b>보완</b> '+esc(fix.join(', '))+'</div>':'')+(errs.length?'<div><b>확인</b> '+esc(errs.join(', '))+'</div>':'')+'</div>';
+  // 인적사항·이력
+  var rrn=(p.rrn||'').replace(/\D/g,''), birth=rrn.length>=7 ? ((/[1256]/.test(rrn[6])?'19':'20')+rrn.slice(0,2)+'. '+(+rrn.slice(2,4))+'. '+(+rrn.slice(4,6))+'.') : '';
+  var rowTxt=function(arr, fs){ return (arr||[]).filter(function(r){ return r && fs.some(function(f){ return r[f]; }); }).map(function(r){ return esc(fs.map(function(f){ return r[f]||''; }).filter(Boolean).join(' · ')); }).join('<br>') || '<span class="rvno">없음</span>'; };
+  var val=function(v){ return v ? esc(v) : '<span class="rvno">없음</span>'; };
+  h+='<div class="rvsec" data-rvs="info"><h4>인적사항</h4><table class="rvkv">'+
+     '<tr data-rvs="rrn"><th>주민등록번호</th><td>'+(rrn.length===13?esc(p.rrn)+' <span class="hint">('+birth+')</span>':'<span class="rvno">'+(rrn?'자릿수 확인 ('+rrn.length+'자리)':'없음')+'</span>')+'</td></tr>'+
+     '<tr data-rvs="phone"><th>연락처</th><td>'+val(p.phone)+'</td></tr><tr><th>이메일</th><td>'+val(p.email)+'</td></tr>'+
+     '<tr data-rvs="addr"><th>주소</th><td>'+val(p.address)+'</td></tr>'+
+     '<tr data-rvs="cv"><th>학력</th><td>'+rowTxt(p.edu,['period','school','major'])+'</td></tr><tr><th>경력</th><td>'+rowTxt(p.career,['period','place','note'])+'</td></tr><tr><th>자격</th><td>'+rowTxt(p.cert,['date','name','issuer'])+'</td></tr></table></div>';
+  // 이미지
+  h+='<div class="rvsec"><h4>서명·증명사진·신분증·통장</h4><div class="rvimgs">'+IMG_KEYS.map(function(m){ var v=(p.imgs||{})[m.k], img='';
+    if(v && v.data){ var u=rvUrl(v, v.ext==='png'?'image/png':'image/jpeg'); img='<a href="'+u+'" target="_blank" rel="noopener" title="크게 보기"><img src="'+u+'" alt="'+esc(m.t)+'"></a>'; }
+    else img='<div class="rvph">'+(v?'불러오는 중':'없음')+'</div>';
+    return '<div class="rvimg'+((p.fix||{})[m.k]?' fx':'')+'" data-rvs="'+m.k+'"><div class="t">'+m.t+'</div>'+img+'<div class="c">'+rvFixCtl(p, m.k)+'</div></div>'; }).join('')+'</div></div>';
+  // PDF
+  h+='<div class="rvsec"><h4>증빙서류</h4>'+PDFS.map(function(m){ var L=(p.pdfs||{})[m.k]||[], c=rvCell(x, m.k), extra='';
+    if(m.k==='exam' && L.length && p.examDate){ var es=examState(p); extra='<span class="hint">검진일 '+dotDate(p.examDate)+(es?' · '+esc(es.t):'')+'</span>'; }
+    var files=L.map(function(f, j){ if(!f.data) return '<div class="rvf"><span>'+esc(f.name)+'</span> <span class="hint">불러오는 중</span></div>';
+      var isPdf=/\.pdf$/i.test(f.name), u=rvUrl(f, isPdf?'application/pdf':(f.type||'application/octet-stream'));
+      return '<div class="rvf"><a href="'+u+'" target="_blank" rel="noopener">'+esc(f.name)+'</a>'+(isPdf?'':' <b style="color:var(--warn)">(PDF 아님)</b>')+(isPdf?' <button type="button" class="ghost sm" data-rvpv="'+u+'">미리 보기</button>':'')+'</div>'+(isPdf && j===0 && L.length<4 ? '<iframe class="rvpdf" src="'+u+'#view=FitH" title="'+esc(f.name)+'" loading="lazy"></iframe>' : ''); }).join('');
+    return '<div class="rvpd'+(c.lv==='fix'?' fx':'')+'" data-rvs="'+m.k+'"><div class="rvph2"><b>'+m.no+'. '+m.t+'</b> <span class="rvc '+c.lv+'">'+(c.lv==='ok'?'✓ '+esc(c.t||'있음'):esc(c.t||'–'))+'</span> '+extra+'<span style="flex:1"></span>'+rvFixCtl(p, m.k)+'</div>'+(files||'')+'</div>'; }).join('')+'</div>';
+  h+='</div>';
+  var st=rvState(p), r=p.rv||{};
+  h+='<div class="rvft">'+(st==='done' ? '<span class="hint">검토 완료 '+esc(new Date(r.at).toLocaleString('ko-KR'))+(r.by?' · '+esc(r.by):'')+'</span><button type="button" class="ghost sm" id="rvUndo">검토 취소</button>' : (st==='chg' ? '<span class="hint">검토 완료 뒤에 내용이 바뀌었습니다</span>' : ''))+
+     '<span style="flex:1"></span><button type="button" class="ghost" id="rvOk">검토 완료</button><button type="button" id="rvOkNext"'+(rvIdx>=n-1?' disabled':'')+'>검토 완료 후 다음</button></div>';
+  $('rvPane').innerHTML=h; rvWire(x);
+  if(focus){ var el=$('rvPane').querySelector('[data-rvs="'+focus+'"]'); if(el){ el.scrollIntoView({block:'center'}); el.classList.add('rvhl'); setTimeout(function(){ el.classList.remove('rvhl'); }, 1600); } }
+  else $('rvPane').querySelector('.rvbody').scrollTop=0;
+}
+function rvSaveP(p){ p.updated=Date.now(); dbPut(p); if(people.indexOf(p)<0) people.push(p); }
+function rvDone(p){ var t=Date.now(); p.rv={ at:t, by:(typeof sy!=='undefined' && sy.me)||'', term:(ops && ops.per ? ops.per.join(', ') : '') }; if(lsubWait(p)){ p.lsub.ok=t; p.lsub.okBy=p.rv.by; } p.updated=t; dbPut(p); }
+function rvWire(x){
+  var p=x.p, re=function(){ rvPaint(x); if(p===cur) refresh(); renderList(); };
+  $('rvX').onclick=rvClose;
+  $('rvPrev').onclick=function(){ rvOpen(rvIdx-1); };
+  $('rvNext').onclick=function(){ rvOpen(rvIdx+1); };
+  if($('rvEdit')) $('rvEdit').onclick=function(){ var id=p.id; rvClose(); select(id); go('info'); };
+  if(x.unreg) return;
+  each('[data-rvfix]', function(b){ b.onclick=function(){ var k=b.dataset.rvfix, why=prompt(fixName(k)+' 보완 사유', ''); if(why===null) return; p.fix=p.fix||{}; p.fix[k]={ why:why.trim(), at:Date.now() }; rvSaveP(p); re(); toast(fixName(k)+' 보완 필요로 표시했습니다'); }; }, $('rvPane'));
+  each('[data-rvunfix]', function(b){ b.onclick=function(){ clearFix(p, b.dataset.rvunfix); rvSaveP(p); re(); }; }, $('rvPane'));
+  each('[data-rvpv]', function(b){ b.onclick=function(){ var box=b.closest('.rvpd'), fr=box.querySelector('iframe.rvpdf'); if(!fr){ fr=document.createElement('iframe'); fr.className='rvpdf'; box.appendChild(fr); } fr.src=b.dataset.rvpv+'#view=FitH'; fr.scrollIntoView({block:'nearest'}); }; }, $('rvPane'));
+  if($('rvUndo')) $('rvUndo').onclick=function(){ delete p.rv; rvSaveP(p); re(); toast('검토 완료를 취소했습니다'); };
+  $('rvOk').onclick=function(){ rvDone(p); re(); toast(x.name+' 강사 검토 완료'); };
+  $('rvOkNext').onclick=function(){ rvDone(p); renderList(); toast(x.name+' 강사 검토 완료'); rvOpen(rvIdx+1); };
+}
+document.addEventListener('keydown', function(e){
+  if(!$('rvDlg') || !$('rvDlg').classList.contains('on')) return;
+  var t=e.target; if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.tagName==='SELECT')) return;
+  if(e.key==='Escape'){ rvClose(); e.preventDefault(); }
+  else if(e.key==='ArrowRight' && rvIdx<rvList.length-1){ rvOpen(rvIdx+1); e.preventDefault(); }
+  else if(e.key==='ArrowLeft' && rvIdx>0){ rvOpen(rvIdx-1); e.preventDefault(); }
+});
 
 /* ---------- 백업·복원 ---------- */
 var BK_KEYS=['settings','ops','contacts','mailCfg','sent','smsCfg','smsLog','gas','certCfg','certLog','certPeople','certRecent'], bkCfg={mode:'off', last:0, lastDay:''}, bkDir=null, bkTimer=null, bkReady=false, bkBusy=false;
@@ -1897,6 +2103,7 @@ function bindSms(){
   $('smLink').onclick=function(){ makeLinks($('smLink')); };
   $('smMark').onclick=function(){ var pk=smsPicked(); pk.forEach(function(x){ smsLogSet(x.p.id, x); }); kvPut('smsLog', smsLog); renderSms(); toast(pk.length+'명을 요청함으로 기록했습니다 ('+dotDate(today())+')'); };
   // 강사 목록 화면
+  $('rvQ').addEventListener('input', renderReview);
   $('rsQ').addEventListener('input', renderRoster); $('rsSort').onchange=function(){ rsCol={k:'', dir:1}; renderRoster(); };
   $('rsAll').onclick=function(){ rsLast.forEach(function(x){ rsSel[x.p.id]=1; }); renderRoster(); };
   $('rsNone').onclick=function(){ rsSel={}; renderRoster(); };
@@ -2023,7 +2230,7 @@ function openNames(){ renderNames(); $('namesDlg').classList.add('on'); }
 
 /* ---------- 쪽 이동 ---------- */
 // 현황·강사 목록·발송·요청 화면 위의 적용 학기 선택(운영현황의 「적용 학기」와 같은 설정)
-var PER_PAGES={ status:1, roster:1, mail:1, sms:1 };
+var PER_PAGES={ status:1, roster:1, review:1, mail:1, sms:1 };
 function renderPerBar(){
   var el=$('perBar'), fl=(typeof opsHasRows==='function' && opsHasRows()) ? opsFileList() : [];
   var ex=fl.length ? people.filter(function(p){ return p.name.trim() && schoolsOf(p).length && !opsKnown(p); }).length : 0;
@@ -2048,6 +2255,7 @@ function go(p, fromHistory){
   if(p==='ops') renderOps();
   if(p==='status') renderStatus();
   if(p==='roster') renderRoster();
+  if(p==='review') renderReview(); else if($('rvDlg') && $('rvDlg').classList.contains('on')) rvClose();
   if(p==='out') renderFix();
   if(p==='sms') renderSms();
   if(p==='mail') renderMail();
