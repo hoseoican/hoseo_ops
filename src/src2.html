@@ -1880,8 +1880,12 @@ function conflictsFor(instId,row,asAsst){
 }
 /* 학교밖 공통 운영 조건: 모두 충족해야 제출, 못 맞추면 그 수업은 운영 취소로 제출 */
 const OUT_RULES_DEF={on:true,minMin:80,maxMin:120,perWeek:1,maxSes:10,items:['강사용 PC','수업용 모니터(또는 TV)'],note:''};
-const outRules=()=>({...OUT_RULES_DEF,...((typeof S!=='undefined'&&S&&S.outRules)||{})});
-function outRuleList(r){ const R=outRules(); if(!R.on||!isOut(r)) return [];
+/* 학교밖 운영 조건: 기본값 + 기관별 예외(S.outRules.orgs[기관명], 빈 칸은 기본값을 따름) */
+const OR_KEYS=['on','minMin','maxMin','perWeek','maxSes','items'];
+const outRules=x=>{ const B={...OUT_RULES_DEF,...((typeof S!=='undefined'&&S&&S.outRules)||{})}, nm=typeof x==='string'?x:(x&&x.school), o=nm&&B.orgs&&B.orgs[nm]; delete B.orgs;
+  if(o) OR_KEYS.forEach(k=>{ if(o[k]!=null&&o[k]!=='') B[k]=o[k]; }); if(o) B.custom=true; return B; };
+const outOrgs=()=>((typeof S!=='undefined'&&S&&S.outRules&&S.outRules.orgs)||{});
+function outRuleList(r){ const R=outRules(r); if(!R.on||!isOut(r)) return [];
   const L=[], span=(r.ts!=null&&r.te!=null)?r.te-r.ts:null, nd=(r.days||[]).length, A=(r.sc&&r.sc.orc)||{};
   if(+R.minMin||+R.maxMin) L.push({k:'time',auto:true,t:`하루 운영 시간 ${+R.minMin?R.minMin+'분 이상':''}${+R.minMin&&+R.maxMin?' ~ ':''}${+R.maxMin?R.maxMin+'분 이내':''} (2차시 이상)`,ok:span==null?null:(!+R.minMin||span>=+R.minMin)&&(!+R.maxMin||span<=+R.maxMin),now:span==null?'시간 없음':`지금 ${hm(r.ts)}~${hm(r.te)} · ${span}분`,fix:'시작·종료 시간을 고쳐 주세요'});
   if(+R.perWeek) L.push({k:'week',auto:true,t:`주 ${R.perWeek}회만 운영 (요일 ${R.perWeek}개)`,ok:nd===+R.perWeek,now:`지금 주 ${nd}회${nd?' ('+daysTxt(r.days)+')':''}`,fix:`운영 요일을 ${R.perWeek}개만 골라 주세요`});
@@ -1911,7 +1915,7 @@ function issues(r){
   if(r.srcGone) out.push({lv:'crit',t:'새 목록에서 빠짐 · 운영 여부 확인'});
   if(r.srcChg) out.push({lv:'warn',t:`원본 변경: ${(r.srcChg.fields||[]).join(', ')}`});
   if(!r.days.length) out.push({lv:'warn',t:'요일을 읽지 못함'});
-  if(isOut(r)&&outRules().on){ outRuleList(r).filter(x=>x.auto&&x.ok===false).forEach(x=>out.push({lv:'crit',t:`학교밖 조건 미충족: ${x.t} (${x.now})`})); if(outCx(r)&&r.status!=='cancel') out.push({lv:'crit',t:'기관이 운영 취소 요청'}); }
+  if(isOut(r)&&outRules(r).on){ outRuleList(r).filter(x=>x.auto&&x.ok===false).forEach(x=>out.push({lv:'crit',t:`학교밖 조건 미충족: ${x.t} (${x.now})`})); if(outCx(r)&&r.status!=='cancel') out.push({lv:'crit',t:'기관이 운영 취소 요청'}); }
   if(r.ts==null) out.push({lv:'warn',t:'시간을 읽지 못함'});
   const n=classDays(r).length;
   if(!n) out.push({lv:'warn',t:'수업일 0일 (기간·요일 확인)'});
@@ -2124,7 +2128,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.44';
+const LIB_VER='11.45';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2232,9 +2236,24 @@ function offPanel(){
    ${all.length>open.length?`<details class="small" data-uiopen="offAllOpen" ${S.ui.offAllOpen?'open':''}><summary>처리한 휴강 기록 ${all.length-open.length}건</summary><div class="tw" style="margin-top:6px"><table>${head}<tbody>${all.filter(o=>o.x.aSeen).map(row).join('')}</tbody></table></div></details>`:''}</div>`;
 }
 /* 운영 화면(학교밖 범위): 학교밖 공통 운영 조건 */
+function outOrgPanel(){
+  const B=outRules(), names=[...new Set(myRows().filter(r=>isOut(r)&&r.status!=='cancel').map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const pick=S.ui.orOrg||'', o=(outOrgs()[pick])||{}, has=!!outOrgs()[pick];
+  const v=k=>o[k]==null?'':esc(o[k]), ph=k=>esc(B[k]);
+  const list=Object.keys(outOrgs()).sort((a,b)=>a.localeCompare(b,'ko')).map(n=>{ const x=outOrgs()[n], R=outRules(n); const t=[R.on?'':'조건 점검 안 함',`하루 ${R.minMin||'-'}~${R.maxMin||'-'}분`,+R.perWeek?`주 ${R.perWeek}회`:'',+R.maxSes?`최대 ${R.maxSes}차시`:'',x.items?`준비물 ${R.items.length?R.items.join(', '):'없음'}`:''].filter(Boolean).join(' · ');
+    return `<div class="row small" style="gap:8px"><b>${esc(n)}</b><span class="muted">${esc(t)}</span><button class="btn sm" data-act="ororgpick" data-v="${esc(n)}">수정</button></div>`; }).join('');
+  return `<div class="panel stack" style="gap:8px"><div class="row between"><b>기관별 운영 조건 예외</b><button class="btn sm" data-act="ororgclose">닫기</button></div>
+   ${list||'<div class="small muted">지정된 기관이 없습니다.</div>'}
+   <label class="f">기관<select id="oo-org"><option value="">기관 선택</option>${names.concat(Object.keys(outOrgs()).filter(n=>!names.includes(n))).map(n=>`<option value="${esc(n)}" ${n===pick?'selected':''}>${esc(n)}${outOrgs()[n]?' (예외 있음)':''}</option>`).join('')}</select></label>
+   ${pick?`<div class="small muted">빈 칸은 기본 조건(${esc(`하루 ${B.minMin||'-'}~${B.maxMin||'-'}분 · 주 ${B.perWeek||'-'}회 · 최대 ${B.maxSes||'-'}차시`)})을 따릅니다.</div>
+   <label class="row small" style="gap:6px"><input type="checkbox" id="oo-off" ${o.on===false?'checked':''}> 이 기관은 조건 점검 안 함</label>
+   <div class="row" style="gap:10px;flex-wrap:wrap"><label class="f">하루 최소 운영 시간(분)<input id="oo-min" type="number" min="0" value="${v('minMin')}" placeholder="${ph('minMin')}" style="width:110px"></label><label class="f">하루 최대 운영 시간(분)<input id="oo-max" type="number" min="0" value="${v('maxMin')}" placeholder="${ph('maxMin')}" style="width:110px"></label><label class="f">주 운영 횟수<input id="oo-week" type="number" min="0" max="5" value="${v('perWeek')}" placeholder="${ph('perWeek')}" style="width:110px"></label><label class="f">최대 차시<input id="oo-ses" type="number" min="0" value="${v('maxSes')}" placeholder="${ph('maxSes')}" style="width:110px"></label></div>
+   <label class="row small" style="gap:6px"><input type="checkbox" id="oo-itemson" ${o.items?'checked':''}> 준비물을 따로 지정 (체크하지 않으면 기본 준비물)</label>
+   <label class="f">이 기관이 준비할 것 (한 줄에 하나, 비우면 준비물 없음)<textarea id="oo-items" rows="2">${esc((o.items||B.items||[]).join('\n'))}</textarea></label>
+   <div class="row"><button class="btn sm pri" data-act="ororgsave">저장</button>${has?'<button class="btn sm danger" data-act="ororgdel">예외 삭제 (기본 조건으로)</button>':''}</div>`:''}</div>`; }
 function outRulesPanel(){ const R=outRules(), ed=S.ui.orEdit, rows=myRows().filter(r=>r.status!=='cancel'), bad=rows.filter(r=>outRuleList(r).some(x=>x.auto&&x.ok===false)), cx=rows.filter(outCx);
   const sum=[+R.minMin||+R.maxMin?`하루 ${R.minMin||'-'}~${R.maxMin||'-'}분`:'',+R.perWeek?`주 ${R.perWeek}회만`:'',+R.maxSes?`최대 ${R.maxSes}차시`:'',...(R.items||[])].filter(Boolean).join(' · ');
-  if(!ed) return `<div class="panel row between" style="align-items:center;gap:10px"><div><b>학교밖 운영 필수 조건</b> ${R.on?'<span class="chip ok">켜짐</span>':'<span class="chip">꺼짐</span>'} <span class="small muted">${esc(sum)}</span> ${qt(['기관 화면에서 학급마다 이 조건을 모두 충족해야 제출됨','하루 운영 시간·주 운영 횟수는 기관이 입력한 시간·요일로 자동 확인','준비물은 기관이 「준비됨」을 골라야 함','못 맞추면 기관이 「운영 취소」로 제출 → 그 학급은 운영 취소','제출 칸의 확인 체크도 필수'],'r')}<div class="small" style="margin-top:2px">${bad.length?`<span class="lv-crit">지금 목록 기준 시간·요일 조건이 안 맞는 학급 ${bad.length}개</span> · `:''}${cx.length?`<span class="lv-crit">기관 운영 취소 요청 ${cx.length}개</span>`:''}</div></div><button class="btn sm" data-act="oredit">조건 바꾸기</button></div>`;
+  if(!ed) return `<div class="panel row between" style="align-items:center;gap:10px"><div><b>학교밖 운영 필수 조건</b> ${R.on?'<span class="chip ok">켜짐</span>':'<span class="chip">꺼짐</span>'} <span class="small muted">${esc(sum)}</span> ${qt(['기관 화면에서 학급마다 이 조건을 모두 충족해야 제출됨','하루 운영 시간·주 운영 횟수는 기관이 입력한 시간·요일로 자동 확인','준비물은 기관이 「준비됨」을 골라야 함','못 맞추면 기관이 「운영 취소」로 제출 → 그 학급은 운영 취소','제출 칸의 확인 체크도 필수'],'r')}<div class="small" style="margin-top:2px">${bad.length?`<span class="lv-crit">지금 목록 기준 시간·요일 조건이 안 맞는 학급 ${bad.length}개</span> · `:''}${cx.length?`<span class="lv-crit">기관 운영 취소 요청 ${cx.length}개</span>`:''}${Object.keys(outOrgs()).length?`<span class="muted">기관별 예외 ${Object.keys(outOrgs()).length}곳: ${esc(Object.keys(outOrgs()).join(', '))}</span>`:''}</div></div><div class="row" style="gap:6px"><button class="btn sm" data-act="ororg">기관별 예외</button><button class="btn sm" data-act="oredit">조건 바꾸기</button></div></div>${S.ui.orOrg!=null?outOrgPanel():''}`;
   return `<div class="panel stack"><b>학교밖 운영 필수 조건 바꾸기</b>
    <label class="row small" style="gap:6px"><input type="checkbox" id="or-on" ${R.on?'checked':''}> 기관 화면에서 조건 점검하기 (끄면 학교와 같은 방식)</label>
    <div class="row" style="gap:10px;flex-wrap:wrap"><label class="f">하루 최소 운영 시간(분)<input id="or-min" type="number" min="0" value="${esc(R.minMin)}" style="width:110px"></label><label class="f">하루 최대 운영 시간(분)<input id="or-max" type="number" min="0" value="${esc(R.maxMin)}" style="width:110px"></label><label class="f">주 운영 횟수(요일 수, 0=확인 안 함)<input id="or-week" type="number" min="0" max="5" value="${esc(R.perWeek)}" style="width:110px"></label><label class="f">최대 총 차시(0=확인 안 함)<input id="or-ses" type="number" min="0" value="${esc(R.maxSes)}" style="width:110px"></label></div>
@@ -2909,7 +2928,7 @@ function condBlock(r,lock,forSchool,noAlt){
     return `<div class="cond ${forSchool&&(c.kind==='rule'||c.note)?'stk':''}"><div>${forSchool&&(c.kind==='rule'||c.note)?`<b class="ct">${esc(c.text)}${tags}</b>`:esc(c.text)+tags}${c.note?`<div class="small condnote">${esc(c.note)}</div>`:''}${c.kind==='rule'?ruleFacts(c):''}${sub?`<div class="small muted">${sub}</div>`:''}</div>
      <div class="yn">${input}${x.waived?'<span class="chip waive small" title="운영기관이 기관 사정을 확인하고 예외로 인정">예외 승인</span>':x.met===true?'<span class="lv-ok small">✓</span>':x.met===false?`<span class="${c.required?'lv-crit':'lv-warn'} small">✕</span>`:''}</div></div>${firstBad&&!noAlt?altPick(r,lock,forSchool):''}`}).join('')}</div>`;
 }
-function outRuleBlock(r,lock){ const R=outRules(), L=outRuleList(r); if(!L.length&&!outCx(r)) return '';
+function outRuleBlock(r,lock){ const R=outRules(r), L=outRuleList(r); if(!L.length&&!outCx(r)) return '';
   const id=r.id, bad=L.filter(x=>x.ok!==true), cx=outCx(r), ask=S.ui.ocxAsk===id;
   if(cx) return `<div class="orb orb-cx"><b class="lv-crit">이 수업은 운영 취소로 ${lock?'제출되었습니다':'제출됩니다'}</b><div class="small" style="margin-top:4px">사유: ${esc(r.sc.outCancel.why||'')} <span class="muted">${esc(r.sc.outCancel.at||'')}</span></div>${lock?'':`<button class="btn sm" data-act="ocxundo" data-id="${id}" style="margin-top:6px">운영 취소 되돌리기</button>`}</div>`;
   return `<div class="orb ${bad.length?'orb-bad':'orb-ok'}"><div class="row between" style="align-items:flex-start"><div><b>학교밖 운영 필수 조건</b> <span class="small ${bad.length?'lv-crit':'lv-ok'}">${bad.length?`${L.length-bad.length}/${L.length} 충족 · 모두 충족해야 운영할 수 있습니다`:'모두 충족'}</span></div>${qt(['못 맞춘 조건이 있어도 제출은 됨 · 호서대가 확인 후 연락','하루 운영 시간·주 운영 횟수는 아래 시작·종료 시간과 운영 요일로 자동 확인','맞출 수 없으면 「운영 취소」로 제출(그 수업만 취소)',...(R.note?[R.note]:[])],'r')}</div>
@@ -6315,6 +6334,18 @@ document.addEventListener('click',async e=>{
     case 'ed-start': S.ui.edit={id:r.id,room:r.sc.room||r.room,count:r.sc.count,multi:r.sc.multi,low:r.sc.low,spYn:r.sc.spYn||'',sp:r.sc.sp??'',start:r.start,end:r.end,ts:r.ts==null?'':hm(r.ts),te:r.te==null?'':hm(r.te),days:[...r.days],req:{...r.sc.req},reqEtc:r.sc.reqEtc,why:'',cdate:new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10),cwho:(S.contacts[r.school]||{}).name||'',cway:'전화',cours:S.ui.lastOurs||''}; S.ui.reopenAsk=''; break;
     case 'ed-cancel': S.ui.edit=null; break;
     case 'oredit': S.ui.orEdit=!S.ui.orEdit; break;
+    case 'ororg': S.ui.orOrg=S.ui.orOrg!=null?null:''; break;
+    case 'ororgclose': S.ui.orOrg=null; break;
+    case 'ororgpick': S.ui.orOrg=el.dataset.v||''; break;
+    case 'ororgsave': { const g=i=>document.getElementById(i), nm=S.ui.orOrg; if(!nm){ toast('기관을 골라 주세요'); return; }
+      const n=id=>{ const t=String(g(id).value||'').trim(); return t===''?undefined:Math.max(0,parseInt(t,10)||0); };
+      const x={}; if(g('oo-off').checked) x.on=false;
+      const mn=n('oo-min'), mx=n('oo-max'), wk=n('oo-week'), ss=n('oo-ses'); if(mn!=null) x.minMin=mn; if(mx!=null) x.maxMin=mx; if(wk!=null) x.perWeek=Math.min(5,wk); if(ss!=null) x.maxSes=ss;
+      const B=outRules(); if((x.minMin??B.minMin)&&(x.maxMin??B.maxMin)&&(x.minMin??B.minMin)>(x.maxMin??B.maxMin)){ toast('최소 시간이 최대 시간보다 클 수 없습니다'); return; }
+      if(g('oo-itemson').checked) x.items=g('oo-items').value.split('\n').map(t=>t.trim()).filter(Boolean).slice(0,10);
+      const orgs={...outOrgs()}; if(Object.keys(x).length) orgs[nm]=x; else delete orgs[nm];
+      S.outRules={...(S.outRules||{}),orgs}; toast(Object.keys(x).length?`${nm} 운영 조건 예외를 저장했습니다`:`${nm}은(는) 기본 조건을 따릅니다`); break; }
+    case 'ororgdel': { const nm=S.ui.orOrg, orgs={...outOrgs()}; delete orgs[nm]; S.outRules={...(S.outRules||{}),orgs}; toast(`${nm} 예외를 삭제했습니다`); break; }
     case 'fckind': S.ui.fcKind=el.dataset.v; break;
     case 'fcedit': { const k=S.ui.fcKind==='out'?'out':'school'; S.ui.fcDraft={kind:k,cfg:JSON.parse(JSON.stringify(formCfg(k)))}; break; }
     case 'fccancel': S.ui.fcDraft=null; break;
@@ -6324,9 +6355,9 @@ document.addEventListener('click',async e=>{
     case 'fccuadd': { const v=(document.getElementById('fc-cu-new')||{}).value||''; if(!v.trim()){ toast('질문을 적어 주세요'); return; } S.ui.fcDraft.cfg.custom=[...S.ui.fcDraft.cfg.custom,{id:'q'+Date.now().toString(36),l:v.trim().slice(0,40),type:'text',req:false,help:''}]; break; }
     case 'fccudel': S.ui.fcDraft.cfg.custom=S.ui.fcDraft.cfg.custom.filter((o,i)=>i!==+el.dataset.i); break;
     case 'fcsave': { const D=S.ui.fcDraft; if(D.cfg.reqOpts.some(o=>!String(o.l).trim())||D.cfg.custom.some(c=>!String(c.l).trim())){ toast('비어 있는 선택지·질문 이름이 있습니다'); return; } S.formCfg={...(S.formCfg||{}),[D.kind]:D.cfg}; S.ui.fcDraft=null; toast(`${D.kind==='out'?'학교밖':'학교'} 담당자 화면 항목을 저장했습니다`); break; }
-    case 'ordef': S.outRules={...OUT_RULES_DEF}; S.ui.orEdit=false; toast('처음 값으로 되돌렸습니다'); break;
+    case 'ordef': S.outRules={...OUT_RULES_DEF,orgs:outOrgs()}; S.ui.orEdit=false; toast('처음 값으로 되돌렸습니다'); break;
     case 'orsave': { const g=i=>document.getElementById(i), n=v=>Math.max(0,parseInt(v,10)||0); const mn=n(g('or-min').value), mx=n(g('or-max').value); if(mn&&mx&&mn>mx){ toast('최소 시간이 최대 시간보다 클 수 없습니다'); return; }
-      S.outRules={on:g('or-on').checked,minMin:mn,maxMin:mx,perWeek:Math.min(5,n(g('or-week').value)),maxSes:n(g('or-ses').value),items:g('or-items').value.split('\n').map(x=>x.trim()).filter(Boolean).slice(0,10),note:g('or-note').value.trim().slice(0,200)}; S.ui.orEdit=false; toast('학교밖 운영 조건을 저장했습니다'); break; }
+      S.outRules={on:g('or-on').checked,minMin:mn,maxMin:mx,perWeek:Math.min(5,n(g('or-week').value)),maxSes:n(g('or-ses').value),items:g('or-items').value.split('\n').map(x=>x.trim()).filter(Boolean).slice(0,10),note:g('or-note').value.trim().slice(0,200),orgs:outOrgs()}; S.ui.orEdit=false; toast('학교밖 운영 조건을 저장했습니다'); break; }
     case 'ocxask': S.ui.ocxAsk=el.dataset.id; break;
     case 'ocxno': S.ui.ocxAsk=''; break;
     case 'ocxok': { const id=el.dataset.id, w=(document.getElementById('ocxwhy-'+id)||{}).value||'', ck=(document.getElementById('ocxchk-'+id)||{}).checked; if(!w.trim()){ toast('취소 사유를 적어 주세요'); return; } if(!ck){ toast('확인 문항을 체크해 주세요'); return; } const x=R(id); x.sc.outCancel={why:w.trim().slice(0,200),at:now()}; S.ui.ocxAsk=''; toast('이 수업은 운영 취소로 제출됩니다. 다른 수업까지 마치고 「확인 완료 제출」을 눌러 주세요'); break; }
@@ -6741,6 +6772,7 @@ document.addEventListener('change',e=>{
   if(t.id==='opsall'){ S.ui.opsAll=t.checked; render(); return; }
   if(t.id==='seasonSel'){ seasonGo(t.value); return; }
   if(t.id==='bizSel'){ bizGo(t.value); return; }
+  if(t.id==='oo-org'){ S.ui.orOrg=t.value; render(); return; }
   if(t.id==='up'){ const f=t.files[0]; t.value=''; if(!f) return; f.arrayBuffer().then(b=>{ try{ u.pending=parseUpload(b,f.name,scopeOut()); if(noScope()&&u.pending) u.pending.mixed=true; }catch(err){ toast(err.message); } render(); }); return; }
   if(t.dataset.assel!=null){ (u.asSel=u.asSel||{})[t.dataset.assel]=t.checked; render(); return; }
   if(t.dataset.asall!=null){ const m={...(u.asSel||{})}; asList().forEach(r=>{ if(t.checked) m[r.id]=true; else delete m[r.id]; }); u.asSel=m; render(); return; }
