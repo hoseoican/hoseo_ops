@@ -1191,7 +1191,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-16';
+var APP_VERSION = '2026.11.23-17';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2687,9 +2687,12 @@ function bizNames(){ if(bizNamesCache && bizNamesCache.rows===ops.rows) return b
 /* 강사 목록·강사 선택: 이 사업 강사 + 운영현황에 없는 강사(사업 미지정) */
 function inBizP(p){ if(!(typeof opsHasRows==='function' && opsHasRows())) return true; var n=String(p.name||'').replace(/\s/g,''); return !n || !opsKnown(p) || !!bizNames()[n]; }
 function renderBizBar(){ var el=$('bizBar'); if(!el) return; var d=bizDef(docBiz);
-  if(EMBED && topBiz()){ el.innerHTML='<span class="bzl">사업</span><span class="bzc on"><i style="background:'+d.dot+'"></i>'+esc(d.name)+'<small>'+esc(d.center)+'</small></span><span class="bzh">운영 관리 위쪽에서 고른 사업</span>'; return; }
   el.innerHTML='<span class="bzl">사업</span><span class="bzseg" role="tablist" aria-label="사업">'+BIZ_DEFS.map(function(b){ return '<button type="button" role="tab" aria-selected="'+(b.k===docBiz)+'" class="bzc'+(b.k===docBiz?' on':'')+'" data-bz="'+b.k+'"><i style="background:'+b.dot+'"></i>'+esc(b.name)+'<small>'+esc(b.center)+'</small></button>'; }).join('')+'</span>';
-  each('[data-bz]', function(b){ b.onclick=function(){ setDocBiz(b.dataset.bz); }; }, el); }
+  each('[data-bz]', function(b){ b.onclick=function(){ var k=b.dataset.bz; if(k===docBiz) return;
+    /* 운영 관리 9번 안: 운영 관리 사업도 함께 바꾸고, 바뀌면 bizFromTop으로 따라옴 */
+    var top=null; try{ top=EMBED && window.top.opsBizGo ? window.top : null; }catch(e){}
+    if(top){ el.querySelectorAll('[data-bz]').forEach(function(x){ x.disabled=true; }); b.insertAdjacentHTML('beforeend','<small> 바꾸는 중…</small>'); try{ top.opsBizGo(k); }catch(e){ setDocBiz(k); } setTimeout(function(){ if(docBiz!==k){ renderBizBar(); } }, 15000); }
+    else setDocBiz(k); }; }, el); }
 /* ---------- 학기 안 시기(학교밖처럼 한 시트에 여러 시기): 「시기」 칸, 없으면 시작일로 ---------- */
 function sigiOf(r){ var v=String(r.sigi||'').trim(); if(v) return v; var m=/^(\d{4})-(\d{2})/.exec(r.start||''); if(!m) return ''; var y=+m[1], mo=+m[2];
   return mo<=2 ? (y-1)+' 겨울' : mo<=6 ? y+' 1학기' : mo<=8 ? y+' 여름' : mo<=11 ? y+' 2학기' : y+' 겨울'; }

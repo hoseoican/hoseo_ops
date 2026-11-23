@@ -2188,7 +2188,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.52';
+const LIB_VER='11.53';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -7141,7 +7141,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.52';
+const APP_VER = '11.53';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -7558,6 +7558,8 @@ document.addEventListener('click', e => {
 if (MODE === 'admin') window.opsDocsAuth = () => ADMIN_KEY ? run('docsCode', ADMIN_KEY) : Promise.reject(new Error('운영 관리에 먼저 로그인해 주세요.'));
 /* 강사서류 「운영 관리에서」: 이미 불러온 강사 명단을 바로 씀 (서버 요청 없음) */
 if (MODE === 'admin') window.opsBizNow = () => (typeof curBiz === 'function' ? curBiz() : '');
+if (MODE === 'admin') window.opsBizGo = b => bizGo(b); /* 9번 강사서류에서 사업을 바꿀 때 */
+const docsBizNotify = () => setTimeout(() => { try { const f = document.getElementById('docsFrame'); if (f && f.contentWindow && f.contentWindow.bizFromTop) f.contentWindow.bizFromTop(); } catch (e) {} }, 0);
 if (MODE === 'admin') window.opsInstructors = () => S && S.instructors ? S.instructors.map(x => ({ id: x.id, name: x.name || '', phone: x.phone || '', email: x.email || '', region: x.region || '', asst: !!x.asstOnly })) : null;
 if (MODE === 'admin') bizGo = function (b) {
   if (!b || b === S.biz) return;
@@ -7565,7 +7567,7 @@ if (MODE === 'admin') bizGo = function (b) {
   const go = () => {
     if (saving || dirtyPayload()) { if (++n > 40) { toast('저장이 끝나지 않아 사업을 바꾸지 못했습니다'); render(); return; } flush(); setTimeout(go, 500); return; }
     setSave('사업 바꾸는 중…');
-    run('adminSetBiz', ADMIN_KEY, b).then(d => { const keep = S.ui; aUse(d, true); S.ui = { ...keep, view: 'board', scope: '', st: '', q: '', sel: '', mDrawer: '', drawer: '', asOpen: false, afAsk: false, spAsk: false, pending: null, spubAsk: false, sdelAsk: false }; setSave('불러옴 · ' + now()); render(); toast(`${bizName()} 관리로 바꿨습니다`); })
+    run('adminSetBiz', ADMIN_KEY, b).then(d => { const keep = S.ui; aUse(d, true); docsBizNotify(); S.ui = { ...keep, view: 'board', scope: '', st: '', q: '', sel: '', mDrawer: '', drawer: '', asOpen: false, afAsk: false, spAsk: false, pending: null, spubAsk: false, sdelAsk: false }; setSave('불러옴 · ' + now()); render(); toast(`${bizName()} 관리로 바꿨습니다`); })
       .catch(e => { setSave('사업을 바꾸지 못했습니다', true); toast(errMsg(e)); render(); });
   };
   go();
