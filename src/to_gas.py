@@ -36,7 +36,9 @@ rep("""  document.getElementById('tabs').innerHTML=routesOf(S.ui.role).map(([k,t
 """  const tabs=routesOf(S.ui.role); document.getElementById('tabs').innerHTML=tabs.length>1?tabs.map(([k,t])=>`<button class="tabbtn ${cur===k?'on':''}" data-act="tab" data-v="${k}">${t}</button>`).join(''):'';""")
 rep("  enhanceTables(cur); renderLayer(); save();\n}","  enhanceTables(cur); renderLayer(); save(); if(typeof afterRender==='function') afterRender();\n}")
 # board: demo notice removal + setup link
-a=js.index("  ${S.demo?`<div class=\"notice\">"); b=js.index("  ${u.pending",a); js=js[:a]+js[b:]
+a=js.index("  ${S.demo?`<div class=\"notice\">"); b=js.index("  ${u.pending",a)
+keep="".join(l+"\n" for l in js[a:b].split("\n") if "S.ui.manual&&" in l)  # 학급 직접 추가 자리는 남김
+js=js[:a]+keep+js[b:]
 rep("""<a href="#setup">기준정보로 가기</a>""","""<button class="btn sm" data-act="tab" data-v="setup">기준정보로 가기</button>""")
 rep("    case 'role': S.ui.role=el.dataset.v; S.ui.drawer=''; location.hash=homeView(S.ui.role); break;","    case 'tab': S.ui.view=el.dataset.v; S.ui.drawer=''; break;")
 rep("    case 'clean': freshState(); toast('처음 상태로 돌렸습니다'); break;\n","")

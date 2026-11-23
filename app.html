@@ -2271,6 +2271,7 @@ function viewBoard(){
   const hrsSum=list.reduce((a,r)=>a+rowHrs(r),0);
   const pct=s=>rows.length?cnt[s]/rows.length*100:0;
   return `<div class="stack">
+  ${S.ui.manual&&S.ui.manual.open&&!!S.ui.manual.out===!!O?manualPanel(O):''}
   ${u.pending&&mgHasOld(u.pending)?mergePanel():u.pending&&u.pending.hub?`<div class="notice"><b>${esc(u.pending.file)}</b> · 늘봄허브 신청 목록 ${qt(['신청취소는 뺌','매칭확정: 계약정보(학급별 일정·학년·인원)로 학급을 만듦','신청완료: 신청 내용으로 학급을 만들고 학교 확인 때 정함','학교가 아닌 신청 기관(거점형 늘봄센터 등)은 「학교밖」으로 들어감','담당자 연락처(전화·휴대폰)는 학교 담당자 정보에 미리 넣음'])}
      <div class="small" style="margin-top:4px">신청 ${u.pending.info.apps}건 (매칭확정 ${u.pending.info.matched} · 신청완료 ${u.pending.info.applied}) → <b>${u.pending.info.classes}학급</b> · 학교·기관 ${new Set(u.pending.rows.map(r=>r[2])).size}곳 · <span class="muted">신청취소 ${u.pending.info.cancel}건 제외</span></div>
      <div class="small" style="margin-top:4px">${esc(season().name)} 학급을 이 목록으로 새로 시작합니다. 학교 운영 건과 학교밖 운영 건을 함께 바꿉니다.</div>
