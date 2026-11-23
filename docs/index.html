@@ -98,7 +98,7 @@
   #nav input { display: none; }
   #nav .st { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.3); flex: none; }
   #nav .st.ok { background: #4ade80; } #nav .st.warn { background: #fbbf24; } #nav .st.err { background: #f87171; }
-  #side .sidefoot { margin-top: auto; padding: 18px 18px 0; font-size: 11.5px; line-height: 1.6; color: rgba(255,255,255,.55); }
+  #side .sidefoot { margin-top: auto; position: sticky; bottom: 0; z-index: 2; background: var(--hs); padding: 18px 18px 0; font-size: 11.5px; line-height: 1.6; color: rgba(255,255,255,.55); }
   #side .sidefoot .bk { display: block; margin: 0 0 6px; padding: 7px 10px; border-radius: 8px; background: rgba(255,255,255,.10); color: #fff; font-size: 12px; cursor: pointer; text-align: left; border: 1px solid rgba(255,255,255,.18); width: 100%; font-family: inherit; }
   #side .sidefoot .bk:hover { background: rgba(255,255,255,.18); }
   #side .sidefoot .bk small { display: block; color: rgba(255,255,255,.65); font-size: 11px; margin-top: 1px; }
@@ -1065,7 +1065,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-2';
+var APP_VERSION = '2026.11.23-3';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
