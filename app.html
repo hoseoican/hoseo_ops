@@ -908,6 +908,29 @@ tr:first-child>td{border-top:0}
 .settabs{border-bottom-color:var(--line2);padding:8px 0 10px}
 .settabs button{padding:6px 14px;transition:border-color .12s,background-color .12s}
 .settabs button:hover:not(.on){background:var(--tint)}
+/* 검토·매칭 단계 대시보드 */
+.mdash{display:flex;flex-direction:column;gap:14px}
+.msteps{display:flex;flex-wrap:wrap;gap:10px 22px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.mdg{display:flex;flex-direction:column;gap:6px}
+.mdg>span{font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.08em}
+.mdg ol{display:flex;align-items:center;gap:0;margin:0;padding:0;list-style:none}
+.mdg li{display:flex;align-items:center;gap:7px;font-size:13.5px;white-space:nowrap}
+.mdg li+li::before{content:"";width:22px;height:2px;background:var(--line);margin:0 8px}
+.msn{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;font-size:13px;font-weight:800;background:var(--sunk);color:var(--muted);flex:none}
+.ms-now .msn,.mc-now .msn{background:var(--accent);color:var(--on-accent)}
+.ms-done .msn,.mc-done .msn{background:#2f8a5b;color:#fff}
+.ms-now .mst{font-weight:700;color:var(--fg)} .ms-wait .mst{color:var(--muted)}
+.mcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.mcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.mcard.mc-now{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));box-shadow:inset 0 3px 0 var(--accent)}
+.mch{display:flex;align-items:center;gap:8px}.mch b{flex:1;font-size:15px}
+.mchip{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--sunk);color:var(--muted)}
+.mc-now .mchip{background:color-mix(in srgb,var(--accent) 12%,var(--surface));color:var(--accent-ink)}
+.mc-done .mchip{background:color-mix(in srgb,#2f8a5b 14%,var(--surface));color:#2f6b4f}
+.mcn{display:flex;align-items:baseline;gap:6px}.mcn b{font-size:26px;line-height:1.1}.mcn span{font-size:13px;color:var(--muted)}
+.mc-wait .mcn b{color:var(--muted)}
+.mcs{font-size:12.5px;color:var(--muted);min-height:1.2em}
+.mca{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
 /* 왼쪽 메뉴(A안): 탭 안 중분류·소분류 */
 .lwrap{display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px}
 .lmenu{flex:1 1 220px;max-width:240px;position:sticky;top:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 0 12px;box-sizing:border-box}
@@ -2165,7 +2188,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.50';
+const LIB_VER='11.51';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2736,6 +2759,40 @@ function matchLayerHtml(){ const r=S.rows.find(x=>x.id===S.ui.mDrawer); if(!r) r
   return `<div class="ov" data-act="close"><div class="drawer mdrawer" role="dialog" aria-label="수업 정보 · 신청 강사"><div class="stack">
    <div class="row between"><span class="small muted">검토 · 매칭 · ${tOrgTag(r)}</span><button class="btn" data-act="close">닫기</button></div>
    ${matchDetail(r)}</div></div></div>`; }
+/* 검토·매칭 단계 대시보드: 단계별 상태(할 일 있음·완료·대기)와 실행 버튼을 한눈에 */
+function matchDash(){
+  const M=matchRows(), nRev=M.filter(toReview).length, nRevOk=M.filter(r=>toReview(r)&&reviewOk(r)).length, nOpen=M.filter(toOpen).length, rec=M.filter(r=>r.status==='recruit'), nApps=rec.reduce((a,r)=>a+r.apps.length,0);
+  const unassigned=M.filter(r=>['fixed','recruit'].includes(r.status)&&canAssign(r)&&!r.inst).length, ready=M.filter(r=>['fixed','recruit'].includes(r.status)&&r.inst&&canAssign(r)).length;
+  const wish=M.filter(r=>r.wish&&r.inst!==r.wish.tid&&r.status!=='final'&&canAssign(r)).length, nSms=instSmsList().length, nSp=spReady().length;
+  const R=resultSchools().ready, un=R.filter(x=>!resultSentMap()[x.school]).length;
+  const A=asRows(), aO=A.filter(r=>r.aOpen).length, aN=A.filter(r=>r.aOpen).reduce((a,r)=>a+asApps(r).length,0), aP=A.filter(r=>asState(r)==='pend').length, aF=A.filter(r=>asState(r)==='fin').length;
+  const fin=M.filter(r=>r.status==='final');
+  const st=(pend,done)=>pend?'now':done?'done':'wait';
+  const S7=[
+   {no:1,g:'검토',t:'제출 검토',st:st(nRev,M.some(r=>!['wait','cancel'].includes(r.status))),n:nRev,u:'학급 검토 대기',sub:`검토 통과 ${nRevOk}학급`,
+    act:`<button class="btn sm ${nRevOk?'pri':''}" data-act="review-all" ${nRevOk?'':'disabled'}>검토 통과 학급 모두 검토 완료</button>`},
+   {no:2,g:'배치',t:'강사 화면에 공개',st:st(nOpen,rec.length||fin.length),n:nOpen,u:'학급 공개 전',sub:`모집 중 ${rec.length}학급 · 신청 ${nApps}건`,
+    act:`<button class="btn sm ${nOpen?'pri':''}" data-act="recruit" ${nOpen?'':'disabled'}>강사 화면에 공개</button>`},
+   {no:3,g:'배치',t:'강사 배정',st:st(unassigned,M.some(r=>r.inst)),n:unassigned,u:'학급 미배정',sub:wish?`대학 희망 ${wish}학급`:'',
+    act:`${wish?`<button class="btn sm" data-act="wishall">대학 희망대로 가배치 (${wish})</button>`:''}<button class="btn sm" data-act="auto" ${unassigned?'':'disabled'}>자동 추천</button>`},
+   {no:4,g:'배치',t:'배치 확정',st:st(ready,fin.length),n:ready,u:'학급 확정 대기',sub:`배치 확정 ${fin.length}학급`,
+    act:`<button class="btn sm ${ready?'pri':''}" data-act="afask" ${ready?'':'disabled'}>배치 확정 (강사 공개)…</button><button class="btn sm" data-act="instsms" ${nSms?'':'disabled'} title="배치 확정된 주강사에게 보낼 문자 내용을 강사별로 정리한 엑셀">강사 안내 문자 엑셀 (${nSms}명)</button>${smsBrBtn('smsinst',nSms,`강사 문자 보내기 (${nSms}명)`,'data-k=""')}<button class="btn sm" data-act="smstpl">문자 문구 수정</button>`},
+   {no:5,g:'배치',t:'학교 공개',st:st(nSp,fin.some(r=>!r.schPend)),n:nSp,u:'학급 공개 대기',sub:'',
+    act:`<button class="btn sm ${nSp?'pri':''}" data-act="spask" ${nSp?'':'disabled'}>학교 담당자에게 공개…</button>`},
+   {no:6,g:'배치',t:'배치 완료 메일',st:st(un,R.length),n:un,u:'곳 보낼 학교',sub:`보냄 ${R.length-un}곳`,
+    act:`<button class="btn sm ${un?'pri':''}" data-act="rmopen">${S.ui.rmOpen?'닫기':'학교별 메일 확인'}</button>`},
+   {no:7,g:'보조강사',t:'보조강사 배치',st:aO||aP?'now':aF?'done':'wait',n:aO,u:'학급 모집 중',sub:`신청 ${aN}건${aP?` · 확정 대기 ${aP}`:''}${aF?` · 확정 ${aF}`:''}`,
+    act:`<button class="btn sm ${S.ui.asOpen?'':'pri'}" data-act="asopen" ${A.length?'':'disabled title="운영 확정된 학급이 있어야 합니다"'}>${S.ui.asOpen?'닫기':'보조강사 배치…'}</button>`}];
+  const L={now:'할 일 있음',done:'완료',wait:'대기'};
+  const step=x=>`<li class="ms-${x.st}"><span class="msn">${x.no}</span><span class="mst">${esc(x.t)}</span></li>`;
+  const grpHead=(g,a)=>`<div class="mdg"><span>${g}</span><ol>${a.map(step).join('')}</ol></div>`;
+  return `<div class="mdash">
+   <div class="msteps" aria-label="진행 단계">${grpHead('검토',S7.filter(x=>x.g==='검토'))}${grpHead('배치',S7.filter(x=>x.g==='배치'))}${grpHead('보조강사',S7.filter(x=>x.g==='보조강사'))}</div>
+   <div class="mcards">${S7.map(x=>`<section class="mcard mc-${x.st}" aria-label="${x.no}. ${esc(x.t)}">
+     <div class="mch"><span class="msn">${x.no}</span><b>${esc(x.t)}</b><span class="mchip">${L[x.st]}</span></div>
+     <div class="mcn"><b>${x.n}</b><span>${esc(x.u)}</span></div>
+     <div class="mcs">${esc(x.sub)||'&nbsp;'}</div>
+     <div class="mca">${x.act}</div></section>`).join('')}</div></div>`; }
 function viewMatch(){
   const u=S.ui;
   const list=matchRows().filter(r=>r.status!=='cancel'&&(u.showWait||!['wait'].includes(r.status)));
@@ -2747,15 +2804,7 @@ function viewMatch(){
   const load=S.instructors.map(t=>{const rs=S.rows.filter(x=>(x.inst===t.id||x.asst===t.id)&&x.status!=='cancel');return {t,rs,apps:S.rows.filter(x=>x.apps.some(a=>a.tid===t.id)).length,days:rs.reduce((a,x)=>a+classDays(x).length,0),hrs:rs.filter(x=>x.inst===t.id).reduce((a,x)=>a+rowHrs(x),0),hrsF:rs.filter(x=>x.inst===t.id&&x.status==='final').reduce((a,x)=>a+rowHrs(x),0),hrsA:rs.filter(x=>x.asst===t.id).reduce((a,x)=>a+rowHrs(x),0),bad:rs.some(x=>conflictsFor(t.id,x).length)}});
   return `<div class="stack">
    <div class="row" style="gap:6px;align-items:center"><h2>검토 · 매칭</h2>${qt(['학교 제출 → 검토 완료 → 강사 화면에 공개 → 강사 신청','가배치: 운영기관만 보임','배치 확정: 강사 화면에 보임','학교 공개: 학교 화면에 보임','보조강사는 배치 확정 뒤 「7」에서 따로 모집'])}</div>
-   <ol class="flow">
-    <li><b>1. 제출 검토</b><span>검토 대기 ${matchRows().filter(toReview).length}학급 · 검토 통과 ${matchRows().filter(r=>toReview(r)&&reviewOk(r)).length}</span><button class="btn sm" data-act="review-all" ${matchRows().some(r=>toReview(r)&&reviewOk(r))?'':'disabled'}>검토 통과 학급 모두 검토 완료</button></li>
-    <li><b>2. 강사 화면에 공개</b><span>공개 전 ${matchRows().filter(toOpen).length}학급 · 모집 중 ${matchRows().filter(r=>r.status==='recruit').length}학급 · 신청 ${matchRows().filter(r=>r.status==='recruit').reduce((a,r)=>a+r.apps.length,0)}건</span><button class="btn sm pri" data-act="recruit" ${matchRows().some(toOpen)?'':'disabled'}>공개 전 ${matchRows().filter(toOpen).length}학급 강사 화면에 공개</button></li>
-    <li><b>3. 강사 배정</b><span>미배정 ${unassigned}학급${(()=>{ const w=matchRows().filter(r=>r.wish&&r.inst!==r.wish.tid&&r.status!=='final'&&canAssign(r)).length; return w?` · 대학 희망 ${w}`:''; })()}</span>${(()=>{ const w=matchRows().filter(r=>r.wish&&r.inst!==r.wish.tid&&r.status!=='final'&&canAssign(r)).length; return w?`<button class="btn sm" data-act="wishall">대학 희망대로 가배치 (${w})</button>`:''; })()}<button class="btn sm" data-act="auto" ${unassigned?'':'disabled'}>자동 추천</button></li>
-    <li><b>4. 배치 확정</b><span>배정 완료 ${ready}학급</span><button class="btn sm pri" data-act="afask" ${ready?'':'disabled'}>배치 확정 (강사 공개)…</button>${(()=>{ const n=instSmsList().length; return `<button class="btn sm" data-act="instsms" ${n?'':'disabled'} title="배치 확정된 주강사에게 보낼 문자 내용을 강사별로 정리한 엑셀 (보조강사는 「7. 보조강사 배치」에서 따로)">강사 안내 문자 엑셀 (${n}명)</button>${smsBrBtn('smsinst',n,`강사 문자 보내기 (${n}명)`,'data-k=""')}<button class="btn sm" data-act="smstpl">문자 문구 수정</button>`; })()}</li>
-    <li><b>5. 학교 공개</b><span>공개 대기 ${spReady().length}학급</span><button class="btn sm pri" data-act="spask" ${spReady().length?'':'disabled'}>학교 담당자에게 공개…</button></li>
-    ${(()=>{const R=resultSchools().ready, un=R.filter(x=>!resultSentMap()[x.school]).length;return `<li><b>6. 배치 완료 메일</b><span>보낼 학교 ${un}곳 · 보냄 ${R.length-un}곳</span><button class="btn sm ${un?'pri':''}" data-act="rmopen">${S.ui.rmOpen?'닫기':'학교별 메일 확인'}</button></li>`;})()}
-    ${(()=>{ const A=asRows(), o=A.filter(r=>r.aOpen).length, n=A.filter(r=>r.aOpen).reduce((a,r)=>a+asApps(r).length,0), pd=A.filter(r=>asState(r)==='pend').length; return `<li><b>7. 보조강사 배치</b><span>모집 중 ${o}학급 · 신청 ${n}건${pd?` · 확정 대기 ${pd}`:''}</span><button class="btn sm ${S.ui.asOpen?'':'pri'}" data-act="asopen" ${A.length?'':'disabled title="운영 확정된 학급이 있어야 합니다"'}>${S.ui.asOpen?'닫기':'보조강사 배치…'}</button></li>`; })()}
-   </ol>
+   ${matchDash()}
    ${applyWinPanel()}
    ${placeClashHtml()}
    ${S.ui.afAsk?afPanel():''}
@@ -7092,7 +7141,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.50';
+const APP_VER = '11.51';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
