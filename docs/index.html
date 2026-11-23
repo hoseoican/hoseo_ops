@@ -622,7 +622,7 @@ var EMBED = (function(){ try{ return window.top !== window && !!window.top.docum
 if(EMBED) document.documentElement.classList.add('embed');
 </script>
 <style>
-  html.embed #side h1.brandbar, html.embed #navBack { display: none !important; }
+  html.embed #side h1.brandbar, html.embed #navBack, html.embed #bizLogo { display: none !important; } /* 운영 관리 9번 안: 위쪽 머리글과 겹치는 로고 줄 숨김 */
   html.embed #side { padding-top: 10px; }
 </style>
 </head>
@@ -1157,7 +1157,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-13';
+var APP_VERSION = '2026.11.23-14';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
