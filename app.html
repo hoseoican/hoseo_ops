@@ -1931,7 +1931,7 @@ function issues(r){
   if(r.ts==null) out.push({lv:'warn',t:'시간을 읽지 못함'});
   const n=classDays(r).length;
   if(!n) out.push({lv:'warn',t:'수업일 0일 (기간·요일 확인)'});
-  else if(r.total && r.perDay*n!==r.total) out.push({lv:'warn',t:`총차시 불일치: 교육청 ${r.total}차시, 계산 ${n}일×${r.perDay}차시=${n*r.perDay}`});
+  else if(r.total && r.perDay*n!==r.total) out.push({lv:'warn',t:`총차시 불일치: 원본 ${r.total}차시, 계산 ${n}일×${r.perDay}차시=${n*r.perDay}`});
   if(n>20) out.push({lv:'warn',t:`수업일 ${n}일 (양식은 20일까지)`});
   const cs=condState(r);
   if(cs.has){
@@ -2139,7 +2139,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.45';
+const LIB_VER='11.46';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2293,7 +2293,7 @@ function viewBoard(){
   const flat=bsort!=='school'&&bsort!=='org';
   const groups={}; list.forEach(r=>(groups[r.school]=groups[r.school]||[]).push(r));
   const orgCell=r=>`<td class="nowrap" data-l="운영 대학">${tOrgTag(r)}${r.ext?'<div class="muted small">타대학 업로드</div>':''}</td>`;
-  const hrsCell=r=>{ const n=classDays(r).length, h=n*r.perDay, diff=r.total&&h!==r.total; return `<td class="nowrap c-hrs" data-l="차시"><b class="hrs">${h}차시</b><div class="mono muted small">${n}회 × ${r.perDay}차시</div>${r.total?`<div class="small ${diff?'lv-warn':'muted'}">${curBiz()==='anchor'?'교육청':'원본'} ${r.total}차시${diff?' · 다름':''}</div>`:''}</td>`; };
+  const hrsCell=r=>{ const n=classDays(r).length, h=n*r.perDay, diff=r.total&&h!==r.total; return `<td class="nowrap c-hrs" data-l="차시"><b class="hrs">${h}차시</b><div class="mono muted small">${n}회 × ${r.perDay}차시</div>${r.total?`<div class="small ${diff?'lv-warn':'muted'}">${'원본'} ${r.total}차시${diff?' · 다름':''}</div>`:''}</td>`; };
   const hrsSum=list.reduce((a,r)=>a+rowHrs(r),0);
   const pct=s=>rows.length?cnt[s]/rows.length*100:0;
   return `<div class="stack">
@@ -4623,7 +4623,7 @@ function renderLayer0(){
      </div></details>`:''}
    ${srcNotice(r)}
    <details><summary class="small">수업일 ${classDays(r).length}일 달력 보기</summary><div style="margin-top:8px">${calHtml(r,false)}</div></details>
-   <div class="cmp"><div class="h">항목</div><div class="h">교육청 원본</div><div class="h">현재 값</div>
+   <div class="cmp"><div class="h">항목</div><div class="h">원본</div><div class="h">현재 값</div>
     ${line('학교명',r.srcSchool,r.school)}${line('프로그램',r.src.prog,p.name)}${line('시작일',ymd(r.src.start),ymd(r.start))}${line('종료일',ymd(r.src.end),ymd(r.end))}
     ${line('요일',r.src.days,daysTxt(r.days))}${line('시간',r.src.time,`${hm(r.ts)}~${hm(r.te)}`)}${line('총차시',r.total,`${classDays(r).length}일 × ${r.perDay} = ${classDays(r).length*r.perDay}`)}
     ${line('인원',r.expected,sc.count)}${line('장소',r.room,sc.room)}${line('학급 구분','',r.label)}</div>
@@ -7054,7 +7054,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.45';
+const APP_VER = '11.46';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
