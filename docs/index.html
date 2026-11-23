@@ -257,6 +257,20 @@
   .ptable td small { color: var(--mute); }
   .modal .box.wide { width: min(860px, 94vw); }
   .pscroll { max-height: 52vh; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .drvWrap { display: flex; gap: 12px; align-items: flex-start; }
+  .drvSlots { width: 280px; flex: none; max-height: 52vh; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .drvMain { flex: 1; min-width: 0; }
+  .drvHead { padding: 8px 10px; border-bottom: 1px solid var(--line); background: #F3ECEB; font-size: 13px; position: sticky; top: 0; }
+  .drvHead small { color: var(--mute); }
+  .drvSlot { display: flex; gap: 8px; align-items: flex-start; padding: 7px 10px; border-bottom: 1px solid #F1EBEA; cursor: pointer; font-size: 13px; }
+  .drvSlot:hover { background: #FBF8F8; }
+  .drvSlot .no { width: 26px; flex: none; color: var(--mute); font-size: 12px; padding-top: 1px; }
+  .drvSlot .nm { flex: 1; min-width: 0; }
+  .drvSlot .nm small { display: block; color: var(--mute); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drvSlot.miss .nm { color: var(--mute); }
+  .drvSlot .opt { font-size: 11px; color: var(--mute); margin-left: 4px; }
+  .drvFoot { padding: 8px 10px; }
+  @media (max-width: 720px) { .drvWrap { flex-direction: column; } .drvSlots { width: 100%; max-height: 30vh; } }
 
   /* 학교별 발송 */
   .mailgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 12px; max-width: 1180px; align-items: start; }
@@ -1033,7 +1047,7 @@ if(EMBED) document.documentElement.classList.add('embed');
   <h3>공유드라이브에서 제출서류 불러오기</h3>
   <p class="note">강사가 보낸 ZIP이나 강사별 폴더를 체크하고 불러오기를 누르세요. 강사 이름을 넣고 Enter(또는 「전체 폴더에서 찾기」)를 누르면 대학별 폴더까지 모두 찾습니다. 여러 개를 한꺼번에 고를 수 있습니다. 폴더 이름을 누르면 안으로 들어갑니다. 「등록됨」은 이미 강사 목록에 있는 이름입니다.</p>
   <div class="row" style="margin:0 0 8px;gap:8px"><span id="drvPath" class="hint" style="font-size:13px"></span><input type="text" id="drvQ" placeholder="이름으로 찾기" autocomplete="off" style="margin-left:auto;width:200px"><label class="hint" style="font-size:12.5px;color:var(--ink)"><input type="checkbox" id="drvNew"> 안 불러온 것만</label><button type="button" class="ghost sm" id="drvAll" title="강사서류 폴더 전체(호서대·상명대·유원대·연암대·단국대·전체 강사 서류)에서 찾기">전체 폴더에서 찾기</button></div>
-  <div class="pscroll" id="drvList"></div>
+  <div class="drvWrap"><div class="drvSlots" id="drvSlots"></div><div class="pscroll drvMain" id="drvList"></div></div>
   <div class="act"><button type="button" class="ghost" id="drvClose">닫기</button><button type="button" id="drvGo" disabled>불러오기</button></div>
 </div></div>
 <div class="modal" id="impDlg"><div class="box">
@@ -1057,7 +1071,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.22-6';
+var APP_VERSION = '2026.11.23-1';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -3288,7 +3302,7 @@ function drvImpTag(x){ var st = drvState(x); if(!st) return ''; var d = new Date
 function drvKnown(name){ var n = String(name||'').replace(/\s/g,''); return people.filter(function(p){ var m = String(p.name||'').replace(/\s/g,''); return m.length >= 2 && n.indexOf(m) >= 0; })[0]; }
 async function drvOpen(id){
   if(!gasOn()){ toast('「운영현황 → 구글 시트 연동」에서 연동 주소와 접근 코드를 먼저 넣어 주세요'); return; }
-  $('drvDlg').classList.add('on'); $('drvList').innerHTML = '<p class="hint">불러오는 중…</p>';
+  $('drvDlg').classList.add('on'); $('drvList').innerHTML = '<p class="hint">불러오는 중…</p>'; $('drvSlots').innerHTML = '';
   try{
     var r = await gasCall('dlist', { folder: id || '' });
     drv.found = ''; drv.folder = r.folder.id; drv.path = r.path; drv.items = r.items.sort(function(a, b){ return (b.dir?1:0)-(a.dir?1:0) || (b.at||0)-(a.at||0); }); drv.pick = {};
@@ -3301,13 +3315,59 @@ async function drvSearch(){
   try{ var r = await gasCall('dsearch', { q: q }); drv.found = q; drv.items = r.items.sort(function(a, b){ return (b.at||0)-(a.at||0); }); drv.pick = {}; drv.q = ''; drvRender(); }
   catch(e){ $('drvList').innerHTML = '<p class="hint" style="color:var(--danger)">'+esc(e.message||e)+'</p>'; }
 }
+// 서류 목록(왼쪽) ↔ 공유드라이브 파일 자동 매칭. 파일 이름의 번호(「8.」·「4-1.」)나 낱말로 서류를 알아본다
+var DRV_SLOTS = [
+  {k:'0', t:'범죄경력조회 동의서 · 행정정보 이용 동의서', req:true},
+  {k:'1', t:'이력서', req:true},
+  {k:'2', t:'신분증 · 통장 사본', req:true},
+  {k:'3', t:'개인정보 수집·이용 및 제3자 제공 동의서', req:true},
+  {k:'4-1', t:'채용신체검사서', req:true},
+  {k:'4-2', t:'잠복결핵 검사 확인서', req:true},
+  {k:'5', t:'최종학력 졸업증명서', req:true},
+  {k:'6', t:'자격증 사본 및 경력증명서', req:false},
+  {k:'7', t:'청렴서약서', req:true},
+  {k:'8', t:'성범죄 및 아동학대 수사여부 부존재 확인 서약서', req:true},
+  {k:'9', t:'개인정보 보안서약서(수탁자)', req:true},
+  {k:'10', t:'교육의 중립성 준수 서약서', req:true},
+  {k:'11', t:'안전관리 서약서', req:false},
+  {k:'12', t:'강사 서약서', req:false}
+];
+var DRV_SHORT = {'0':'0번 동의서','1':'1번 이력서','2':'2번 신분증·통장','3':'3번 개인정보 동의','4-1':'4-1 신체검사','4-2':'4-2 잠복결핵','5':'5번 졸업증명','6':'6번 경력·자격','7':'7번 청렴서약','8':'8번 부존재 서약','9':'9번 보안서약','10':'10번 중립성 서약','11':'11번 안전관리 서약','12':'12번 강사 서약'};
+var DRV_KEYWORDS = [['신체검사|채용신체|건강검진|검진결과','4-1'],['결핵|IGRA','4-2'],['졸업|학위|재학|성적증명','5'],['경력증명|자격증|경력확인','6'],['이력서','1'],['신분증|통장','2'],['범죄경력|행정정보','0'],['제3자','3'],['청렴','7'],['부존재','8'],['보안서약','9'],['중립성','10'],['안전관리','11'],['강사서약','12']];
+function drvDocKey(name){
+  var b = String(name||'').replace(/^.*\//, '');
+  var m = /^(\d{1,2})(?:-(\d))?\s*[.\s_)]/.exec(b);
+  if(m){ var k = (m[1] === '4' && m[2]) ? '4-' + m[2] : m[1]; if(DRV_SHORT[k]) return k; }
+  var s = b.replace(/\s+/g, '');
+  for(var i = 0; i < DRV_KEYWORDS.length; i++) if(new RegExp(DRV_KEYWORDS[i][0]).test(s)) return DRV_KEYWORDS[i][1];
+  return '';
+}
+function drvSlotOf(x){ return x.dir ? '' : drvDocKey(x.name); }
+function drvMatchAll(){ var by = {}; DRV_SLOTS.forEach(function(s){ by[s.k] = []; }); drv.items.forEach(function(x){ var k = drvSlotOf(x); if(k && by[k]) by[k].push(x); }); return by; }
+function drvSlotsRender(){
+  var box = $('drvSlots'); if(!box) return;
+  if(!drv.items.length){ box.innerHTML = ''; return; }
+  var by = drvMatchAll(), done = 0, need = 0;
+  var rows = DRV_SLOTS.map(function(s){
+    var a = by[s.k];
+    if(s.req){ need++; if(a.length) done++; }
+    var sub = a.length ? esc(a[0].name) + (a.length > 1 ? ' 외 ' + (a.length - 1) + '개' : '') : '찾지 못함';
+    return '<div class="drvSlot'+(a.length ? '' : ' miss')+'" data-drvs="'+s.k+'"><span class="no">'+s.k+'</span><span class="nm">'+esc(s.t)+(s.req ? '' : '<span class="opt">선택</span>')+'<small>'+sub+'</small></span><span class="badge '+(a.length ? 'sent' : 'no')+'">'+(a.length ? a.length+'개' : '없음')+'</span></div>';
+  }).join('');
+  var where = drv.found ? '검색 결과' : (drv.path.length ? drv.path[drv.path.length-1].name : '');
+  box.innerHTML = '<div class="drvHead"><b>서류 목록</b> <small>'+esc(where)+' 기준 · 필수 '+done+'/'+need+'</small></div>' + rows
+    + '<div class="drvFoot"><button type="button" class="ghost sm" id="drvPickMatched">찾은 서류 전체 선택</button></div>';
+}
+function drvPickSlot(k, on){ var a = drvMatchAll()[k] || []; a.forEach(function(x){ if(on) drv.pick[x.id] = 1; else delete drv.pick[x.id]; }); }
 function drvRender(){
+  drvSlotsRender();
   if(drv.found){ $('drvPath').innerHTML = '전체 폴더에서 「<b>'+esc(drv.found)+'</b>」 찾은 결과 '+drv.items.length+'개 · <a href="#" data-drvp="'+(drv.folder||'')+'">폴더 보기로 돌아가기</a>'; }
   else $('drvPath').innerHTML = drv.path.map(function(p, i){ return i === drv.path.length-1 ? '<b>'+esc(p.name)+'</b>' : '<a href="#" data-drvp="'+p.id+'">'+esc(p.name)+'</a>'; }).join(' › ');
   var q = drv.q.replace(/\s/g,''), list = drv.items.filter(function(x){ return (!q || x.name.replace(/\s/g,'').indexOf(q) >= 0) && (!drv.onlyNew || drvState(x) !== 'done'); });
-  $('drvList').innerHTML = list.length ? '<table class="ptable"><tr><th style="width:28px"></th><th>이름</th>'+(drv.found ? '<th style="width:200px">위치</th>' : '')+'<th style="width:80px">크기</th><th style="width:90px">수정일</th></tr>'+list.map(function(x){
+  $('drvList').innerHTML = list.length ? '<table class="ptable"><tr><th style="width:28px"></th><th>이름</th><th style="width:118px">서류</th>'+(drv.found ? '<th style="width:200px">위치</th>' : '')+'<th style="width:80px">크기</th><th style="width:90px">수정일</th></tr>'+list.map(function(x){
     var k = drvKnown(x.name);
-    return '<tr><td><input type="checkbox" data-drvk="'+x.id+'"'+(drv.pick[x.id]?' checked':'')+'></td><td>'+(x.dir ? '<span class="pill">폴더</span> <a href="#" data-drvf="'+x.id+'">'+esc(x.name)+'</a> <small class="hint">폴더째 불러오려면 체크</small>' : esc(x.name))+(k ? ' <span class="badge ok">등록됨 · '+esc(k.name)+'</span>' : '')+drvImpTag(x)+'</td>'+(drv.found ? '<td><small>'+esc(x.where||'')+'</small></td>' : '')+'<td>'+(x.dir ? '' : drvSize(x.size))+'</td><td>'+(x.at ? new Date(x.at).toLocaleDateString('ko-KR') : '')+'</td></tr>';
+    var sk = drvSlotOf(x);
+    return '<tr><td><input type="checkbox" data-drvk="'+x.id+'"'+(drv.pick[x.id]?' checked':'')+'></td><td>'+(x.dir ? '<span class="pill">폴더</span> <a href="#" data-drvf="'+x.id+'">'+esc(x.name)+'</a> <small class="hint">폴더째 불러오려면 체크</small>' : esc(x.name))+(k ? ' <span class="badge ok">등록됨 · '+esc(k.name)+'</span>' : '')+drvImpTag(x)+'</td><td>'+(sk ? '<span class="badge sent">'+esc(DRV_SHORT[sk])+'</span>' : '<small class="hint">'+(x.dir ? '폴더' : '분류 안 됨')+'</small>')+'</td>'+(drv.found ? '<td><small>'+esc(x.where||'')+'</small></td>' : '')+'<td>'+(x.dir ? '' : drvSize(x.size))+'</td><td>'+(x.at ? new Date(x.at).toLocaleDateString('ko-KR') : '')+'</td></tr>';
   }).join('')+'</table>' : '<p class="hint">불러올 수 있는 파일(ZIP·한글·PDF·JPG·PNG)이나 폴더가 없습니다.</p>';
   var n = Object.keys(drv.pick).length; $('drvGo').disabled = !n; $('drvGo').textContent = n ? n+'개 불러오기' : '불러오기';
 }
@@ -3353,6 +3413,12 @@ function bindDrv(){
   $('drvQ').addEventListener('input', function(){ if(drv.found) return; drv.q = $('drvQ').value; drvRender(); });
   $('drvQ').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); drvSearch(); } });
   $('drvAll').onclick = drvSearch;
+  $('drvSlots').addEventListener('click', function(e){
+    if(e.target.closest('#drvPickMatched')){ var by = drvMatchAll(); Object.keys(by).forEach(function(k){ by[k].forEach(function(x){ drv.pick[x.id] = 1; }); }); drvRender(); return; }
+    var r = e.target.closest('[data-drvs]'); if(!r) return;
+    var a = drvMatchAll()[r.dataset.drvs] || []; if(!a.length){ toast('이 서류 파일이 목록에 없습니다'); return; }
+    var all = a.every(function(x){ return drv.pick[x.id]; }); drvPickSlot(r.dataset.drvs, !all); drvRender();
+  });
   $('drvNew').addEventListener('change', function(){ drv.onlyNew = $('drvNew').checked; drvRender(); });
   $('drvDlg').addEventListener('click', function(e){
     var a = e.target.closest('[data-drvf],[data-drvp]'); if(a){ e.preventDefault(); $('drvQ').value = ''; drv.q = ''; drvOpen(a.dataset.drvf || a.dataset.drvp); return; }
