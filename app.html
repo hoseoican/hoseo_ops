@@ -7031,7 +7031,7 @@ function docsFit() {
 function docsShow(on) {
   const pane = document.getElementById('docsPane'), app = document.getElementById('app'), ft = document.querySelector('footer.site');
   if (!pane) return;
-  if (on && !pane.firstChild) pane.innerHTML = '<iframe id="docsFrame" src="docs/" title="강사서류"></iframe>';
+  if (on && !pane.firstChild) pane.innerHTML = '<iframe id="docsFrame" src="docs/?v=' + Date.now().toString(36) + '" title="강사서류"></iframe>'; /* 강사서류 화면은 늘 최신 파일로 */
   pane.hidden = !on; app.hidden = on; if (ft) ft.hidden = on;
   document.body.classList.toggle('docs-on', on);
   if (on) { window.scrollTo(0, 0); docsFit(); }
