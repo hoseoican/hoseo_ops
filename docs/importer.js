@@ -230,11 +230,22 @@
     var photoKey = r.imgs.photo ? hash(r.imgs.photo.data) : '';
     var best = null; Object.keys(sigCount).forEach(function (k) { if (k !== photoKey && sigCount[k] >= 2 && (!best || sigCount[k] > sigCount[best])) best = k; });
     if (best) r.imgs.sign = picOut(sigPics[best]);
-    if (!r.name) r.name = cleanName(hint.replace(/\(.*?\)|_?주강사|_?보조강사|보조|\d+/g, ''));
+    if (!r.name) r.name = hintName(hint);
     if (!r.birth && r.rrn) r.birth = '';
     if (!kinds.resume) r.notes.push('한글 이력서가 없어 이력 칸은 비워 둡니다');
     if (!kinds.f2 && !(r.imgs.idcard && r.imgs.bank)) r.notes.push('신분증·통장 사본(한글 파일이나 「신분증」「통장」 이름의 사진 파일)이 없어 이미지를 못 가져왔습니다');
     return r;
+  }
+  // 폴더·파일 이름에서 강사 이름 찾기. 서류 이름 낱말(채용신체검사, 졸업증명서 등)은 이름으로 보지 않는다
+  var DOC_WORDS = /채용신체검사서?|신체검사서?|건강검진|검진결과|잠복결핵|결핵검사|결핵|확인서|졸업증명서|최종학력|학력|졸업|증명서|성적|재학|이력서|신분증|통장사본|통장|사본|동의서|서약서|개인정보|수집|이용|제3자|제공|범죄경력|조회|행정정보|청렴|부존재|성범죄|아동학대|수사여부|보안|수탁자|중립성|안전관리|강사서약|자격증|경력|스캔본|스캔|검사|서류|제출|강사|주강사|보조강사|보조|파일|사진|증명사진|서명|양식|최종|채용/g;
+  function hintName(hint) {
+    var segs = String(hint || '').split('/').filter(Boolean).reverse();
+    for (var i = 0; i < segs.length; i++) {
+      var t = segs[i].replace(/\.[A-Za-z0-9]{2,5}$/, '').replace(/\(([가-힣]{2,4})\)/g, ' $1 ').replace(/\(.*?\)/g, ' ').replace(/\d+/g, ' ').replace(/\s+/g, '').replace(DOC_WORDS, ' ');
+      var m = t.match(/[가-힣]{2,4}/g);
+      if (m && m.length) return m[m.length - 1];
+    }
+    return '';
   }
   function isPhotoShape(p) { var ratio = p.h / (p.w || 1); return p.w > 12 && p.w < 45 && ratio > 1.15 && ratio < 1.7; }
   function picOut(p) { var sz = imgSize(p.bytes, p.ext) || { w: Math.round(p.w * 12) || 300, h: Math.round(p.h * 12) || 400 }; return { data: p.bytes, ext: p.ext === 'png' ? 'png' : 'jpg', pxW: sz.w, pxH: sz.h }; }
