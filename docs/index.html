@@ -311,6 +311,17 @@
   .sheets label { display: inline-flex; gap: 5px; align-items: center; border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; cursor: pointer; background: #fff; }
   .sheets label.on { border-color: var(--hs-200); background: var(--hs-50); color: var(--hs-d); font-weight: 700; }
   .sheets b { color: var(--mute); font-size: 12px; font-weight: 600; margin-right: 2px; }
+  .sheets .sgi { display: inline-flex; gap: 4px; align-items: center; padding: 2px 6px 2px 8px; margin-right: 6px; border-left: 2px solid var(--hs-200); }
+  .sheets .sgi label { padding: 2px 8px; font-size: 12px; }
+  .bizbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; max-width: 1180px; margin: 0 0 14px; padding: 8px 12px; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+  .bizbar .bzl { font-size: 11.5px; font-weight: 700; color: #9A8E90; letter-spacing: .08em; }
+  .bizbar .bzseg { display: inline-flex; padding: 3px; gap: 2px; background: #F3ECEB; border-radius: 10px; }
+  .bizbar .bzc { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; font-size: 13.5px; cursor: pointer; box-shadow: none; }
+  .bizbar .bzc i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .bizbar .bzc small { font-size: 11.5px; color: var(--mute); font-weight: 400; }
+  .bizbar .bzc.on { background: #fff; font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .bizbar span.bzc.on { background: #F3ECEB; }
+  .bizbar .bzh { font-size: 12px; color: var(--mute); }
 
   /* 운영현황 편집 */
   table.ops .ln { display: flex; gap: 4px; align-items: baseline; padding: 1px 0; }
@@ -697,6 +708,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 </div>
 
 <div class="work">
+  <div id="bizBar" class="bizbar"></div>
   <!-- 강사 선택: 강사별 화면에서 강사를 아직 열지 않았을 때 -->
   <div id="pick" hidden>
   <div class="sidebox">
@@ -1179,7 +1191,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-15';
+var APP_VERSION = '2026.11.23-16';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1764,7 +1776,7 @@ var sideF='all', sideS='recent', pickAll=false, PICK_N=9;
 try{ var _sd=JSON.parse(localStorage.getItem('lecSide')||'{}'); if(_sd.f) sideF=_sd.f; if(_sd.s) sideS=_sd.s; }catch(e){}
 function renderList(){
   people.sort(function(a,b){ return (b.updated||0)-(a.updated||0); });
-  var q=$('pq').value||'', all=people.map(rosterInfo), list=rosterSort(all.filter(function(x){ return rosterMatch(x, sideF, q); }), sideS), full=list.length;
+  var q=$('pq').value||'', all=people.filter(inBizP).map(rosterInfo), list=rosterSort(all.filter(function(x){ return rosterMatch(x, sideF, q); }), sideS), full=list.length;
   /* 강사 선택 화면: 찾기 전에는 위쪽 몇 명만 보이고 나머지는 펼쳐서 봄 */
   var cut=!q.trim() && !pickAll && full>PICK_N; if(cut) list=list.slice(0, PICK_N);
   $('pf').value=sideF; $('ps').value=sideS;
@@ -1931,7 +1943,7 @@ function rsSelInfo(){
   $('rsDrive').disabled=!sel.length;
 }
 function renderRoster(){
-  var q=$('rsQ').value||'', un=unregList(), all=people.map(rosterInfo).concat(un);
+  var q=$('rsQ').value||'', un=unregList(), all=people.filter(inBizP).map(rosterInfo).concat(un);
   var cnt={all:all.length, miss:0, ok:0, unreg:un.length, unsent:0, main:0, sub:0, dual:0, term:0, exam:0, late:0, cur:0, lsub:0};
   all.forEach(function(x){ ['term','exam','late','cur','lsub'].forEach(function(f){ if(rosterMatch(x, f, '')) cnt[f]++; }); if(!x.unreg) cnt[x.ok?'ok':'miss']++; if(x.send.st!=='sent') cnt.unsent++; cnt[roleKind(x)]++; });
   $('rsBasis').textContent='등록 '+people.length+'명 · 구비 완료 '+cnt.ok+'명 · 미구비 '+cnt.miss+'명'+(un.length?' · 운영현황에만 있는 미등록 '+un.length+'명':'');
@@ -2277,8 +2289,9 @@ var PER_PAGES={ status:1, roster:1, review:1, mail:1, sms:1 };
 function renderPerBar(){
   var el=$('perBar'), fl=(typeof opsHasRows==='function' && opsHasRows()) ? opsFileList() : [];
   var ex=fl.length ? people.filter(function(p){ return p.name.trim() && schoolsOf(p).length && !opsKnown(p); }).length : 0;
-  el.hidden = !PER_PAGES[page] || (fl.length<2 && !ex); if(el.hidden) return;
-  el.innerHTML=(fl.length>1 ? '<b>적용 학기</b>' : '')+(fl.length>1 ? fl : []).map(function(f){ var o=!ops.per||ops.per.indexOf(f)>=0; return '<label class="'+(o?'on':'')+'"><input type="checkbox" data-pb="'+esc(f)+'"'+(o?' checked':'')+'>'+esc(f)+'</label>'; }).join('')+''+((ex && (page==='status' || page==='mail')) ? '<label class="'+(opsExtra?'on':'')+'" style="margin-left:auto" title="운영현황(모든 학기)에 이름이 없는 등록 강사입니다. 켜면 그 강사가 배치 학교로 넣은 학교의 현황·발송 대상에 함께 나옵니다"><input type="checkbox" id="pbExtra"'+(opsExtra?' checked':'')+'>운영현황에 없는 등록 강사 포함 <small>'+ex+'명</small></label>' : '');
+  el.hidden = !PER_PAGES[page] || (fl.length<2 && !ex && !(fl.length===1 && sigiList(fl[0]).length>1)); if(el.hidden) return;
+  el.innerHTML=(fl.length>1 ? '<b>적용 학기</b>' : '')+(fl.length>1 ? fl : []).map(function(f){ var o=!ops.per||ops.per.indexOf(f)>=0; return '<label class="'+(o?'on':'')+'"><input type="checkbox" data-pb="'+esc(f)+'"'+(o?' checked':'')+'>'+esc(f)+'</label>'+(o?sigiChips(f):''); }).join('')+(fl.length===1?'<b>시기</b>'+sigiChips(fl[0]):'')+''+((ex && (page==='status' || page==='mail')) ? '<label class="'+(opsExtra?'on':'')+'" style="margin-left:auto" title="운영현황(모든 학기)에 이름이 없는 등록 강사입니다. 켜면 그 강사가 배치 학교로 넣은 학교의 현황·발송 대상에 함께 나옵니다"><input type="checkbox" id="pbExtra"'+(opsExtra?' checked':'')+'>운영현황에 없는 등록 강사 포함 <small>'+ex+'명</small></label>' : '');
+  bindSigi(el, function(){ go(page, true); refresh(); });
   if($('pbExtra')) $('pbExtra').onchange=function(){ opsExtra=$('pbExtra').checked; try{ localStorage.setItem('opsExtra', opsExtra?'1':'0'); }catch(e){} go(page, true); };
   each('[data-pb]', function(cb){ cb.onchange=function(){ var n=cb.dataset.pb, per=(ops.per||fl).slice(), k=per.indexOf(n); if(cb.checked && k<0) per.push(n); if(!cb.checked && k>=0) per.splice(k,1); if(!per.length){ cb.checked=true; toast('학기를 하나 이상 켜 주세요'); return; } ops.per = per.length===fl.length ? null : per; opsChanged(); go(page, true); refresh(); }; }, el);
 }
@@ -2311,6 +2324,7 @@ function go(p, fromHistory, viaNav){
   // 브라우저 뒤로가기: 메뉴를 옮길 때마다 기록해 두고, 뒤로가기 하면 이전 메뉴로
   if(!fromHistory && page !== p){ try{ history.pushState({ page: p }, '', '#'+p); }catch(e){} }
   page = p; try{ localStorage.setItem('lecDocsPage', p); }catch(e){}
+  bizSync(); renderBizBar();
   each('#nav label', function(l){ l.classList.toggle('on', l.dataset.page===p); }); if(typeof navApply==='function' && $('nav').querySelector('.navg[data-dec]')) navApply();
   var picking = !SHARED_PAGES[p] && !(personOpen || (!fromHistory && !viaNav && (personOpen=true)));
   $('pick').hidden = !picking;
@@ -2655,14 +2669,44 @@ function isUni(n){ return UNI_SHEETS.indexOf(Ops.norm(n))>=0; }
 function opsLoaded(){ return ops && ops.rows && opsRows().length > 0; }
 function opsHasRows(){ return ops && ops.rows && ops.rows.length > 0; }
 function rowFile(r){ if(r.file) return r.file; var t=' · '+(r.sheet||''); return r.sheet && r.src && r.src.slice(-t.length)===t ? r.src.slice(0, r.src.length-t.length) : (r.src||''); }   // 운영현황 파일(학기) 이름
-function opsFileList(){ var fl=[]; (ops.rows||[]).forEach(function(r){ if(r.src==='직접 추가') return; var f=rowFile(r); if(f && fl.indexOf(f)<0) fl.push(f); }); return fl; }
+function opsFileList(){ var fl=[]; (ops.rows||[]).forEach(function(r){ if(r.src==='직접 추가') return; var f=rowFile(r); if(f && fl.indexOf(f)<0 && fileBiz(f)===docBiz) fl.push(f); }); return fl; }
 function defaultPer(fl){ var c=fl.filter(function(f){ return !/학교\s*밖/.test(f); }); return fl.length>1 ? (c.length ? [c[c.length-1]] : fl.slice()) : null; }   // 처음에는 가장 나중 학기 하나
-function opsRows(){ var on=ops.on, per=ops.per; return (ops.rows||[]).filter(function(r){ return (!on || !r.sheet || on.indexOf(r.sheet)>=0) && (!per || r.src==='직접 추가' || per.indexOf(rowFile(r))>=0); }); }
+/* ---------- 사업(센터) 구분: 운영현황 시트 이름으로 나눔 (방학집중형은 이름에 「방학집중형」) ---------- */
+var BIZ_DEFS=[{k:'anchor',name:'앵커늘봄',center:'앵커늘봄총괄센터',dot:'#89171A'},{k:'vac',name:'방학집중형',center:'AI·SW교육센터',dot:'#1F5A96',re:/방학집중형/}];
+var docBiz=(function(){ try{ return localStorage.getItem('lecBiz')||'anchor'; }catch(e){ return 'anchor'; } })(), bizNamesCache=null;
+function bizDef(k){ return BIZ_DEFS.filter(function(b){ return b.k===k; })[0]||BIZ_DEFS[0]; }
+function fileBiz(f){ var t=String(f||''); for(var i=1;i<BIZ_DEFS.length;i++) if(BIZ_DEFS[i].re.test(t)) return BIZ_DEFS[i].k; return 'anchor'; }
+function rowBizOk(r){ return r.src==='직접 추가' || fileBiz(rowFile(r))===docBiz; }
+function topBiz(){ try{ if(EMBED && window.top.opsBizNow){ var k=window.top.opsBizNow(); if(BIZ_DEFS.some(function(b){ return b.k===k; })) return k; } }catch(e){} return ''; }
+function setDocBiz(k, quiet){ if(!k || k===docBiz) return; docBiz=k; try{ localStorage.setItem('lecBiz', k); }catch(e){} opsSchoolsCache=null; opsPeopleCache=null; pairIdxCache=null; opsNamesCache=null; bizNamesCache=null; if(!quiet){ renderAll(); go(page, true); } }
+function bizSync(){ var k=topBiz(); if(k && k!==docBiz){ setDocBiz(k, true); renderList(); } }
+/* 운영 관리 위쪽에서 사업을 바꾸면 바로 따라감 */
+window.bizFromTop=function(){ var k=topBiz(); if(k && k!==docBiz) setDocBiz(k); else renderBizBar(); };
+/* 이 사업 운영현황(모든 학기)에 나오는 이름 */
+function bizNames(){ if(bizNamesCache && bizNamesCache.rows===ops.rows) return bizNamesCache.m; var m={}; (ops.rows||[]).forEach(function(r){ if(rowBizOk(r)) (r.people||[]).forEach(function(q){ m[q.name]=1; }); }); bizNamesCache={ rows:ops.rows, m:m }; return m; }
+/* 강사 목록·강사 선택: 이 사업 강사 + 운영현황에 없는 강사(사업 미지정) */
+function inBizP(p){ if(!(typeof opsHasRows==='function' && opsHasRows())) return true; var n=String(p.name||'').replace(/\s/g,''); return !n || !opsKnown(p) || !!bizNames()[n]; }
+function renderBizBar(){ var el=$('bizBar'); if(!el) return; var d=bizDef(docBiz);
+  if(EMBED && topBiz()){ el.innerHTML='<span class="bzl">사업</span><span class="bzc on"><i style="background:'+d.dot+'"></i>'+esc(d.name)+'<small>'+esc(d.center)+'</small></span><span class="bzh">운영 관리 위쪽에서 고른 사업</span>'; return; }
+  el.innerHTML='<span class="bzl">사업</span><span class="bzseg" role="tablist" aria-label="사업">'+BIZ_DEFS.map(function(b){ return '<button type="button" role="tab" aria-selected="'+(b.k===docBiz)+'" class="bzc'+(b.k===docBiz?' on':'')+'" data-bz="'+b.k+'"><i style="background:'+b.dot+'"></i>'+esc(b.name)+'<small>'+esc(b.center)+'</small></button>'; }).join('')+'</span>';
+  each('[data-bz]', function(b){ b.onclick=function(){ setDocBiz(b.dataset.bz); }; }, el); }
+/* ---------- 학기 안 시기(학교밖처럼 한 시트에 여러 시기): 「시기」 칸, 없으면 시작일로 ---------- */
+function sigiOf(r){ var v=String(r.sigi||'').trim(); if(v) return v; var m=/^(\d{4})-(\d{2})/.exec(r.start||''); if(!m) return ''; var y=+m[1], mo=+m[2];
+  return mo<=2 ? (y-1)+' 겨울' : mo<=6 ? y+' 1학기' : mo<=8 ? y+' 여름' : mo<=11 ? y+' 2학기' : y+' 겨울'; }
+function sigiList(f){ var m={}; (ops.rows||[]).forEach(function(r){ if(rowFile(r)===f) m[sigiOf(r)]=1; }); return Object.keys(m).sort(function(a,b){ return !a ? 1 : !b ? -1 : a.localeCompare(b,'ko'); }); }
+function sigiChips(f){ var L=sigiList(f); if(L.length<2) return ''; var sel=(ops.perSigi||{})[f];
+  return '<span class="sgi">'+L.map(function(v){ var o=!sel||sel.indexOf(v)>=0; return '<label class="'+(o?'on':'')+'"><input type="checkbox" data-psg="'+esc(f)+'" data-psv="'+esc(v)+'"'+(o?' checked':'')+'>'+esc(v||'시기 미기재')+'</label>'; }).join('')+'</span>'; }
+function bindSigi(el, after){ each('[data-psg]', function(cb){ cb.onchange=function(){ var f=cb.dataset.psg, v=cb.dataset.psv, L=sigiList(f), ps=ops.perSigi=ops.perSigi||{}, sel=(ps[f]||L).slice(), k=sel.indexOf(v);
+  if(cb.checked && k<0) sel.push(v); if(!cb.checked && k>=0) sel.splice(k,1); if(!sel.length){ cb.checked=true; toast('시기를 하나 이상 켜 주세요'); return; } if(sel.length===L.length) delete ps[f]; else ps[f]=sel; opsChanged(); after(); }; }, el); }
+function opsRows(){ var on=ops.on, per=ops.per, ps=ops.perSigi||{};
+  var perB=per ? per.filter(function(f){ return fileBiz(f)===docBiz; }) : null; if(perB && !perB.length) perB=null;
+  return (ops.rows||[]).filter(function(r){ if(!rowBizOk(r)) return false; var f=rowFile(r);
+    return (!on || !r.sheet || on.indexOf(r.sheet)>=0) && (!perB || r.src==='직접 추가' || perB.indexOf(f)>=0) && (!ps[f] || ps[f].indexOf(sigiOf(r))>=0); }); }
 function opsSchools(){ if(!opsSchoolsCache) opsSchoolsCache = Ops.bySchool(opsRows()); return opsSchoolsCache; }
 function opsPeople(){ if(!opsPeopleCache) opsPeopleCache = Ops.byPerson(opsRows()); return opsPeopleCache; }
 function opsSchoolSet(){ var m={}; opsSchools().forEach(function(s){ m[s.school]=1; }); return m; }
 function opsPersonOf(name){ var n=String(name||'').replace(/\s/g,''); return n ? opsPeople().filter(function(p){ return p.name===n; })[0] : null; }
-function opsChanged(){ opsSchoolsCache=null; opsPeopleCache=null; pairIdxCache=null; opsNamesCache=null; kvPut('ops', ops); }
+function opsChanged(){ opsSchoolsCache=null; opsPeopleCache=null; pairIdxCache=null; opsNamesCache=null; bizNamesCache=null; kvPut('ops', ops); }
 async function loadOpsFiles(list){
   if(!list.length) return;
   var editedN=(ops.rows||[]).filter(function(r){ return r.edited; }).length;
@@ -2701,8 +2745,9 @@ function renderOps(){
   $('opsSum').hidden=!has; $('opsTableCard').hidden=!has; $('opsDrop').classList.toggle('loaded', has);
   if(!has) return;
   var sh=ops.sheets||[], fl=opsFileList();
-  $('opsPeriods').innerHTML = fl.length>1 ? '<b>적용 학기</b>'+fl.map(function(f){ var o=!ops.per||ops.per.indexOf(f)>=0, n=(ops.rows||[]).filter(function(r){ return rowFile(r)===f && (!ops.on || !r.sheet || ops.on.indexOf(r.sheet)>=0); }).length; return '<label class="'+(o?'on':'')+'"><input type="checkbox" data-per="'+esc(f)+'"'+(o?' checked':'')+'>'+esc(f)+' <small>'+n+'</small></label>'; }).join('')+
+  $('opsPeriods').innerHTML = (fl.length===1 && sigiList(fl[0]).length>1) ? '<b>시기</b>'+sigiChips(fl[0]) : fl.length>1 ? '<b>적용 학기</b>'+fl.map(function(f){ var o=!ops.per||ops.per.indexOf(f)>=0, n=(ops.rows||[]).filter(function(r){ return rowFile(r)===f && (!ops.on || !r.sheet || ops.on.indexOf(r.sheet)>=0); }).length; return '<label class="'+(o?'on':'')+'"><input type="checkbox" data-per="'+esc(f)+'"'+(o?' checked':'')+'>'+esc(f)+' <small>'+n+'</small></label>'+(o?sigiChips(f):''); }).join('')+
     '<span class="hint tip" tabindex="0"><i class="ti">i</i><span class="tipbody">현황표·강사 기준정보·학교별 발송·제출서류는 <b>켠 학기</b>만 기준으로 진행합니다. 처음에는 가장 나중 학기 하나만 켜집니다.<br>여러 학기를 함께 켤 수도 있습니다.<br><b>증명서 발급은 이 선택과 상관없이 모든 학기</b>의 「호서대」 시트를 합쳐서 봅니다.</span></span>' : '';
+  bindSigi($('opsPeriods'), function(){ renderOps(); refresh(); });
   each('[data-per]', function(cb){ cb.onchange=function(){ var n=cb.dataset.per, per=(ops.per||fl).slice(); var i=per.indexOf(n); if(cb.checked && i<0) per.push(n); if(!cb.checked && i>=0) per.splice(i,1); ops.per = per.length===fl.length ? null : per; opsChanged(); renderOps(); refresh(); }; }, $('opsPeriods'));
   $('opsSheets').innerHTML = sh.length>1 ? '<b>적용 시트</b>'+sh.map(function(x){ var o=!ops.on||ops.on.indexOf(x.name)>=0; return '<label class="'+(o?'on':'')+'"><input type="checkbox" data-sheet="'+esc(x.name)+'"'+(o?' checked':'')+'>'+esc(x.name)+' <small>'+x.count+'</small></label>'; }).join('')+
     '<span class="hint tip" tabindex="0"><i class="ti">i</i><span class="tipbody">5개 대학 시트(호서대·상명대·유원대·단국대·연암대)만 보여 줍니다. 처음에는 <b>「호서대」 시트만</b> 씁니다. 다른 대학 운영 학급의 강사 서류는 그 대학이 받으므로 보통 켜지 않습니다.<br>켜고 끄면 현황표·강사 기준정보·학교별 발송에 바로 반영됩니다.</span></span>' : '';
@@ -2832,7 +2877,7 @@ function renderStatus(){
   pairs.forEach(function(x){ cnt[x.st]++; if(x.st!=='sent') cnt.unsent++; });
   var ppl={}; pairs.forEach(function(x){ ppl[x.name]=1; });
   var sch={}; pairs.forEach(function(x){ sch[x.school]=1; });
-  $('stBasis').textContent = (opsLoaded() ? (ops.per ? ops.per.join('·')+' · ' : '')+(ops.on||[]).join('·')+' 시트 기준 · ' : '')+'강사 '+Object.keys(ppl).length+'명 · 학교·기관 '+Object.keys(sch).length+'곳';
+  $('stBasis').textContent = bizDef(docBiz).name+' · '+(opsLoaded() ? (ops.per ? ops.per.join('·')+' · ' : '')+(ops.on||[]).join('·')+' 시트 기준 · ' : '')+'강사 '+Object.keys(ppl).length+'명 · 학교·기관 '+Object.keys(sch).length+'곳';
   $('stStats').innerHTML=[['강사×학교', cnt.all, ''], ['발송 완료', cnt.sent, 'ok'], ['구비 완료·미발송', cnt.ready, 'warn'], ['미구비', cnt.notready, 'err'], ['미등록', cnt.none, '']].map(function(x){
     return '<div class="st2 '+x[2]+'"><b>'+x[1]+'</b><span>'+x[0]+(cnt.all&&x[0]!=='강사×학교'?' · '+Math.round(x[1]/cnt.all*100)+'%':'')+'</span></div>'; }).join('');
   var t=cnt.all||1;

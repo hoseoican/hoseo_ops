@@ -1573,7 +1573,7 @@ function bizWords(h){ const b=curBiz(); if(b==='anchor') return h; return String
 function bizSel(){ const L=bizListC(), cur=curBiz();
   if(S.isMaster!==false) return `<label class="sb-l" for="bizSel">사업</label><select id="bizSel" class="sb-sel" aria-label="관리할 사업">${L.map(b=>`<option value="${esc(b.k)}" ${b.k===cur?'selected':''}>${esc(b.name)}</option>`).join('')}</select><span class="sb-gap"></span>`;
   return `<span class="sb-l">사업</span><b class="sb-biz">${esc(bizName())}</b> <span class="small muted">${esc(bizOf(cur).center||'')}${S.adminName?' · '+esc(S.adminName):''}</span><span class="sb-gap"></span>`; }
-function bizGo(b){ if(!b||b===curBiz()) return; S.biz=b; Object.assign(S.ui,{st:'',q:'',sel:'',mDrawer:'',drawer:'',asOpen:false,afAsk:false,spAsk:false,pending:null,scope:''}); render(); toast(`${bizName()} 관리로 바꿨습니다`); }
+function bizGo(b){ if(!b||b===curBiz()) return; S.biz=b; setTimeout(()=>{ try{ const f=document.getElementById('docsFrame'); if(f&&f.contentWindow&&f.contentWindow.bizFromTop) f.contentWindow.bizFromTop(); }catch(e){} },0); Object.assign(S.ui,{st:'',q:'',sel:'',mDrawer:'',drawer:'',asOpen:false,afAsk:false,spAsk:false,pending:null,scope:''}); render(); toast(`${bizName()} 관리로 바꿨습니다`); }
 let adminAcc = (op,d)=>{ const L=(S.admins=S.admins||[]); if(op==='add'){ L.push({id:'ad'+Date.now().toString(36),biz:d.biz,name:d.name,at:now(),phone:d.phone||'',chat:d.chat||''}); } else if(op==='info'){ const a=L.find(x=>x.id===d.id); if(a){ a.phone=d.phone; a.chat=d.chat; } } else if(op==='del'){ S.admins=L.filter(a=>a.id!==d.id); } render(); return Promise.resolve(S.admins); };
 /* 시기(차수): 운영 화면은 고른 시기(S.ctxSeason)만 다룸. 학교·강사에게 공개되는 시기는 S.season */
 const curSK = () => (S&&(S.ctxSeason||S.season))||'';
@@ -2188,7 +2188,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.51';
+const LIB_VER='11.52';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -7141,7 +7141,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.51';
+const APP_VER = '11.52';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -7557,6 +7557,7 @@ document.addEventListener('click', e => {
 /* 「9 강사서류」 화면이 이 로그인으로 강사서류 접근 코드를 받아 감 */
 if (MODE === 'admin') window.opsDocsAuth = () => ADMIN_KEY ? run('docsCode', ADMIN_KEY) : Promise.reject(new Error('운영 관리에 먼저 로그인해 주세요.'));
 /* 강사서류 「운영 관리에서」: 이미 불러온 강사 명단을 바로 씀 (서버 요청 없음) */
+if (MODE === 'admin') window.opsBizNow = () => (typeof curBiz === 'function' ? curBiz() : '');
 if (MODE === 'admin') window.opsInstructors = () => S && S.instructors ? S.instructors.map(x => ({ id: x.id, name: x.name || '', phone: x.phone || '', email: x.email || '', region: x.region || '', asst: !!x.asstOnly })) : null;
 if (MODE === 'admin') bizGo = function (b) {
   if (!b || b === S.biz) return;
