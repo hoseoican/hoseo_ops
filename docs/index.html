@@ -256,6 +256,9 @@
   .ptable td { padding: 5px 8px; border-bottom: 1px solid #F1EBEA; vertical-align: top; }
   .ptable td small { color: var(--mute); }
   .modal .box.wide { width: min(860px, 94vw); }
+  .pfile { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 1px 0; }
+  .pfile .pdel { font-size: 11.5px; padding: 0 7px; line-height: 1.7; border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--danger); cursor: pointer; }
+  .pfile .pdel:hover { background: #FDE4E1; }
   .pscroll { max-height: 52vh; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
   .drvHead { padding: 8px 10px; border-bottom: 1px solid var(--line); background: #F3ECEB; font-size: 13px; }
   .drvHead small { color: var(--mute); }
@@ -1065,7 +1068,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.23-7';
+var APP_VERSION = '2026.11.23-8';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1158,20 +1161,20 @@ function buildPdfs(){
   $('pdfs').innerHTML = PDFS.map(function(p){
     return '<div class="prow" data-pdf="'+p.k+'"><div class="pno">'+p.no+'</div><div><div class="pnm">'+p.t+(p.need?'':'<span class="tag">해당자</span>')+'</div><div class="pst"></div>'+
       (p.k==='exam' ? '<div class="pex"><label class="row" style="margin:6px 0 0;gap:4px;font-size:12.5px"><input type="checkbox" id="tbIn41"> 잠복결핵 검사 확인서 포함 파일</label> <button type="button" class="ghost sm" id="btnSplit" hidden>쪽 나누기</button></div>' : '')+
-      '</div><div><input type="file" accept="application/pdf,.pdf,.jpg,.jpeg,.png" '+(p.multi?'multiple':'')+' hidden><button type="button" class="ghost sm up">파일 선택</button> <button type="button" class="del sm clr" hidden>삭제</button></div></div>';
+      '</div><div><input type="file" accept="application/pdf,.pdf,.jpg,.jpeg,.png" multiple hidden><button type="button" class="ghost sm up">파일 추가</button> <button type="button" class="del sm clr" hidden>전체 삭제</button></div></div>';
   }).join('');
   each('[data-pdf]', function(row){
-    var k=row.dataset.pdf, inp=row.querySelector('input');
+    var k=row.dataset.pdf, inp=row.querySelector('input[type=file]');
     row.querySelector('.up').onclick=function(){ inp.click(); };
-    row.querySelector('.clr').onclick=function(){ delete cur.pdfs[k]; clearFix(cur, k); if(k==='exam') clearFix(cur, 'tb'); save(); renderPdfs(); refresh(); renderList(); };
+    row.querySelector('.clr').onclick=function(){ var n=(cur.pdfs[k]||[]).length; if(n>1 && !confirm('이 서류의 파일 '+n+'개를 모두 삭제합니다.')) return; delete cur.pdfs[k]; clearFix(cur, k); if(k==='exam') clearFix(cur, 'tb'); save(); renderPdfs(); refresh(); renderList(); };
     inp.onchange=async function(){
       var list=[];
       for(var i=0;i<inp.files.length;i++){ var f=inp.files[i]; var pe=await toPdfEntry({name:f.name, type:f.type, data:new Uint8Array(await f.arrayBuffer())}); pe.at=Date.now(); list.push(pe); }
       var meta=PDFS.filter(function(p){return p.k===k;})[0];
       inp.value=''; toast('PDF 변환·용량 줄이는 중…');
       await shrinkPdfList(list);
-      cur.pdfs[k] = meta.multi ? (cur.pdfs[k]||[]).concat(list) : list.slice(0,1);
-      clearFix(cur, k); if(k==='exam' && cur.tbIn41) clearFix(cur, 'tb'); save(); renderPdfs(); refresh(); renderList(); toast('PDF를 넣었습니다');
+      cur.pdfs[k] = (cur.pdfs[k]||[]).concat(list);
+      clearFix(cur, k); if(k==='exam' && cur.tbIn41) clearFix(cur, 'tb'); save(); renderPdfs(); refresh(); renderList(); toast('파일 '+list.length+'개를 추가했습니다');
     };
   });
   $('tbIn41').onchange=function(){ cur.tbIn41=$('tbIn41').checked; save(); renderPdfs(); refresh(); };
@@ -1922,10 +1925,13 @@ async function openStored(h, mime){
 function renderPdfs(){
   PDFS.forEach(function(p){
     var row=document.querySelector('[data-pdf="'+p.k+'"]'), v=cur.pdfs[p.k], st=row.querySelector('.pst'), clr=row.querySelector('.clr');
-    if(v&&v.length){ st.className='pst has'; st.innerHTML=v.map(function(f, i){ return '<a href="#" class="popen" data-po="'+p.k+'" data-pi="'+i+'" title="눌러서 열어 보기">'+esc(f.name)+'</a>'+(/\.pdf$/i.test(f.name)?'':' <b style="color:var(--warn)">(PDF 아님)</b>'); }).join(' · ')+(cur.fix&&cur.fix[p.k]?' · <span class="fixmark">보완 필요: '+esc(cur.fix[p.k].why||'사유 미입력')+'</span>':''); clr.hidden=false; }
+    if(v&&v.length){ st.className='pst has'; st.innerHTML=v.map(function(f, i){ return '<div class="pfile"><a href="#" class="popen" data-po="'+p.k+'" data-pi="'+i+'" title="눌러서 열어 보기">'+esc(f.name)+'</a>'+(/\.pdf$/i.test(f.name)?'':' <b style="color:var(--warn)">(PDF 아님)</b>')+' <button type="button" class="pdel" data-pdk="'+p.k+'" data-pdi="'+i+'" title="이 파일 삭제" aria-label="이 파일 삭제">삭제</button></div>'; }).join('')+(cur.fix&&cur.fix[p.k]?' · <span class="fixmark">보완 필요: '+esc(cur.fix[p.k].why||'사유 미입력')+'</span>':''); clr.hidden=v.length<2; }
     else if(p.k==='tb' && cur.tbIn41 && (cur.pdfs.exam||[]).length){ st.className='pst has'; st.textContent='4-1 파일에 포함'; clr.hidden=true; }
     else { st.className='pst'; st.textContent = p.need?'미제출':'해당자만'; clr.hidden=true; }
   });
+  each('[data-pdk]', function(b){ b.onclick=function(e){ e.preventDefault(); e.stopPropagation(); var k=b.dataset.pdk, a=cur.pdfs[k]||[], f=a[+b.dataset.pdi]; if(!f) return;
+    a.splice(+b.dataset.pdi, 1); if(!a.length){ delete cur.pdfs[k]; clearFix(cur, k); if(k==='exam') clearFix(cur, 'tb'); }
+    save(); renderPdfs(); refresh(); renderList(); toast('「'+f.name+'」을(를) 삭제했습니다'); }; });
   each('[data-po]', function(a){ a.onclick=function(e){ e.preventDefault(); e.stopPropagation(); var f=(cur.pdfs[a.dataset.po]||[])[+a.dataset.pi]; if(f) openStored(f, /\.pdf$/i.test(f.name)?'application/pdf':(f.type||'application/octet-stream')); }; });
   if($('tbIn41')){ $('tbIn41').checked=!!cur.tbIn41; $('btnSplit').hidden=!(cur.pdfs.exam||[]).length; }
 }
