@@ -764,7 +764,7 @@ if(EMBED) document.documentElement.classList.add('embed');
     <div class="card" style="max-width:1180px">
       <div class="row" style="margin:0 0 10px;gap:8px;justify-content:space-between">
         <div class="modes" id="stView"><label data-v="person" class="on">강사별</label><label data-v="school">기관별</label></div>
-        <input type="text" id="stQ" placeholder="강사·학교·프로그램 찾기" autocomplete="off" style="width:280px">
+        <div class="row" style="gap:8px;margin:0"><button type="button" class="ghost sm" id="stCopySent" title="지금 고른 구분 · 시기에서 모든 강사를 발송 완료한 학교·기관 (엑셀에 붙여 넣으면 칸이 나뉨)">발송 완료 학교 명단 복사</button><input type="text" id="stQ" placeholder="강사·학교·프로그램 찾기" autocomplete="off" style="width:240px"></div>
       </div>
       <div class="stsub"><div class="fchips" id="stSub"></div><span class="sep"></span><div class="fchips" id="stTerm"></div></div>
       <div class="fchips" id="stFilter"></div>
@@ -1209,7 +1209,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-3';
+var APP_VERSION = '2026.11.24-4';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2948,6 +2948,13 @@ function renderStatus(){
   $('stTerm').innerHTML = noTerm ? '' : [['','시기 전체']].concat(ST_TERMS.map(function(t){ return [t,t]; })).map(function(x){ var n=tN(x[0]); return (x[0]&&!n&&stTerm!==x[0]) ? '' : '<button type="button" data-sterm="'+x[0]+'" class="'+(stTerm===x[0]?'on':'')+'">'+x[1]+'<b>'+n+'</b></button>'; }).join('');
   each('[data-sterm]', function(b){ b.onclick=function(){ stTerm=b.dataset.sterm; renderStatus(); }; }, $('stTerm'));
   var pairs=inT.filter(function(x){ return stView!=='school' || stSSub==='all' || (stSSub==='out')===x.out; });
+  /* 발송 완료 학교 명단: 학교마다 강사 모두 발송했을 때만 */
+  var sg={}; pairs.forEach(function(x){ (sg[x.school]=sg[x.school]||[]).push(x); });
+  var sentSch=Object.keys(sg).filter(function(k){ return sg[k].every(function(x){ return x.sent; }); }).sort(function(a,b){ return a.localeCompare(b,'ko'); });
+  $('stCopySent').textContent='발송 완료 학교 명단 복사 ('+sentSch.length+'곳)'; $('stCopySent').disabled=!sentSch.length;
+  $('stCopySent').onclick=function(){ var lines=['학교·기관\t구분\t강사\t발송일'].concat(sentSch.map(function(k){ var xs=sg[k], ds=xs.map(function(x){ return fmtSent(x.sent); }).filter(function(v,i,a){ return v&&a.indexOf(v)===i; });
+      return [k, xs[0].out?'학교밖':'학교', xs.map(function(x){ return x.name; }).join(', '), ds.join(', ')].join('\t'); }));
+    copyText(lines.join('\n'), '발송 완료 학교 '+sentSch.length+'곳 명단을 복사했습니다'); };
   $('stEmpty').hidden = opsLoaded();
   var cnt={ all:pairs.length, sent:0, ready:0, notready:0, none:0, unsent:0 };
   pairs.forEach(function(x){ cnt[x.st]++; if(x.st!=='sent') cnt.unsent++; });
@@ -4123,7 +4130,7 @@ async function ctMake(){
   }catch(e){ console.error(e); info.textContent = (gasOn() && !entry.docNo ? '날인대장에 기록하지 못해 발급하지 않았습니다: ' : '')+(e.message||e); }
   finally{ btn.disabled = false; }
 }
-function copyText(text, note, area){
+function copyCertText(text, note, area){
   function fb(){ area.hidden = false; area.value = text; area.focus(); area.select(); note.textContent = '선택된 내용을 Ctrl+C로 복사해 주세요'; }
   try{ navigator.clipboard.writeText(text).then(function(){ note.textContent = '복사했습니다. 날인대장의 순번 칸을 선택하고 붙여 넣으세요'; }, fb); }catch(e){ fb(); }
 }
@@ -4154,7 +4161,7 @@ function bindCert(){
   $('ctStaff').addEventListener('change', function(){ try{ localStorage.setItem('certStaff', $('ctStaff').value); }catch(e){} });
   $('ctMake').addEventListener('click', ctMake);
   $('ctAgain').addEventListener('click', function(){ if(ct.last) ctSave(ct.last).catch(function(e){ toast('다운로드하지 못했습니다: '+(e.message||e)); }); });
-  $('ctCopy').addEventListener('click', function(){ copyText($('ctLedger').value, $('ctCopyInfo'), $('ctLedger')); });
+  $('ctCopy').addEventListener('click', function(){ copyCertText($('ctLedger').value, $('ctCopyInfo'), $('ctLedger')); });
   $('csAddStaff').addEventListener('click', function(){ certCfg.staff = readCertStaff().concat([{ name: '', title: '', tel: '' }]); renderCertSet(); });
   $('csStaff').addEventListener('click', function(e){ var b = e.target.closest('[data-sdel]'); if(!b) return; var s = readCertStaff(); s.splice(+b.dataset.sdel, 1); certCfg.staff = s; renderCertSet(); });
   $('csSave').addEventListener('click', async function(){
@@ -4168,7 +4175,7 @@ function bindCert(){
     else info.textContent = '이 브라우저에 저장했습니다.';
   });
   $('clReload').addEventListener('click', renderCertLog);
-  $('clCopy').addEventListener('click', function(){ copyText(certLog.slice().reverse().map(ledgerLine).join('\n'), $('clInfo'), $('clArea')); });
+  $('clCopy').addEventListener('click', function(){ copyCertText(certLog.slice().reverse().map(ledgerLine).join('\n'), $('clInfo'), $('clArea')); });
 }
 
 /* ---------- 시작 ---------- */
