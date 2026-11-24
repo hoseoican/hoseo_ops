@@ -42,9 +42,18 @@
   .modes label:hover { background: rgba(255,255,255,.7); color: var(--hs); }
   .modes label.on { background: var(--hs); color: #fff; box-shadow: 0 2px 6px rgba(137,23,26,.35); }
   .modes input { display: none; }
-  .stsub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px; }
-  .stsub .sep { width: 1px; height: 22px; background: var(--line, #E6DEDD); }
-  .stsub .fchips { margin: 0; }
+  .sttool { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+  .stseg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: #fff; }
+  .stseg button { border: 0; background: none; padding: 7px 14px; font: inherit; font-size: 13.5px; color: #5B4A4B; cursor: pointer; }
+  .stseg button + button { border-left: 1px solid var(--line); }
+  .stseg button b { margin-left: 5px; font-weight: 700; color: var(--mute); }
+  .stseg button.on { background: #FBF1F1; color: var(--hs); font-weight: 700; }
+  .stseg button.on b { color: var(--hs); }
+  .stats button.st2 { font: inherit; text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .stats button.st2:hover { border-color: #D9C3C3; }
+  .stats button.st2.on { border-color: var(--hs); box-shadow: 0 0 0 2px rgba(137,23,26,.12); background: #fff; }
+  .stats .st2 .pk { display: block; font-size: 11px; color: var(--hs); margin-top: 2px; visibility: hidden; }
+  .stats button.st2.on .pk { visibility: visible; }
 
   /* 컴팩트 안내: ⓘ (마우스를 올리거나 누르면 전체 설명) */
   .hint.tip { cursor: help; display: inline-flex; align-items: center; vertical-align: middle; font-size: 0; }
@@ -762,12 +771,14 @@ if(EMBED) document.documentElement.classList.add('embed');
       <div class="legend"><span style="--c:var(--ok)">발송 완료</span><span style="--c:#E9B44C">구비 완료·미발송</span><span style="--c:#E58A80">미구비</span><span style="--c:#D8CFCE">미등록</span></div>
     </div>
     <div class="card" style="max-width:1180px">
-      <div class="row" style="margin:0 0 10px;gap:8px;justify-content:space-between">
+      <div class="sttool">
         <div class="modes" id="stView"><label data-v="person" class="on">강사별</label><label data-v="school">기관별</label></div>
-        <div class="row" style="gap:8px;margin:0"><button type="button" class="ghost sm" id="stCopySent" title="지금 고른 구분 · 시기에서 모든 강사를 발송 완료한 학교·기관 (엑셀에 붙여 넣으면 칸이 나뉨)">발송 완료 학교 명단 복사</button><input type="text" id="stQ" placeholder="강사·학교·프로그램 찾기" autocomplete="off" style="width:240px"></div>
+        <div class="stseg" id="stSub"></div>
+        <span style="flex:1"></span>
+        <button type="button" class="ghost sm" id="stCopySent" title="지금 보이는 범위에서 모든 강사를 발송 완료한 학교·기관 (엑셀에 붙여 넣으면 칸이 나뉨)">발송 완료 학교 명단 복사</button>
+        <input type="text" id="stQ" placeholder="강사·학교·프로그램 찾기" autocomplete="off" style="width:220px">
       </div>
-      <div class="stsub"><div class="fchips" id="stSub"></div><span class="sep"></span><div class="fchips" id="stTerm"></div></div>
-      <div class="fchips" id="stFilter"></div>
+      <div id="stFilter" hidden></div><div id="stTerm" hidden></div>
       <div class="gview"><table class="stt" id="stTable"></table></div>
     </div>
   </section>
@@ -1209,7 +1220,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-4';
+var APP_VERSION = '2026.11.24-5';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2943,6 +2954,7 @@ function renderStatus(){
     : [['all','전체', inT.length],['school','학교', inT.filter(function(x){ return !x.out; }).length],['out','학교밖', inT.filter(function(x){ return x.out; }).length]];
   var subV = stView==='person' ? stPSub : stSSub;
   $('stSub').innerHTML=subs.map(function(x){ return '<button type="button" data-ssub="'+x[0]+'" class="'+(subV===x[0]?'on':'')+'">'+x[1]+'<b>'+x[2]+'</b></button>'; }).join('');
+  stTerm='';  /* 시기는 아래 「적용 학기」 한 곳에서 고름 */
   each('[data-ssub]', function(b){ b.onclick=function(){ if(stView==='person') stPSub=b.dataset.ssub; else stSSub=b.dataset.ssub; renderStatus(); }; }, $('stSub'));
   var noTerm = stView==='person' && stPSub==='unplaced';
   $('stTerm').innerHTML = noTerm ? '' : [['','시기 전체']].concat(ST_TERMS.map(function(t){ return [t,t]; })).map(function(x){ var n=tN(x[0]); return (x[0]&&!n&&stTerm!==x[0]) ? '' : '<button type="button" data-sterm="'+x[0]+'" class="'+(stTerm===x[0]?'on':'')+'">'+x[1]+'<b>'+n+'</b></button>'; }).join('');
@@ -2961,19 +2973,20 @@ function renderStatus(){
   var ppl={}; pairs.forEach(function(x){ ppl[x.name]=1; });
   var sch={}; pairs.forEach(function(x){ sch[x.school]=1; });
   $('stBasis').textContent = bizDef(docBiz).name+' · '+(opsLoaded() ? (ops.per ? ops.per.join('·')+' · ' : '')+(ops.on||[]).join('·')+' 시트 기준 · ' : '')+'강사 '+Object.keys(ppl).length+'명 · 학교·기관 '+Object.keys(sch).length+'곳';
-  $('stStats').innerHTML=[['강사×학교', cnt.all, ''], ['발송 완료', cnt.sent, 'ok'], ['구비 완료·미발송', cnt.ready, 'warn'], ['미구비', cnt.notready, 'err'], ['미등록', cnt.none, '']].map(function(x){
-    return '<div class="st2 '+x[2]+'"><b>'+x[1]+'</b><span>'+x[0]+(cnt.all&&x[0]!=='강사×학교'?' · '+Math.round(x[1]/cnt.all*100)+'%':'')+'</span></div>'; }).join('');
+  var stCards=[['all','강사×학교', cnt.all, ''], ['sent','발송 완료', cnt.sent, 'ok'], ['ready','구비 완료·미발송', cnt.ready, 'warn'], ['notready','미구비', cnt.notready, 'err'], ['none','미등록', cnt.none, ''], ['unsent','미발송 전체', cnt.unsent, '']];
+  var plc = stView==='person' && stPSub==='unplaced';
+  $('stStats').innerHTML=stCards.map(function(x){
+    return '<button type="button" class="st2 '+x[3]+(stFilter===x[0]&&!plc?' on':'')+'" data-sf="'+x[0]+'"'+(plc?' disabled':'')+'><b>'+x[2]+'</b><span>'+x[1]+(cnt.all&&x[0]!=='all'?' · '+Math.round(x[2]/cnt.all*100)+'%':'')+'</span><span class="pk">표에 보는 중</span></button>'; }).join('');
+  each('[data-sf]', function(b){ b.onclick=function(){ stFilter=b.dataset.sf; renderStatus(); }; }, $('stStats'));
   var t=cnt.all||1;
   $('stBar').innerHTML='<i class="b1" style="width:'+(cnt.sent/t*100)+'%"></i><i class="b2" style="width:'+(cnt.ready/t*100)+'%"></i><i class="b3" style="width:'+(cnt.notready/t*100)+'%"></i><i class="b4" style="width:'+(cnt.none/t*100)+'%"></i>';
-  $('stFilter').innerHTML=ST_FILTERS.map(function(f){ return f[0]==='|' ? '<span class="sep"></span>' : '<button type="button" data-sf="'+f[0]+'" class="'+(stFilter===f[0]?'on':'')+'">'+f[1]+'<b>'+cnt[f[0]]+'</b></button>'; }).join('');
-  each('[data-sf]', function(b){ b.onclick=function(){ stFilter=b.dataset.sf; renderStatus(); }; }, $('stFilter'));
+
   each('label', function(l){ l.classList.toggle('on', l.dataset.v===stView); }, $('stView'));
-  $('stFilter').hidden = stView==='person' && stPSub==='unplaced';
+
   var list=pairs.filter(function(x){ return stMatch(x, stFilter) && (!q || x.name.indexOf(q)>=0 || x.school.indexOf(q)>=0 || x.classes.some(function(c){ return c.program.replace(/\s/g,'').indexOf(q)>=0; })); });
   var rdBadge=function(x){ return x.st==='none' ? '<span class="badge no">미등록</span>' : x.rd.lv==='ok' ? '<span class="badge ok">구비 완료</span>' : '<span class="badge err">미구비</span>'; };
   var sendCell=function(x){ return '<div class="sendcell">'+(x.sent ? '<span class="badge sent">'+fmtSent(x.sent)+' 발송</span><button type="button" class="ghost" data-unsend="'+esc(sentKey(x.school,x.name))+'">취소</button>' : '<span class="badge wait">미발송</span>'+(x.person?'<button type="button" class="ghost" data-send="'+esc(sentKey(x.school,x.name))+'">발송 완료 처리</button>':''))+'</div>'; };
   if(stView==='person' && stPSub==='unplaced'){
-    $('stFilter').innerHTML='';
     var ul=unplaced.filter(function(p){ return !q || String(p.name||'').replace(/\s/g,'').indexOf(q)>=0; }).sort(function(a,b){ return String(a.name).localeCompare(String(b.name),'ko'); });
     $('stTable').innerHTML='<tr><th style="width:140px">강사</th><th style="width:200px">서류 구비</th><th>미비 서류</th><th style="width:70px"></th></tr>'+(ul.length ? ul.map(function(p){ var rd=readyOf(p), miss=missingDocs(p).map(missText).concat(fixDocs(p).map(function(f){ return fixName(f.k)+'(보완)'; }));
       return '<tr><td class="nm"><b>'+esc(p.name)+'</b><small>'+esc(p.role||'')+'</small></td><td>'+(rd.lv==='ok'?'<span class="badge ok">구비 완료</span>':'<span class="badge err">미구비</span>')+'</td><td><span class="miss">'+esc(miss.join(', ')||'-')+'</span></td><td><button type="button" class="ghost sm" data-stopen="'+esc(p.id)+'">열기</button></td></tr>'; }).join('') : '<tr><td colspan="4" class="hint" style="text-align:center;padding:18px">미배치 강사가 없습니다</td></tr>');
