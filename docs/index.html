@@ -794,7 +794,7 @@ if(EMBED) document.documentElement.classList.add('embed');
     </div>
     <div class="card" style="max-width:1180px">
       <div class="sttool">
-        <div class="modes" id="stView"><label data-v="person" class="on">강사별</label><label data-v="school">기관별</label></div>
+        <div class="modes" id="stView"><label data-v="school" class="on">기관별</label><label data-v="person">강사별</label></div>
         <div class="stseg" id="stSub"></div>
         <span style="flex:1"></span>
         <button type="button" class="ghost sm" id="stCopySent" title="지금 보이는 범위에서 모든 강사를 발송 완료한 학교·기관 이름 (한 줄에 하나)">발송 완료 학교 명단 복사</button>
@@ -1241,7 +1241,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-10';
+var APP_VERSION = '2026.11.24-11';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2944,7 +2944,7 @@ function renderOps(){
 }
 
 /* ---------- 서류 구비·발송 현황 ---------- */
-var sent = {}, stFilter = 'all', stView = 'person', stPSub = 'placed', stSSub = 'all', stTerm = '';
+var sent = {}, stFilter = 'all', stView = 'school', stPSub = 'placed', stSSub = 'all', stTerm = '';
 /* 시기: 운영현황 파일 이름(1학기·하계·2학기·동계) → 없으면(학교밖 파일) 행의 시기·시작일 */
 var ST_TERMS=['1학기','여름방학','2학기','겨울방학'];
 function termOfRow(r){ if(/학교밖/.test(rowFile(r))){ var o=outTerm(r); return o==='시기 미기재'?'':o; } var f=rowFile(r)+' '+(r.sheet||''), t=/1학기/.test(f)?'1학기':/하계|여름/.test(f)?'여름방학':/2학기/.test(f)?'2학기':/동계|겨울/.test(f)?'겨울방학':''; if(t) return t; var g=sigiOf(r); return /1학기/.test(g)?'1학기':/여름|하계/.test(g)?'여름방학':/2학기/.test(g)?'2학기':/겨울|동계/.test(g)?'겨울방학':''; }
