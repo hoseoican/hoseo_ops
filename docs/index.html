@@ -525,6 +525,7 @@
   a.popen { color: var(--hs-d); text-decoration: underline; text-underline-offset: 2px; }
   .drop[data-img] { position: relative; }
   .vbig { position: absolute; left: 8px; top: 8px; padding: 3px 8px !important; font-size: 11.5px !important; }
+  .vcrop { position: absolute; left: 8px; top: 38px; padding: 3px 8px !important; font-size: 11.5px !important; }
   .mtag.tm { background: #E4ECF7; color: #2C5282; } .mtag.ls { background: #E6F4EA; color: #1E6B3A; font-weight: 700; }
   #lsubBar.okd { background: #F3F1F0; border-color: var(--line); color: var(--mute); }
   #linkBar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 12px; padding: 8px 14px; border-radius: 10px; background: #fff; border: 1px solid var(--line); font-size: 13px; max-width: 1080px; }
@@ -1066,7 +1067,7 @@ if(EMBED) document.documentElement.classList.add('embed');
     <div class="card" style="max-width:1180px">
       <h3>제출 서류 보완 <small id="fixInfo"></small> <span class="hint tip" tabindex="0"><i class="ti">i</i><span class="tipbody">제출한 서류가 조건에 맞지 않으면 「보완 필요」를 표시하고 사유를 넣습니다. 표시한 서류는 「서류 보완 요청」 문자에 사유와 함께 들어갑니다. 그 서류를 새로 올리면 표시가 자동으로 지워집니다. 신체검사서가 출강일 기준 1년을 넘으면 자동으로 들어갑니다.</span></span></h3>
       <div class="gview"><table class="stt fixt" id="fixTable"></table></div>
-      <datalist id="fixWhy"><option value="글씨·사진이 흐리거나 잘림"><option value="본인 서류가 아님"><option value="필수 항목이 빠짐"><option value="발급일이 오래됨"><option value="최종학력 서류가 아님"><option value="계좌번호가 보이지 않음"></datalist>
+      <datalist id="fixWhy"><option value="글씨·사진이 흐리거나 잘림"><option value="본인 서류가 아님"><option value="필수 항목이 빠짐"><option value="발급일이 오래됨"><option value="최종학력 서류가 아님"><option value="계좌번호가 보이지 않음"><option value="신분증만 보이게 다시 올려 주세요 (손·배경 없이, 글자가 선명하게)"></datalist>
     </div>
     <div class="outgrid">
       <div class="card"><h3>검토 결과</h3><ul class="check" id="check"></ul></div>
@@ -1196,6 +1197,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="hwpcore.js"></script>
 <script src="forms.js"></script>
 <script src="importer.js?v=16"></script>
+<script src="cardcrop.js?v=2"></script>
 <script src="templates.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="ops.js?v=2"></script>
@@ -1203,7 +1205,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-1';
+var APP_VERSION = '2026.11.24-2';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2251,7 +2253,7 @@ function renderImgs(){
   IMG_KEYS.forEach(function(m){
     var el=document.querySelector('.drop[data-img="'+m.k+'"]'), ph=el.querySelector('.ph'), v=cur.imgs[m.k];
     if(urls[m.k]){ URL.revokeObjectURL(urls[m.k]); delete urls[m.k]; }
-    var old=el.querySelector('.x'); if(old) old.remove(); var oldv=el.querySelector('.vbig'); if(oldv) oldv.remove();
+    var old=el.querySelector('.x'); if(old) old.remove(); var oldv=el.querySelector('.vbig'); if(oldv) oldv.remove(); var oldc=el.querySelector('.vcrop'); if(oldc) oldc.remove();
     el.classList.toggle('loaded', !!v);
     if(v && !v.data){ ph.innerHTML='<span class="hint">불러오는 중…</span>'; return; }
     if(v){
@@ -2261,6 +2263,7 @@ function renderImgs(){
       var x=document.createElement('button'); x.type='button'; x.className='del x'; x.textContent='×'; x.title='삭제';
       x.onclick=function(e){ e.stopPropagation(); delete cur.imgs[m.k]; clearFix(cur, m.k); save(); renderImgs(); refresh(); renderList(); };
       el.appendChild(x);
+      if(m.k==='idcard' && window.CardCrop){ var cb=document.createElement('button'); cb.type='button'; cb.className='ghost sm vcrop'; cb.textContent='신분증만 자르기'; cb.title='네 모서리를 맞춰 손·배경을 잘라 내고 반듯하게 폅니다'; cb.onclick=async function(e){ e.stopPropagation(); try{ var c=await CardCrop.open(new Blob([v.data],{type:'image/jpeg'}), { title:'신분증만 남기기' }); if(!c) return; var bl=await canvasBlob(c,'image/jpeg',0.9); cur.imgs.idcard={ data:new Uint8Array(await bl.arrayBuffer()), ext:'jpg', pxW:c.width, pxH:c.height }; clearFix(cur,'idcard'); save(); renderImgs(); refresh(); renderList(); toast('신분증만 남겨 저장했습니다'); }catch(er){ toast(er.message||'자르지 못했습니다'); } }; el.appendChild(cb); }
       var vw=document.createElement('button'); vw.type='button'; vw.className='ghost sm vbig'; vw.textContent='크게 보기'; vw.onclick=function(e){ e.stopPropagation(); openStored(v, v.ext==='png'?'image/png':'image/jpeg'); }; el.appendChild(vw);
     } else { ph.innerHTML='<div class="plus">+</div>'; el.querySelector('.s').textContent=m.s; }
   });

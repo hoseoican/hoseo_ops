@@ -128,6 +128,7 @@
 <div class="toast" id="toast"></div>
 <input type="file" id="fileIn" hidden>
 <script src="pdf-lib.min.js"></script>
+<script src="cardcrop.js?v=2"></script>
 <script>
 (function(){
 'use strict';
@@ -188,7 +189,7 @@ var ROWS = [
 var DOCS = [
   { k: 'sign', t: '서명', img: true, need: true, s: '아래 칸에 손가락(마우스)으로 크게 서명해 주세요.', use: '범죄경력조회 동의서, 이력서, 개인정보 동의서, 각종 서약서의 서명란' },
   { k: 'photo', t: '증명사진', img: true, need: true, s: '최근 6개월 이내 증명사진 (배경이 밝은 정면 사진)', use: '이력서 사진란' },
-  { k: 'idcard', t: '신분증 사본', img: true, need: true, s: '주민등록증 또는 운전면허증 앞면', use: '본인 확인, 성범죄·아동학대 범죄경력 조회' },
+  { k: 'idcard', t: '신분증 사본', img: true, need: true, s: '주민등록증 또는 운전면허증 앞면 · 올린 뒤 신분증 네 모서리를 맞춰 신분증만 남깁니다 (손 · 배경이 보이지 않게)', use: '본인 확인, 성범죄·아동학대 범죄경력 조회' },
   { k: 'bank', t: '통장 사본', img: true, need: true, s: '본인 명의, 은행명·계좌번호가 선명하게', use: '강사료 지급' },
   { k: 'exam', t: '채용신체검사서', need: true, s: 'PDF 또는 사진 (여러 장이면 한 번에 고르세요). 검진일부터 1년 동안 유효합니다.', use: '아동 관련 기관 출강 전 건강 확인 (학교 제출)', date: true },
   { k: 'tb', t: '잠복결핵 검사 확인서', need: true, s: 'PDF 또는 사진', use: '학교 출강자 결핵 검사 확인 (학교 제출)' },
@@ -331,7 +332,8 @@ async function takeFiles(k, files){
   var d = DOCS.filter(function(x){ return x.k === k; })[0]; if (!d) return;
   if (d.img) { files = files.filter(function(f){ return /^image\//.test(f.type) || /\.(jpe?g|png|heic|webp)$/i.test(f.name); }); if (!files.length) { toast('사진 파일(JPG·PNG)을 놓아 주세요'); return; } }
   try {
-    if (d.img) { var im = await shrink(files[0], k === 'photo' ? 1200 : 2000); await upload(k, im.bytes, im.ext, files[0].name, im); }
+    if (d.img && k === 'idcard' && window.CardCrop) { var cc = await CardCrop.open(files[0], { title: '신분증만 남기기' }); if (!cc) { toast('신분증 사진을 올리지 않았습니다'); return; } await upload(k, await canvasBytes(cc, 'image/jpeg', .9), 'jpg', files[0].name, { w: cc.width, h: cc.height }); }
+    else if (d.img) { var im = await shrink(files[0], k === 'photo' ? 1200 : 2000); await upload(k, im.bytes, im.ext, files[0].name, im); }
     else {
       var pdfs = files.filter(function(f){ return /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name); }), imgs = files.filter(function(f){ return /^image\//.test(f.type); });
       if (d.multi) { for (const f of pdfs) await upload(k, new Uint8Array(await f.arrayBuffer()), 'pdf', f.name); if (imgs.length) await upload(k, await imgsToPdf(imgs), 'pdf', imgs[0].name.replace(/\.[^.]+$/, '') + '.pdf'); }
