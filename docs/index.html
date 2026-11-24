@@ -579,6 +579,38 @@
   .reqd { font-size: 11.5px; color: #2C5282; margin-top: 3px; }
   .smsgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; max-width: 1280px; align-items: start; }
   .smsgrid select { max-width: 100%; }
+  .smtabs { display: flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin: 0 0 10px; }
+  .smtabs button { flex: 1; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: #fff !important; padding: 8px 6px; font: inherit; font-size: 13px; color: #5B4A4B; cursor: pointer; }
+  .smtabs button + button { border-left: 1px solid var(--line) !important; }
+  .smtabs button b { display: block; font-size: 17px; font-weight: 800; color: var(--ink); }
+  .smtabs button.on { background: #FBF1F1 !important; color: var(--hs); font-weight: 700; box-shadow: inset 0 -3px 0 var(--hs) !important; }
+  .smtabs button.on b { color: var(--hs); }
+  .smcond { position: relative; }
+  .smcond > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; font-size: 13px; background: #fff; }
+  .smcond > summary::-webkit-details-marker { display: none; }
+  .smcond > summary b { margin-left: 5px; color: var(--hs); }
+  .smcond .inner { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; width: 280px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .smhead { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border: 1px solid var(--line); border-bottom: 0; border-radius: 8px 8px 0 0; background: #FAF7F6; font-size: 13px; }
+  .smhead label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .smhead + .smslist { border-radius: 0 0 8px 8px; }
+  .smcfg { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 10px; background: #FCFAFA; }
+  .smcfg > summary { list-style: none; cursor: pointer; display: flex; gap: 10px; align-items: center; padding: 8px 12px; font-size: 13px; color: #5B4A4B; }
+  .smcfg > summary::-webkit-details-marker { display: none; }
+  .smcfg > summary em { margin-left: auto; font-style: normal; font-size: 12px; color: var(--hs); font-weight: 700; }
+  .smcfg[open] > summary em { visibility: hidden; }
+  .smcfg .inner { padding: 4px 12px 12px; }
+  .smright { display: flex; flex-direction: column; }
+  .smsend { position: sticky; bottom: 0; display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; background: #fff; border: 1px solid var(--hs-100); border-radius: 10px; box-shadow: 0 -4px 14px rgba(0,0,0,.06); }
+  .smsend .save { padding: 9px 20px; }
+  .smmore { position: relative; }
+  .smmore > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 13px; background: #fff; }
+  .smmore > summary::-webkit-details-marker { display: none; }
+  .smmore > summary::after { content: ' ▾'; color: var(--mute); }
+  .smmore .menu { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 6; width: 220px; background: #fff; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 6px; display: flex; flex-direction: column; }
+  .smmore .menu button { text-align: left; border: 0 !important; box-shadow: none !important; background: none !important; padding: 8px 10px; border-radius: 6px !important; font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
+  .smmore .menu button:hover:not(:disabled) { background: #F6F1F0 !important; }
+  .smmore .menu button:disabled { color: #C9BDBD; cursor: default; }
+  .smmore .menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
   .smslist { list-style: none; margin: 0; padding: 0; max-height: 640px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; }
   .smslist li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 13px; cursor: pointer; }
   .smslist li:last-child { border-bottom: 0; }
@@ -1066,20 +1098,19 @@ if(EMBED) document.documentElement.classList.add('embed');
   <section data-sec="sms" hidden>
     <div class="smsgrid">
       <div class="card">
-        <h3>발송 대상 <small id="smBasis"></small></h3>
-        <div class="row" style="margin:0 0 8px;gap:6px;flex-wrap:wrap">
-          <select id="smSchool" title="배치 학교"></select><select id="smItem" title="부족 서류"></select>
-          <input type="text" id="smQ" placeholder="이름 찾기" autocomplete="off" style="width:130px">
-        </div>
+        <h3>보낼 강사 <small id="smBasis"></small></h3>
+        <div class="smtabs" id="smTabs"></div>
+        <input type="hidden" id="smReq" value=""><input type="hidden" id="smSort" value="smart">
         <div class="row" style="margin:0 0 8px;gap:6px;flex-wrap:wrap;align-items:center">
-          <button type="button" class="ghost sm" id="smAll">보이는 강사 전체 선택</button><button type="button" class="ghost sm" id="smNone">전체 해제</button>
-          <select id="smSort" title="정렬"><option value="name">이름순</option><option value="school">배치 학교순</option><option value="miss">부족 서류 많은 순</option><option value="req">요청 오래된 순</option><option value="noreq">요청 안 한 강사 먼저</option></select><select id="smReq" title="요청 기록"><option value="">요청 기록 전체</option><option value="none">아직 요청 안 한 강사</option><option value="d3">요청 후 3일 지난 강사</option><option value="d7">요청 후 7일 지난 강사</option><option value="d14">요청 후 14일 지난 강사</option></select>
-          <span class="hint" id="smCount" style="margin-left:auto"></span>
+          <input type="text" id="smQ" placeholder="이름 찾기" autocomplete="off" style="flex:1 1 140px">
+          <details class="smcond" id="smCond"><summary>조건<b id="smCondN"></b></summary><div class="inner"><label class="fld"><span>배치 학교</span><select id="smSchool"></select></label><label class="fld"><span>부족 서류</span><select id="smItem"></select></label></div></details>
         </div>
+        <div class="smhead"><label><input type="checkbox" id="smAllCk"> 보이는 강사 모두 선택</label><span class="hint" id="smCount"></span><button type="button" id="smAll" hidden></button><button type="button" id="smNone" hidden></button></div>
         <ul class="smslist" id="smList"></ul>
       </div>
-      <div class="card">
-        <h3>문자 내용</h3>
+      <div class="card smright">
+        <h3>보낼 문자</h3>
+        <details class="smcfg" id="smCfgBox"><summary><span id="smCfgSum"></span><em>수정</em></summary><div class="inner">
         <div class="grid g2">
           <label class="fld"><span>제출기한</span><input type="text" id="smDue" autocomplete="off"></label>
           <label class="fld"><span>담당자</span><input type="text" id="smWho" placeholder="예: 연구원 이지훈" autocomplete="off"></label>
@@ -1092,8 +1123,21 @@ if(EMBED) document.documentElement.classList.add('embed');
           <div class="ph-list" id="smPh"></div>
           <div class="row" style="margin:0"><button type="button" class="ghost sm" id="smReset">기본값 초기화</button></div>
         </div></details>
-        <div class="bulkbar" style="margin-top:12px"><span id="smSelInfo"></span><span style="flex:1"></span><button type="button" class="ghost sm" id="smCopyAll">전체 내용 복사</button><button type="button" class="ghost sm" id="smCsv">CSV 다운로드</button><button type="button" class="ghost sm" id="smLink" title="고른 강사마다 본인만 열 수 있는 제출 링크를 만들어 문자에 넣습니다 (14일 동안 사용)">제출 링크 생성</button><button type="button" class="sm" id="smMark">요청함 처리</button><button type="button" class="ghost sm" id="smIndXlsx" title="i-ONE 「개별메시지/사진 문자발송」 업로드 양식(이름 · 연락처 · 개별메시지1=강사별 문자 내용)">개별 문자 엑셀</button><button type="button" class="save sm" id="smSendInd" title="강사마다 다른 내용을 i-ONE 「개별메시지/사진 문자발송」으로 한 번에 보냅니다">개별 문자로 한 번에 보내기</button><button type="button" class="ghost sm" id="smSendAll" title="i-ONE 「메시지전송(문자)」 화면에 1명씩 채웁니다">1명씩 보내기</button></div>
+        </div></details>
         <div class="smsprev" id="smPrev"></div>
+        <div class="smsend">
+          <span id="smSelInfo"></span><span style="flex:1"></span>
+          <details class="smmore"><summary>다른 방법</summary><div class="menu">
+            <button type="button" id="smSendAll" title="i-ONE 「메시지전송(문자)」 화면에 1명씩 채웁니다">1명씩 보내기</button>
+            <button type="button" id="smIndXlsx" title="i-ONE 「개별메시지/사진 문자발송」 업로드 양식">개별 문자 엑셀 받기</button>
+            <button type="button" id="smCopyAll">전체 내용 복사</button>
+            <button type="button" id="smCsv">CSV 다운로드</button>
+            <hr>
+            <button type="button" id="smLink" title="고른 강사마다 본인만 열 수 있는 제출 링크를 만듭니다 (14일 동안 사용)">제출 링크만 만들기</button>
+            <button type="button" id="smMark">요청함으로 기록</button>
+          </div></details>
+          <button type="button" class="save" id="smSendInd" title="강사마다 다른 내용을 i-ONE 「개별메시지/사진 문자발송」으로 한 번에 보냅니다">문자 보내기</button>
+        </div>
       </div>
     </div>
   </section>
@@ -1241,7 +1285,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-11';
+var APP_VERSION = '2026.11.24-12';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2136,6 +2180,7 @@ function smsMatch(x){
   if(q && x.name.replace(/\s/g,'').indexOf(q)<0) return false;
   var rq=$('smReq').value, lg=smsLog[x.p.id];
   if(rq==='none' && lg) return false;
+  if(rq==='done' && !lg) return false;
   if(rq.charAt(0)==='d' && !(lg && reqDays(lg)>=+rq.slice(1))) return false;
   return true;
 }
@@ -2164,6 +2209,13 @@ function smsIndBook(jobs){
 function smsIndCheck(jobs){ var big=jobs.filter(function(j){ return smsBytes(j.body)>2000; }); if(big.length){ toast('2,000바이트를 넘는 문자가 있습니다: '+big.map(function(j){ return j.name; }).join(', ')+' · 문자 양식을 줄여 주세요'); return false; } return true; }
 function smsIndXlsx(){ var jobs=smsIndList(smsPicked()); if(!jobs.length){ toast('휴대폰번호가 있는 강사가 없습니다'); return; } if(!smsIndCheck(jobs)) return;
   var out=XLSX.write(smsIndBook(jobs), {bookType:'xlsx', type:'array'}); saveBlob(new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), '개별문자_서류보완요청_'+jobs.length+'명_'+today()+'.xlsx'); }
+/* 보내기 전에 제출 링크가 없거나 기간이 지난 강사는 링크를 새로 만듦(공유 자료를 켠 경우) */
+async function smsEnsureLinks(btn){ if(!(typeof syReady==='function' && syReady())) return; var need=smsPicked().filter(function(x){ return !x.unreg && phoneOf(x.p).length>=10 && linkState(x.p).st!=='ok'; }); if(!need.length) return;
+  var label=btn.textContent; btn.disabled=true; var n=0;
+  try{ for(const x of need){ btn.textContent='제출 링크 만드는 중… '+(++n)+'/'+need.length; try{ var p=x.p; if(sy.dirty[p.id] || !p._rev){ sy.dirty[p.id]=1; await syPushOne(p.id); } if(p._rev) await linkCall(p, false); }catch(e){ console.error(e); } } await syPull(); }
+  finally{ btn.textContent=label; btn.disabled=false; } }
+async function smsIndSendAuto(){ await smsEnsureLinks($('smSendInd')); smsIndSend(); }
+async function smsOneAuto(){ await smsEnsureLinks($('smSendAll')); smsBrSend(smsPicked()); }
 function smsIndSend(){ var jobs=smsIndList(smsPicked()); if(!jobs.length){ toast('휴대폰번호가 있는 강사가 없습니다'); return; } if(!smsIndCheck(jobs)) return;
   if(!SMS_BR.on || !/^0\.([2-9]|\d{2,})\./.test(SMS_BR.ver||'')){ $('smsBrDlg').classList.add('on'); smsBrPost({ type:'hs-sms-ping' }); if(SMS_BR.on) toast('문자 보내기 스크립트를 0.2.0 이상으로 업데이트해 주세요'); return; }
   var b64=XLSX.write(smsIndBook(jobs), {bookType:'xlsx', type:'base64'});
@@ -2178,7 +2230,13 @@ function renderSms(){
   $('smSchool').innerHTML='<option value="">배치 학교 전체</option>'+Object.keys(scN).sort(natSort).map(function(s){ return '<option value="'+esc(s)+'">'+esc(s)+' ('+scN[s]+')</option>'; }).join('');
   $('smItem').innerHTML='<option value="">부족 서류 전체</option>'+(itN.unreg?'<option value="unreg">미등록 강사 · 서류 전체 ('+itN.unreg+')</option>':'')+MISS_ORDER.filter(function(k){ return itN[k]; }).map(function(k){ return '<option value="'+k+'">'+esc(missText(k))+' 미제출 ('+itN[k]+')</option>'; }).join('')+FIX_DOCS.filter(function(d){ return itN['fix:'+d[0]]; }).map(function(d){ return '<option value="fix:'+d[0]+'">'+esc(d[1])+' 보완 ('+itN['fix:'+d[0]]+')</option>'; }).join('')+(itN.exp?'<option value="exp">채용신체검사서 기한 ('+itN.exp+')</option>':'');
   if(scN[scV]) $('smSchool').value=scV; if(itN[itV]) $('smItem').value=itV;
-  var how=$('smSort').value, rk=function(x){ var lg=smsLog[x.p.id]; return how==='school' ? 0 : how==='miss' ? -(x.unreg ? 99 : x.miss.length+x.fix.length) : how==='req' ? (lg ? lg.at||0 : 9e15) : how==='noreq' ? (lg ? 1 : 0) : 0; };
+  var how=$('smSort').value, rk=function(x){ var lg=smsLog[x.p.id]; return how==='school' ? 0 : how==='miss' ? -(x.unreg ? 99 : x.miss.length+x.fix.length) : how==='req' ? (lg ? lg.at||0 : 9e15) : how==='noreq' ? (lg ? 1 : 0) : how==='smart' ? (lg ? lg.at||1 : 0) : 0; };
+  /* 상태 탭: 요청 전 · 다시 요청 필요(7일 지남) · 요청함 · 전체 (조건 · 검색은 함께 적용) */
+  var rq0=$('smReq').value, cnt=function(v){ $('smReq').value=v; var n=all.filter(smsMatch).length; return n; };
+  var TB=[['none','요청 전'],['d7','다시 요청 필요'],['done','요청함'],['','전체']], TN=TB.map(function(t){ return cnt(t[0]); }); $('smReq').value=rq0;
+  $('smTabs').innerHTML=TB.map(function(t,i){ return '<button type="button" data-smtab="'+t[0]+'" class="'+(rq0===t[0]?'on':'')+'"'+(t[0]==='d7'?' title="요청한 지 7일이 지났는데 아직 서류가 남은 강사"':'')+'><b>'+TN[i]+'</b>'+t[1]+'</button>'; }).join('');
+  each('[data-smtab]', function(b){ b.onclick=function(){ $('smReq').value=b.dataset.smtab; renderSms(); }; }, $('smTabs'));
+  var cn=($('smSchool').value?1:0)+($('smItem').value?1:0); $('smCondN').textContent=cn?cn:'';
   var list=all.filter(smsMatch).sort(function(a,b){ return (how==='school' ? natSort(a.schools.join(',')||'힣', b.schools.join(',')||'힣') : rk(a)-rk(b)) || natSort(a.name,b.name); });
   var nUn=all.filter(function(x){ return x.unreg; }).length; $('smBasis').textContent='미제출·보완 서류가 있는 강사 '+(all.length-nUn)+'명'+(nUn?' · 미등록 '+nUn+'명':'');
   $('smCount').textContent=list.length+'명 표시';
@@ -2201,7 +2259,9 @@ function renderSmsPreview(){
   var pk=smsPicked();
   $('smSelInfo').innerHTML = pk.length ? '<b>'+pk.length+'명</b> 선택'+(pk.some(function(x){ return phoneOf(x.p).length<10; })?' · 연락처 없는 강사 '+pk.filter(function(x){ return phoneOf(x.p).length<10; }).length+'명':'') : '선택한 강사 없음';
   ['smCopyAll','smCsv','smMark','smNone','smLink'].forEach(function(id){ $(id).disabled=!pk.length; });
-  var nSend=pk.filter(function(x){ return phoneOf(x.p).length>=10; }).length; $('smSendAll').disabled=!nSend; $('smSendAll').textContent='1명씩 보내기'+(nSend?' ('+nSend+'명)':''); $('smSendInd').disabled=!nSend; $('smIndXlsx').disabled=!nSend; $('smSendInd').textContent='개별 문자로 한 번에 보내기'+(nSend?' ('+nSend+'명)':'')+(SMS_BR.on?'':' · 설치 필요');
+  { var vis=smsTargets().filter(smsMatch).filter(function(x){ return phoneOf(x.p).length>=10; }); $('smAllCk').checked=vis.length>0 && vis.every(function(x){ return smsPick[x.p.id]; }); $('smAllCk').indeterminate=!$('smAllCk').checked && vis.some(function(x){ return smsPick[x.p.id]; }); }
+  $('smCfgSum').textContent='제출기한 '+(smsCfg.due||smsDueDefault())+' · 담당 '+(smsCfg.who||'미입력')+' · '+(smsCfg.tel||'연락처 미입력')+' · '+(smsCfg.email||'메일 미입력');
+  var nSend=pk.filter(function(x){ return phoneOf(x.p).length>=10; }).length; $('smSendAll').disabled=!nSend; $('smSendAll').textContent='1명씩 보내기'+(nSend?' ('+nSend+'명)':''); $('smSendInd').disabled=!nSend; $('smIndXlsx').disabled=!nSend; $('smSendInd').textContent='문자 보내기'+(nSend?' ('+nSend+'명)':'')+(SMS_BR.on?'':' · 설치 필요');
   $('smPrev').innerHTML = pk.length ? pk.map(function(x){
     var p=x.p, t=smsText(x), ph=phoneOf(p), b=smsBytes(t), lg=smsLog[p.id];
     return '<div class="smsitem"><div class="hd"><b>'+esc(x.name)+'</b><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+(function(){ var l=linkState(p); return l.st==='ok' ? '<span class="badge ok" title="'+esc(linkOf(p))+'">링크 ~'+dotDate(p.lnk.exp)+'</span>' : l.st==='none' ? '' : '<span class="badge err" title="「제출 링크 생성」를 누르면 새 링크를 만듭니다">링크 '+(l.st==='lock'?'잠김':'기간 지남')+'</span>'; })()+'<span class="by">'+b+'바이트 · '+(b<=90?'단문':'장문')+'</span></div>'+
@@ -2227,8 +2287,11 @@ function smsCsv(){
   saveBlob(new Blob([csv], {type:'text/csv;charset=utf-8'}), '서류보완요청_'+pk.length+'명_'+today()+'.csv');
 }
 function bindSms(){
-  $('smSchool').onchange=renderSms; $('smItem').onchange=renderSms; $('smReq').onchange=renderSms; $('smSort').onchange=renderSms;
+  $('smSchool').onchange=renderSms; $('smItem').onchange=renderSms;
   $('smQ').addEventListener('input', renderSms);
+  each('.smmore .menu button', function(b){ b.addEventListener('click', function(){ var d=b.closest('details'); if(d) d.open=false; }); });
+  document.addEventListener('click', function(e){ each('.smmore[open], .smcond[open]', function(d){ if(!d.contains(e.target)) d.open=false; }); });
+  $('smAllCk').onchange=function(){ if($('smAllCk').checked) $('smAll').click(); else $('smNone').click(); };
   $('smAll').onclick=function(){ smsTargets().filter(smsMatch).forEach(function(x){ if(phoneOf(x.p).length>=10) smsPick[x.p.id]=1; }); renderSms(); };
   $('smNone').onclick=function(){ smsPick={}; renderSms(); };
   [['smDue','due'],['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).addEventListener('input', function(){ smsCfg[f[1]]=$(f[0]).value.trim(); kvPut('smsCfg', smsCfg); renderSmsPreview(); }); });
@@ -2240,8 +2303,8 @@ function bindSms(){
   $('smCopyAll').onclick=function(){ var pk=smsPicked(); copyText(pk.map(function(x){ var ph=phoneOf(x.p); return x.name+' '+(ph.length>=10?Forms.fmtPhone(ph):'(연락처 없음)')+'\n'+smsText(x); }).join('\n\n'), pk.length+'명의 문자 내용을 복사했습니다'); };
   $('smCsv').onclick=smsCsv;
   $('smLink').onclick=function(){ makeLinks($('smLink')); };
-  $('smSendAll').onclick=function(){ smsBrSend(smsPicked()); };
-  $('smSendInd').onclick=smsIndSend; $('smIndXlsx').onclick=smsIndXlsx;
+  $('smSendAll').onclick=function(){ smsOneAuto(); };
+  $('smSendInd').onclick=smsIndSendAuto; $('smIndXlsx').onclick=smsIndXlsx;
   $('smsBrClose').onclick=function(){ $('smsBrDlg').classList.remove('on'); };
   $('smMark').onclick=function(){ var pk=smsPicked(); pk.forEach(function(x){ smsLogSet(x.p.id, x); }); kvPut('smsLog', smsLog); renderSms(); toast(pk.length+'명을 요청함으로 기록했습니다 ('+dotDate(today())+')'); };
   // 강사 목록 화면
