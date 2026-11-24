@@ -570,6 +570,7 @@ table.mtt td{vertical-align:top}
 .cs-g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;align-items:start}
 .cs-rule{display:grid;grid-template-columns:auto auto auto;gap:6px 10px;align-items:center;justify-content:start;font-size:13.5px}
 .cs-gd{border-color:var(--accent)}
+.ot-on{background:#e7f3ec}.ot-off{background:#fbecec}
 .aw-form{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
 .awtab{display:grid;grid-template-columns:auto auto auto auto minmax(0,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
 .awtab>div{padding:7px 12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:4px;white-space:nowrap;min-width:0}
@@ -1438,9 +1439,9 @@ function relabel(rows){
 function defaultSettings(){
   return {programs:defaultPrograms(),holidays:['2026-12-25','2027-01-01','2027-02-05','2027-02-08'],
     seasons:[{k:'2026-1',name:'2026 1학기',link:''},{k:'2026-s',name:'2026 여름방학',link:''},{k:'2026-2',name:'2026 2학기',link:''},{k:'2026-w',name:'2026 겨울방학',link:WINTER_LINK}],
-    season:'2026-w',retention:'해당 차수 운영 종료 후 1년',ops:{...DEFAULT_OPS},recruitLink:RECRUIT_LINK,addr:{...DEFAULT_ADDR},file:'',webAppUrl:'',joinMail:null,joinSms:null,activeOrgs:['호서대학교'],applyWin:{},asstWin:{},fileOut:'',kpi:{targets:{}},joinAutoMail:true,mailFromName:'충남 1권역 앵커늘봄(호서대학교)',mailReplyTo:'iniini@hoseo.edu',resultMail:null,tScore:null,applyWinOrg:null,outRules:null,formCfg:null,consCfg:null,consOrg:null,gongmun:null,consJudge:null};
+    season:'2026-w',retention:'해당 차수 운영 종료 후 1년',ops:{...DEFAULT_OPS},recruitLink:RECRUIT_LINK,addr:{...DEFAULT_ADDR},file:'',webAppUrl:'',joinMail:null,joinSms:null,activeOrgs:['호서대학교'],applyWin:{},asstWin:{},fileOut:'',kpi:{targets:{}},joinAutoMail:true,mailFromName:'충남 1권역 앵커늘봄(호서대학교)',mailReplyTo:'iniini@hoseo.edu',resultMail:null,tScore:null,applyWinOrg:null,outRules:null,formCfg:null,consCfg:null,consOrg:null,gongmun:null,consJudge:null,orgTabs:null};
 }
-const SETTING_KEYS=['programs','holidays','seasons','season','retention','ops','recruitLink','addr','file','webAppUrl','joinMail','joinSms','activeOrgs','joinAutoMail','mailFromName','mailReplyTo','resultMail','applyWin','asstWin','fileOut','kpi','tScore','applyWinOrg','outRules','formCfg','consCfg','consOrg','gongmun','consJudge'];
+const SETTING_KEYS=['programs','holidays','seasons','season','retention','ops','recruitLink','addr','file','webAppUrl','joinMail','joinSms','activeOrgs','joinAutoMail','mailFromName','mailReplyTo','resultMail','applyWin','asstWin','fileOut','kpi','tScore','applyWinOrg','outRules','formCfg','consCfg','consOrg','gongmun','consJudge','orgTabs'];
 /* 배정 취소: 강사가 직접 취소(by='강사')하거나 운영기관이 배치 취소(by='운영기관'). 기록은 학급에 남기고 그 강사의 신청은 지움 */
 function instCancel(r,tid,why,by){ const wasFinal=r.status==='final';
   (r.instCancels=r.instCancels||[]).push({tid,name:instName(tid),at:now(),why,by,wasFinal,seen:by==='운영기관'});
@@ -2150,12 +2151,17 @@ function autoAssign(silent){
 const stPill = s => { const [t,c]=ST[s]; return `<span class="pill st-${c}">${t}</span>`; };
 const issList = (list,max=9) => list.slice(0,max).map(i=>`<span class="iss lv-${i.lv}"><i>${i.lv==='crit'?'!':i.lv==='warn'?'△':'i'}</i>${esc(i.t)}</span>`).join('<br>');
 const thread = r => r.thread.length?`<div class="thread">${r.thread.map(m=>`<div class="msg"><b>${esc(m.who)}</b>${esc(m.text)} <span class="muted small">${esc(m.at)}</span></div>`).join('')}</div>`:'';
-const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>목록 업로드'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영현황 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류'],['cons','<span class="tno">10</span>컨소시엄 관리']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
+const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>목록 업로드'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영현황 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류'],['cons','<span class="tno">10</span>운영 점검']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
 /* 보조강사 신청 페이지(?r=asst): 주강사 신청 페이지와 완전히 분리. 강사 DB에 없는 사람도 가입해 보조강사 신청 */
 const tRoleA = () => ((document.body&&document.body.dataset.trole)||new URLSearchParams(location.search).get('r')||'')==='asst';
-const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&x[0]==='stats'&&curBiz()!=='anchor')&&!(role==='admin'&&x[0]==='docs'&&(!window.ON_PAGES||S.adminOrg))).map(x=>role==='teacher'&&tRoleA()&&x[0]==='teacher'?['teacher','보조강사 모집']:role==='admin'&&x[0]==='cons'&&S.adminOrg?['cons','<span class="tno">10</span>점검 · 보고']:x);
+/* 타대학 관리자에게 보일 탭: 기본값 + 대학별 따로(S.orgTabs = {def:{탭:bool}, orgs:{대학:{탭:bool}}}). 서버도 같은 기준으로 자료를 보내지 않음 */
+const ORG_TAB_DEF = {setup:false,board:false,joinadm:false,match:false,export:false,stats:true,dev:false,kit:false,docs:false,cons:true};
+const ORG_TAB_INIT = () => ({def:{...ORG_TAB_DEF},orgs:{'상명대학교':{board:true,match:true,dev:true}}});
+const orgTabsCfg = () => S.orgTabs||ORG_TAB_INIT();
+function orgTabOk(k,org){ org=org||S.adminOrg; if(!org) return true; const c=orgTabsCfg(), o=(c.orgs||{})[org]||{}; if(o[k]!=null) return !!o[k]; const d=(c.def||{})[k]; return d!=null?!!d:!!ORG_TAB_DEF[k]; }
+const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&S.adminOrg&&!orgTabOk(x[0]))&&!(role==='admin'&&x[0]==='stats'&&curBiz()!=='anchor')&&!(role==='admin'&&x[0]==='docs'&&(!window.ON_PAGES||S.adminOrg))).map(x=>role==='teacher'&&tRoleA()&&x[0]==='teacher'?['teacher','보조강사 모집']:x);
 function route(){ const ok=routesOf(S.ui.role).map(x=>x[0]); return ok.includes(S.ui.view)?S.ui.view:homeView(S.ui.role); }
-function homeView(role){ const ok=ROUTES[role].map(x=>x[0]); return ok.includes('board')?'board':ok[0]; }
+function homeView(role){ const ok=routesOf(role).map(x=>x[0]); return ok.includes('board')?'board':ok[0]||ROUTES[role][0][0]; }
 function render(){
   if(S&&S.ui&&S.ui.role!=='admin'&&typeof persist!=='undefined'){ try{ fixPhonesAll(); }catch(e){} }
   const cur=route();
@@ -2243,7 +2249,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.64';
+const LIB_VER='11.65';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -3906,10 +3912,18 @@ function setupLinksPanel(){ return `<div class="panel stack"><div><h3><span clas
    <div class="row"><label class="f" style="flex:1 1 360px">웹앱 주소 (강사 화면)<input id="webAppUrl" value="${esc(S.webAppUrl||'')}" placeholder="배포 후 자동으로 들어갑니다" inputmode="url"></label>${S.webAppUrl?`<button class="btn sm" data-act="copytext" data-t="${esc(S.webAppUrl)}">주소 복사</button>`:''}</div>
    <details><summary class="small">학교 확인 링크 ${(S.schoolLinks||[]).length}곳</summary><div class="tw" style="margin-top:8px"><table><thead><tr><th>학교</th><th>확인 링크</th><th></th></tr></thead><tbody>${(S.schoolLinks||[]).filter(x=>myRows().some(r=>r.school===x.school)).sort((a,b)=>a.school.localeCompare(b.school,'ko')).map(x=>`<tr><td class="nowrap">${esc(x.school)}</td><td class="mono small" style="word-break:break-all">${esc(x.link||'(웹앱 주소가 정해지면 생성)')}</td><td class="nowrap">${x.link?`<button class="btn sm" data-act="copytext" data-t="${esc(x.link)}">복사</button> `:''}<button class="btn sm" data-act="regen" data-s="${esc(x.school)}">새 링크</button></td></tr>`).join('')}</tbody></table></div></details></div>`; }
 /* 기준정보 가로 메뉴: 칸이 많아 한 번에 한 칸씩 (「전체 보기」로 예전처럼) */
-const SET_TABS=[['cycle','차수 · 카톡방'],['orgs','참여 대학'],['prog','프로그램 · 조건'],['hol','공휴일'],['inst','강사 명단'],['eval','강사 평가 · 연수'],['ops','운영 담당자'],['form','담당자 화면 항목'],['acc','관리자 계정'],['ext','타대학 수업'],['links','웹앱 주소 · 링크'],['all','전체 보기']];
-const SET_GROUPS=[['운영 설정',['cycle','hol','orgs','ext']],['프로그램',['prog']],['강사',['inst','eval']],['담당자 · 계정',['ops','form','acc','links']]];
+const SET_TABS=[['cycle','차수 · 카톡방'],['orgs','참여 대학'],['prog','프로그램 · 조건'],['hol','공휴일'],['inst','강사 명단'],['eval','강사 평가 · 연수'],['ops','운영 담당자'],['form','담당자 화면 항목'],['acc','관리자 계정'],['orgtabs','타대학 공개 탭'],['ext','타대학 수업'],['links','웹앱 주소 · 링크'],['all','전체 보기']];
+const SET_GROUPS=[['운영 설정',['cycle','hol','orgs','ext']],['프로그램',['prog']],['강사',['inst','eval']],['담당자 · 계정',['ops','form','acc','orgtabs','links']]];
 const LM_IC={cycle:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',hol:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',orgs:'<path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/>',ext:'<path d="M4 7h16M4 12h16M4 17h10"/>',prog:'<path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h6"/>',inst:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',eval:'<path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/>',ops:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',form:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',acc:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',links:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',all:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'};
 const lmIcon = k => LM_IC[k]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LM_IC[k]}</svg>`:'';
+function orgTabsPanel(){ const c=orgTabsCfg(), U=ORGS.filter(o=>o!=='미지정'&&o!=='호서대학교'), T=ROUTES.admin.map(([k,l])=>[k,l.replace(/<[^>]+>/g,'').replace(/^\d+/,'').trim()]);
+  const st=(k,o)=>{ const v=((c.orgs||{})[o]||{})[k]; return v==null?'':v?'on':'off'; };
+  const dv=k=>(c.def||{})[k]!=null?!!c.def[k]:!!ORG_TAB_DEF[k];
+  return `<div class="panel stack noenh" style="gap:8px"><div class="row" style="gap:6px;align-items:center"><h3>타대학 공개 탭</h3>${qt(['타대학 관리자 화면에 보일 탭','「모든 대학」이 기본값, 대학별로 따로 정하면 그 값이 우선','비공개 탭의 자료는 서버가 그 대학에 보내지 않음(서버 2026.11.24-4 이상)','「관리자 화면 미리보기」로 확인'])}</div>
+   <div class="tw"><table class="va-m"><thead><tr><th>탭</th><th class="nowrap">모든 대학</th>${U.map(o=>`<th class="nowrap">${esc(orgShort(o))}</th>`).join('')}</tr></thead><tbody>
+   ${T.map(([k,l])=>`<tr><td class="nowrap">${esc(l)}</td><td><label class="row small" style="gap:4px"><input type="checkbox" data-otd="${k}" ${dv(k)?'checked':''}> 공개</label></td>${U.map(o=>{ const v=st(k,o), eff=orgTabOk(k,o); return `<td><select data-oto="${esc(o)}" data-otk="${k}" class="${eff?'ot-on':'ot-off'}"><option value="" ${v===''?'selected':''}>기본 (${dv(k)?'공개':'비공개'})</option><option value="on" ${v==='on'?'selected':''}>공개</option><option value="off" ${v==='off'?'selected':''}>비공개</option></select></td>`; }).join('')}</tr>`).join('')}
+   </tbody></table></div>
+   <div class="small muted">9 강사서류는 공개로 바꿔도 타대학 화면에는 열리지 않습니다(개인정보).</div></div>`; }
 function setupTabs(html){ const parts=html.split(/<!--§(\w+)-->/), head=parts[0], sec={}, order=[]; let tail='';
   for(let i=1;i<parts.length;i+=2){ const k=parts[i], v=parts[i+1]||''; if(k==='end'){ tail=v; continue; } sec[k]=v; order.push(k); }
   const has=k=>k==='all'||(sec[k]&&sec[k].replace(/<!--[\s\S]*?-->/g,'').trim());
@@ -3955,6 +3969,8 @@ function viewSetupAll(){
    <div class="small muted">보유기간은 대학 개인정보보호 담당 부서와 정한 기준으로 바꿔 주세요.</div></div>
   <!--§orgs-->
   ${orgsPanel()}
+  <!--§orgtabs-->
+  ${!S.adminOrg?orgTabsPanel():''}
   <!--§acc-->
   ${S.isMaster!==false?accountsPanel():''}
   <!--§ext-->
@@ -5918,7 +5934,7 @@ function csAuto(o,q){ const g=csGoal(o,q).p, p=csProg(o,q).p, b=csBud(o,q).p, P=
 function csFinal(o,q){ const J=((S.consJudge||{})[q]||{})[o]||{}; return J.fin||(q>=1?csAuto(o,q).k:'n'); }
 /* ---------- 화면 ---------- */
 const CS_MENU = [['현황',[['dash','대학별 현황'],['judge','분기 점검 · 판정']]],['대학 제출 자료',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['공문',[['gong','공문 발송 · 회신']]],['기준',[['rule','평가 기준']]]];
-const CS_MENU_ORG = [['우리 대학',[['mile','마일스톤 점검표'],['rep','운영 보고'],['mygong','받은 공문 · 성실도']]]];
+const CS_MENU_ORG = [['입력',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['확인',[['mygong','받은 공문']]]];
 const CS_IC = {dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',judge:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',mile:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',rep:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',gong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',mygong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',rule:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
 function viewCons(){
   if(!S.consCfg&&!csMine()){ S.consCfg=CS_DEF(); }
@@ -6053,9 +6069,7 @@ function csGDetail(g){ const i=csGong().indexOf(g), cp=`gongmun.items.${i}`, K=C
    <div class="small muted">전자결재 기안 화면에 제목 · 본문 · 수신자를 붙여 넣으세요. 수신자는 「${esc(csRcName(g,(g.rc||[])[0]||{name:g.tgt==='univ'?'상명대학교':'○○초등학교'}))}, …」 형식으로 복사됩니다.</div></div>`; }
 function csMyGong(){ const o=csMine(), q=S.ui.csQ||csQNow(), P=csPen(o,q), t=csToday();
   const L=csGong().filter(g=>g.tgt==='univ'&&(g.rc||[]).some(r=>r.name===o));
-  return `<div class="row" style="gap:8px;flex-wrap:wrap">${csQSeg('dash',q)}</div>
-   <div class="cs-kps">${csKp(P.score+'점','성실도 점수',P.score<csCfg().cut?'lv-crit':'')}${csKp(P.list.length+'건','감점 항목')}${csKp(csSig(csFinal(o,q)),'분기 판정')}</div>
-   ${P.list.length?`<div class="panel stack" style="gap:4px"><b>감점 내역</b>${P.list.map(x=>`<div class="row between small"><span>${esc(x.t)}</span><b class="lv-crit">-${x.pts}</b></div>`).join('')}${P.adj?`<div class="row between small"><span>수기 조정 ${esc(P.adjWhy)}</span><b>${P.adj>0?'+':''}${P.adj}</b></div>`:''}</div>`:''}
+  return `<div class="small muted">우리 대학이 받은 공문과 회신 기한입니다. 회신은 그룹웨어로 해 주세요.</div>
    <div class="tw"><table><thead><tr><th>제목</th><th>문서번호</th><th>발송</th><th>회신 기한</th><th>우리 대학 회신</th></tr></thead><tbody>${L.map(g=>{ const r=g.rc.find(x=>x.name===o), late=g.reply&&g.due&&!r.ex&&(r.rep?r.rep>g.due:t>g.due); return `<tr><td>${esc(g.title)}</td><td class="small muted">${esc(g.no||'')}</td><td>${g.sent?csFmtD(g.sent):'-'}</td><td>${g.reply&&g.due?csFmtD(g.due):'-'}</td><td>${!g.reply?'-':r.rep?`<span class="chip ${late?'x':'ok'}">${csFmtD(r.rep)} 회신</span>`:late?'<span class="chip x">기한 지남</span>':'<span class="chip">회신 전</span>'}</td></tr>`; }).join('')||'<tr><td colspan="5" class="small muted">받은 공문이 없습니다.</td></tr>'}</tbody></table></div>`; }
 /* ---------- 분기 점검 · 판정 ---------- */
 function csJudge(){ const q=S.ui.csJq||csQNow(), c=csCfg(), U=CS_UNIVS();
@@ -7233,6 +7247,9 @@ document.addEventListener('change',e=>{
   if(['if-region','if-field','if-kind','if-pin'].includes(t.id)){ S.ui.if={...(S.ui.if||{}),[t.id.slice(3)]:t.value}; render(); return; }
   if(t.id==='mts'){ S.ui.mts=t.value; render(); return; }
   if(t.id==='aw-kind'){ S.ui.awKind=t.value; S.ui.awDraft=null; render(); return; }
+  if(t.dataset&&(t.dataset.otd||t.dataset.oto)){ const c=JSON.parse(JSON.stringify(orgTabsCfg())); c.def=c.def||{}; c.orgs=c.orgs||{};
+    if(t.dataset.otd) c.def[t.dataset.otd]=t.checked; else { const o=t.dataset.oto, k=t.dataset.otk; c.orgs[o]=c.orgs[o]||{}; if(t.value==='') delete c.orgs[o][k]; else c.orgs[o][k]=t.value==='on'; }
+    S.orgTabs=c; toast('타대학 공개 탭을 바꿨습니다'); render(); return; }
   if(t.id==='as-ts'){ S.ui.asTs=t.value; render(); return; }
   if(t.id==='if-sort'){ S.ui.isort=t.value; S.ui.idir=['years','apps','score'].includes(t.value)?'desc':'asc'; render(); return; }
   if(t.id==='fbprog') u.bprog=t.value; else if(t.id==='fsort'){ u.bsort=t.value; u.bdir=BSORT_DESC0.includes(t.value)?'desc':'asc'; } else if(t.id==='fregion') u.region=t.value; else if(t.id==='fprob') u.probOnly=t.checked; else if(t.id==='showWait') u.showWait=t.checked; else if(t.id==='onlyApps') u.onlyApps=t.checked; else if(t.id==='allCands') u.allCands=t.checked;
@@ -7500,7 +7517,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.64';
+const APP_VER = '11.65';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
