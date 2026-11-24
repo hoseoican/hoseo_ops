@@ -2194,7 +2194,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.54';
+const LIB_VER='11.55';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2220,7 +2220,7 @@ function adminQuickNav(){
    <span class="qnav-sep" aria-hidden="true"></span>
    <span class="qnav-g"><span class="qnav-l">담당자 화면</span>
     ${schools.length?`<select id="qn-school" class="qn-sel" aria-label="${sW} 선택">${schools.map(x=>`<option value="${esc(x)}" ${x===sel?'selected':''}>${esc(shortSch(x))}</option>`).join('')}</select>${live?`<span class="ql"><button class="ql-o" data-act="schprev" title="고른 ${sW} 담당자에게 보이는 화면을 새 탭으로 엽니다 · 미리보기라 입력·제출해도 저장되지 않음">${sW} 화면 미리보기 <span aria-hidden="true">↗</span></button>${sLink?`<button class="ql-c" data-act="copytext" data-t="${esc(sLink)}" title="담당자 전용 링크 복사: ${esc(sLink)}">링크 복사</button>`:''}</span>`:`<span class="ql"><button class="ql-o" data-act="qn-school-go">${sW} 화면</button></span>`}`:`<span class="small muted">${sW} 없음</span>`}
-    ${orgs.length?`<span class="small muted" style="margin-left:6px">타대학</span><select id="qn-univ" class="qn-sel" aria-label="대학 선택">${orgs.map(o=>`<option value="${esc(o)}" ${o===uo?'selected':''}>${esc(orgShort(o))}</option>`).join('')}</select>${live?(uLink?pair('대학 화면',uLink,orgShort(uo)+' 희망 강사 선택 화면(고르면 실제로 저장되니 보기만 하세요)'):`<button class="btn sm" data-act="univlink" data-o="${esc(uo)}" title="${esc(orgShort(uo))} 화면 링크가 아직 없습니다">링크 생성</button>`):`<span class="ql"><button class="ql-o" data-act="univview" data-o="${esc(uo)}">대학 화면</button></span>`}`:''}</span>
+    ${orgs.length?`<span class="small muted" style="margin-left:6px">타대학</span><select id="qn-univ" class="qn-sel" aria-label="대학 선택">${orgs.map(o=>`<option value="${esc(o)}" ${o===uo?'selected':''}>${esc(orgShort(o))}</option>`).join('')}</select>${live?(uLink?pair('대학 화면',uLink,orgShort(uo)+' 희망 강사 선택 화면(고르면 실제로 저장되니 보기만 하세요)'):`<button class="btn sm" data-act="univlink" data-o="${esc(uo)}" title="${esc(orgShort(uo))} 화면 링크가 아직 없습니다">링크 생성</button>`):`<span class="ql"><button class="ql-o" data-act="univview" data-o="${esc(uo)}">대학 화면</button></span>`}${!S.adminOrg?`<span class="ql"><button class="ql-o" data-act="orgprev" data-o="${esc(uo)}" title="${esc(orgShort(uo))} 운영 관리자 계정으로 들어갔을 때의 화면 (저장되지 않음)">관리자 화면 미리보기</button></span>`:''}`:''}</span>
    ${qt(['「이름 ↗」 = 새 탭으로 열기, 「복사」 = 공지·문자에 붙일 주소 복사',...(bizListC().length>1?['신청 화면 주소는 위에서 고른 사업 것(다른 사업 주소는 사업을 바꾸면 나옴)']:[]),'주강사 신청: 선발 강사 명단에 있는 강사만 로그인 · 보조강사 신청: 가입 후 신청',sW+' 화면 미리보기: 담당자에게 보이는 화면을 새 탭으로(승인 전 '+sW+'도 가능 · 저장·제출 안 됨 · 1시간 동안 열림)','대학 화면: 그대로 열어 봄(고르면 실제 저장)',...(orgs.length?['대학 링크 새로 생성은 「기준정보 → 타대학 수업」']:[])],'r')}
   </div>`;
 }
@@ -6238,6 +6238,7 @@ document.addEventListener('click',async e=>{
     case 'extok': { const res=extApply(S.ui.extPending); S.ui.extPending=null; toast(`타대학 학급 반영: 기존 연결 ${res.up} · 새로 추가 ${res.add}${res.wish?` · 희망 강사 ${res.wish}`:''}`); break; }
     case 'extno': S.ui.extPending=null; break;
     case 'univview': S.ui.univOrg=el.dataset.o; S.univ=null; S.ui.role='univ'; goView('univ'); break;
+    case 'orgprev': if(window.orgPreview) window.orgPreview(el.dataset.o); else toast('운영 화면에서만 미리볼 수 있습니다'); return;
     case 'univlink': { const o=el.dataset.o, L=(S.univLinks=S.univLinks||[]); const i=L.findIndex(x=>x.org===o); const v={org:o,link:'(시연) https:\/\/script.google.com/macros/s/(웹앱 주소)/exec?u='+Math.random().toString(36).slice(2,10)}; if(i>=0) L[i]=v; else L.push(v); toast(`${orgShort(o)} 희망 강사 선택 링크를 만들었습니다`); break; }
     case 'extres': extResXlsx(el.dataset.o); return;
     case 'ures': univResXlsx(); return;
@@ -6996,6 +6997,7 @@ function base(settings) {
 
 /* ---------------- 운영기관 ---------------- */
 let SAVED = null, saveTimer = null, saving = false, again = false;
+let ORG_PREV = ''; /* 타대학 관리자 화면 미리보기 중이면 그 대학 이름 (저장하지 않음) */
 function snap() {
   SAVED = { rows: {}, contacts: {}, inst: {}, set: {} };
   S.rows.forEach(r => SAVED.rows[r.id] = JSON.stringify(r));
@@ -7019,8 +7021,9 @@ function dirtyPayload() {
   const n = (p.resetNames ? p.resetNames.length : 0) + p.rows.length + p.deleteRows.length + Object.keys(p.contacts).length + p.instructors.length + p.deleteInstructors.length + Object.keys(p.settings).length;
   return (n || p.replaceRows) ? p : null;
 }
-function adminPersist() { clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700); }
+function adminPersist() { if (ORG_PREV) return; clearTimeout(saveTimer); saveTimer = setTimeout(flush, 700); }
 function flush() {
+  if (ORG_PREV) return;
   if (saving) { again = true; return; }
   if (!S.adminOrg && typeof fixPhonesAll === 'function') { try { fixPhonesAll(); if (typeof snapDatesAll === 'function') snapDatesAll(); } catch (e) {} }
   const p = dirtyPayload();
@@ -7147,7 +7150,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.54';
+const APP_VER = '11.55';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -7217,7 +7220,7 @@ function adminBoot() {
     if (ADM_TIMER) clearInterval(ADM_TIMER);
     ADM_TIMER = setInterval(() => {
       if (!S || !ADMIN_KEY) return;
-      if (saving || dirtyPayload() || S.ui.drawer || typing() || S.ui.pending || S.ui.idbPending) return;
+      if (ORG_PREV || saving || dirtyPayload() || S.ui.drawer || typing() || S.ui.pending || S.ui.idbPending) return;
       run('adminLoad', ADMIN_KEY, false, S.ui.loadH || '').then(d2 => { if (d2 && d2.same) { setSave('최신 내용 · ' + now()); return; } if (saving || dirtyPayload() || typing() || S.ui.drawer) return; aUse(d2, true); S.ui.loadH = d2.h || ''; render(); setSave('최신 내용 · ' + now()); }).catch(() => {});
     }, 60000);
   };
@@ -7563,6 +7566,26 @@ document.addEventListener('click', e => {
 /* 「9 강사서류」 화면이 이 로그인으로 강사서류 접근 코드를 받아 감 */
 if (MODE === 'admin') window.opsDocsAuth = () => ADMIN_KEY ? run('docsCode', ADMIN_KEY) : Promise.reject(new Error('운영 관리에 먼저 로그인해 주세요.'));
 /* 강사서류 「운영 관리에서」: 이미 불러온 강사 명단을 바로 씀 (서버 요청 없음) */
+/* 타대학 관리자 화면 미리보기: 받아 둔 자료를 그 대학 관리자처럼 보여 줌. 저장·자동 새로고침은 멈추고, 끝내면 서버에서 다시 불러옴 */
+if (MODE === 'admin') window.orgPreview = org => {
+  if (!org || S.adminOrg) return;
+  if (saving || dirtyPayload()) { flush(); toast('저장 중입니다. 잠시 뒤 다시 눌러 주세요'); return; }
+  ORG_PREV = org; S.isMaster = false; S.adminOrg = org; MY_ORG = org;
+  const sc = new Set(S.rows.filter(r => mine(r)).map(r => r.school)); S.joinReqs = (S.joinReqs || []).filter(q => sc.has(q.school));
+  Object.assign(S.ui, { view: 'board', scope: '', st: '', q: '', sel: '', drawer: '', mDrawer: '' });
+  let bar = document.getElementById('orgPrevBar');
+  if (!bar) { bar = document.createElement('div'); bar.id = 'orgPrevBar'; bar.setAttribute('role', 'status'); bar.style.cssText = 'position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:8px 14px;background:#1F5A96;color:#fff;font-size:14px'; document.body.insertBefore(bar, document.body.firstChild); }
+  bar.innerHTML = '<b></b><span>관리자 화면 미리보기 · 여기서 바꾼 내용은 저장되지 않습니다</span><button type="button" style="height:30px;padding:0 12px;border-radius:8px;border:0;background:#fff;color:#1F5A96;font:inherit;font-weight:700;cursor:pointer">미리보기 끝내기</button>';
+  bar.querySelector('b').textContent = orgShort(org);
+  bar.querySelector('button').onclick = window.orgPreviewEnd;
+  location.hash = '#board'; render(); setSave(orgShort(org) + ' 관리자 화면 미리보기 중');
+};
+if (MODE === 'admin') window.orgPreviewEnd = () => {
+  if (!ORG_PREV) return; const bar = document.getElementById('orgPrevBar'); if (bar) bar.remove();
+  setSave('원래 화면으로 돌아가는 중…');
+  run('adminLoad', ADMIN_KEY, false, '').then(d => { ORG_PREV = ''; aUse(d, true); S.ui.loadH = d.h || ''; render(); setSave('불러옴 · ' + now()); })
+    .catch(e => { ORG_PREV = ''; toast(errMsg(e)); location.reload(); });
+};
 if (MODE === 'admin') window.opsBizNow = () => (typeof curBiz === 'function' ? curBiz() : '');
 if (MODE === 'admin') window.opsBizGo = b => bizGo(b); /* 9번 강사서류에서 사업을 바꿀 때 */
 const docsBizNotify = () => setTimeout(() => { try { const f = document.getElementById('docsFrame'); if (f && f.contentWindow && f.contentWindow.bizFromTop) f.contentWindow.bizFromTop(); } catch (e) {} }, 0);

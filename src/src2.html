@@ -2183,7 +2183,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.54';
+const LIB_VER='11.55';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2209,7 +2209,7 @@ function adminQuickNav(){
    <span class="qnav-sep" aria-hidden="true"></span>
    <span class="qnav-g"><span class="qnav-l">담당자 화면</span>
     ${schools.length?`<select id="qn-school" class="qn-sel" aria-label="${sW} 선택">${schools.map(x=>`<option value="${esc(x)}" ${x===sel?'selected':''}>${esc(shortSch(x))}</option>`).join('')}</select>${live?`<span class="ql"><button class="ql-o" data-act="schprev" title="고른 ${sW} 담당자에게 보이는 화면을 새 탭으로 엽니다 · 미리보기라 입력·제출해도 저장되지 않음">${sW} 화면 미리보기 <span aria-hidden="true">↗</span></button>${sLink?`<button class="ql-c" data-act="copytext" data-t="${esc(sLink)}" title="담당자 전용 링크 복사: ${esc(sLink)}">링크 복사</button>`:''}</span>`:`<span class="ql"><button class="ql-o" data-act="qn-school-go">${sW} 화면</button></span>`}`:`<span class="small muted">${sW} 없음</span>`}
-    ${orgs.length?`<span class="small muted" style="margin-left:6px">타대학</span><select id="qn-univ" class="qn-sel" aria-label="대학 선택">${orgs.map(o=>`<option value="${esc(o)}" ${o===uo?'selected':''}>${esc(orgShort(o))}</option>`).join('')}</select>${live?(uLink?pair('대학 화면',uLink,orgShort(uo)+' 희망 강사 선택 화면(고르면 실제로 저장되니 보기만 하세요)'):`<button class="btn sm" data-act="univlink" data-o="${esc(uo)}" title="${esc(orgShort(uo))} 화면 링크가 아직 없습니다">링크 생성</button>`):`<span class="ql"><button class="ql-o" data-act="univview" data-o="${esc(uo)}">대학 화면</button></span>`}`:''}</span>
+    ${orgs.length?`<span class="small muted" style="margin-left:6px">타대학</span><select id="qn-univ" class="qn-sel" aria-label="대학 선택">${orgs.map(o=>`<option value="${esc(o)}" ${o===uo?'selected':''}>${esc(orgShort(o))}</option>`).join('')}</select>${live?(uLink?pair('대학 화면',uLink,orgShort(uo)+' 희망 강사 선택 화면(고르면 실제로 저장되니 보기만 하세요)'):`<button class="btn sm" data-act="univlink" data-o="${esc(uo)}" title="${esc(orgShort(uo))} 화면 링크가 아직 없습니다">링크 생성</button>`):`<span class="ql"><button class="ql-o" data-act="univview" data-o="${esc(uo)}">대학 화면</button></span>`}${!S.adminOrg?`<span class="ql"><button class="ql-o" data-act="orgprev" data-o="${esc(uo)}" title="${esc(orgShort(uo))} 운영 관리자 계정으로 들어갔을 때의 화면 (저장되지 않음)">관리자 화면 미리보기</button></span>`:''}`:''}</span>
    ${qt(['「이름 ↗」 = 새 탭으로 열기, 「복사」 = 공지·문자에 붙일 주소 복사',...(bizListC().length>1?['신청 화면 주소는 위에서 고른 사업 것(다른 사업 주소는 사업을 바꾸면 나옴)']:[]),'주강사 신청: 선발 강사 명단에 있는 강사만 로그인 · 보조강사 신청: 가입 후 신청',sW+' 화면 미리보기: 담당자에게 보이는 화면을 새 탭으로(승인 전 '+sW+'도 가능 · 저장·제출 안 됨 · 1시간 동안 열림)','대학 화면: 그대로 열어 봄(고르면 실제 저장)',...(orgs.length?['대학 링크 새로 생성은 「기준정보 → 타대학 수업」']:[])],'r')}
   </div>`;
 }
@@ -6235,6 +6235,7 @@ document.addEventListener('click',async e=>{
     case 'extok': { const res=extApply(S.ui.extPending); S.ui.extPending=null; toast(`타대학 학급 반영: 기존 연결 ${res.up} · 새로 추가 ${res.add}${res.wish?` · 희망 강사 ${res.wish}`:''}`); break; }
     case 'extno': S.ui.extPending=null; break;
     case 'univview': S.ui.univOrg=el.dataset.o; S.univ=null; S.ui.role='univ'; goView('univ'); break;
+    case 'orgprev': if(window.orgPreview) window.orgPreview(el.dataset.o); else toast('운영 화면에서만 미리볼 수 있습니다'); return;
     case 'univlink': { const o=el.dataset.o, L=(S.univLinks=S.univLinks||[]); const i=L.findIndex(x=>x.org===o); const v={org:o,link:'(시연) https://script.google.com/macros/s/(웹앱 주소)/exec?u='+Math.random().toString(36).slice(2,10)}; if(i>=0) L[i]=v; else L.push(v); toast(`${orgShort(o)} 희망 강사 선택 링크를 만들었습니다`); break; }
     case 'extres': extResXlsx(el.dataset.o); return;
     case 'ures': univResXlsx(); return;
