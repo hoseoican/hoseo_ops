@@ -2223,7 +2223,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.58';
+const LIB_VER='11.59';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2736,7 +2736,7 @@ function applyWinPanel(){ const w=awObj(), {st}=applyState(), ed=!!S.ui.awEdit;
    <div class="awsec stack"><div class="row between" style="align-items:flex-start"><div><div class="awt"><span class="awk">주강사</span><b>${S.adminOrg?`${esc(orgShort(S.adminOrg))} 추가 신청 기간`:'신청 기간'}</b> ${pill} ${qt(S.adminOrg?['공통 신청 기간은 호서대(앵커늘봄총괄센터)가 정함','여기서는 '+orgShort(S.adminOrg)+' 수업만 따로 신청을 더 받는 기간을 정함','공통 기간 또는 이 기간 중 하나라도 열려 있으면 '+orgShort(S.adminOrg)+' 수업 신청 가능']:['모든 대학 공통 신청 기간','대학별 추가 기간은 각 대학 관리자가 정함(아래 표시)'])}</div>
      ${S.adminOrg?`<div class="small muted">공통 기간: ${cw==='none'?'없음(항상 신청 가능)':esc((S.applyWin||{}).round||'')+' '+awRange(S.applyWin||{})+(cw==='open'?' · 신청 받는 중':cw==='closed'?' · 마감':' · 시작 전')}</div>`:OW.length?`<div class="small muted">대학별 추가 기간: ${OW.map(([o,x])=>`${esc(orgShort(o))} ${esc(x.round||'')} ${awRange(x)} (${({none:'없음',before:'시작 전',open:'신청 받는 중',closed:'마감'})[winSt(x).st]})`).join(' · ')}</div>`:''}
      <div class="small muted" style="margin-top:2px">${st==='none'?(S.adminOrg?'추가 기간 없음 · 공통 기간을 따름':'기간 없음 · 항상 신청 가능'):`<b>${esc(rnd||'신청')}</b> ${awRange(w)}${w.onlyOpen?' · 강사 미정 학급만 공개':''} · 모집 중 ${rec.length}학급(강사 미정 ${open}) · ${esc(rnd)} 신청 ${nApps}건`}</div></div>
-    ${ed?'':`<div class="row"><button class="btn sm ${st==='none'?'pri':''}" data-act="awedit">${st==='none'?'신청 기간 설정':'기간 변경'}</button>${st==='open'?'<button class="btn sm danger" data-act="awclose">지금 마감</button>':''}${st==='closed'?'<button class="btn sm pri" data-act="awnext">다음 차수 열기…</button>':''}</div>`}</div>
+    ${ed?'':`<div class="row"><button class="btn sm ${st==='none'?'pri':''}" data-act="awedit" ${st==='none'?'':'title="지금 차수의 날짜만 고침"'}>${st==='none'?'신청 기간 설정':'기간 변경'}</button>${st==='open'?'<button class="btn sm danger" data-act="awclose">지금 마감</button>':''}${st==='closed'?'<button class="btn sm pri" data-act="awnext" title="지금 차수는 지난 기록으로 남기고 새 차수 기간을 정함">다음 차수 열기…</button>':''}</div>`}</div>
    ${ed?`<div class="aw-form"><label class="f">차수 이름<input id="aw-round" value="${esc(S.ui.awDraft?.round??(rnd||'1차'))}" placeholder="예: 1차" style="width:90px"></label>
      <label class="f">신청 시작<input type="datetime-local" id="aw-from" value="${esc(S.ui.awDraft?.from??(w.from||''))}"></label>
      <label class="f">신청 마감<input type="datetime-local" id="aw-to" value="${esc(S.ui.awDraft?.to??(w.to||''))}"></label>
@@ -2752,8 +2752,8 @@ function asstWinSec(){ const {st,w}=asstState(), ro=!!S.adminOrg, ed=!ro&&!!S.ui
   const A=asRows(), aO=A.filter(r=>r.aOpen).length, aN=A.filter(r=>r.aOpen).reduce((a,r)=>a+asApps(r).length,0);
   return `<div class="awsec stack"><div class="row between" style="align-items:flex-start"><div><div class="awt"><span class="awk">보조강사</span><b>신청 기간</b> ${pill} ${qt(['주강사 신청 기간과 따로 정함','이 기간 안에만 보조강사 신청 · 신청 취소 가능','기간이 없으면 신청 받지 않음','기간 밖에도 모집 학급 정보는 강사 화면에 보임',ro?'보조강사 신청 기간은 호서대(앵커늘봄총괄센터)가 정함':''].filter(Boolean))}</div>
      <div class="small muted" style="margin-top:2px">${st==='unset'?'기간을 정해야 보조강사 신청을 받습니다':`${esc(asstRange(w))}`} · 모집 중 ${aO}학급 · 신청 ${aN}건</div></div>
-    ${ro||ed?'':`<div class="row"><button class="btn sm ${st==='unset'?'pri':''}" data-act="aswedit">${st==='unset'?'신청 기간 설정':'기간 변경'}</button>${st==='open'?'<button class="btn sm danger" data-act="aswclose">지금 마감</button>':''}</div>`}</div>
-   ${ed?`<div class="aw-form"><label class="f">신청 시작<input type="datetime-local" id="asw-from" value="${esc(w.from||'')}"></label><label class="f">신청 마감<input type="datetime-local" id="asw-to" value="${esc(w.to||'')}"></label></div>
+    ${ro||ed?'':`<div class="row"><button class="btn sm ${st==='unset'?'pri':''}" data-act="aswedit" ${st==='unset'?'':'title="지금 기간의 날짜만 고침"'}>${st==='unset'?'신청 기간 설정':'기간 변경'}</button>${st==='open'?'<button class="btn sm danger" data-act="aswclose">지금 마감</button>':''}${st==='closed'?'<button class="btn sm pri" data-act="aswnew" title="날짜를 비우고 새 신청 기간을 정함">새 기간 열기…</button>':''}</div>`}</div>
+   ${ed?`<div class="aw-form"><label class="f">신청 시작<input type="datetime-local" id="asw-from" value="${esc(S.ui.aswDraft?S.ui.aswDraft.from:(w.from||''))}"></label><label class="f">신청 마감<input type="datetime-local" id="asw-to" value="${esc(S.ui.aswDraft?S.ui.aswDraft.to:(w.to||''))}"></label></div>
      <div class="small muted">한국 시간 기준 ${qt(['시작을 비우면 지금부터, 마감을 비우면 마감 없이'])}</div>
      <div class="row"><button class="btn sm pri" data-act="aswsave">저장</button><button class="btn sm" data-act="aswedit">닫기</button></div>`:''}</div>`; }
 /* 검토 · 매칭 학급 표: 현황 표처럼 정리, 행을 누르면 오른쪽 서랍에 수업 정보 · 신청 강사 */
@@ -6426,8 +6426,9 @@ document.addEventListener('click',async e=>{
     case 'asopen': S.ui.asOpen=!S.ui.asOpen; break;
     case 'asf': S.ui.asF=el.dataset.v; break;
     case 'asselclr': S.ui.asSel={}; break;
-    case 'aswedit': S.ui.aswEdit=!S.ui.aswEdit; break;
-    case 'aswsave': { const g=id=>(document.getElementById(id)||{}).value||'', from=g('asw-from'), to=g('asw-to'); if(!from&&!to){ toast('시작이나 마감 중 하나는 정해 주세요'); return; } if(from&&to&&from>=to){ toast('마감 시각이 시작 시각보다 늦어야 합니다'); return; } S.asstWin={from,to}; S.ui.aswEdit=false; const st=asstState().st; toast(st==='open'?'보조강사 신청 기간을 저장했습니다. 지금 신청을 받고 있습니다':st==='before'?`저장했습니다. ${awTxt(from)}부터 보조강사 신청을 받습니다`:'저장했습니다. 마감 시각이 지나 신청이 막혀 있습니다'); break; }
+    case 'aswedit': S.ui.aswEdit=!S.ui.aswEdit; S.ui.aswDraft=null; break;
+    case 'aswnew': S.ui.aswEdit=true; S.ui.aswDraft={from:'',to:''}; break;
+    case 'aswsave': { const g=id=>(document.getElementById(id)||{}).value||'', from=g('asw-from'), to=g('asw-to'); if(!from&&!to){ toast('시작이나 마감 중 하나는 정해 주세요'); return; } if(from&&to&&from>=to){ toast('마감 시각이 시작 시각보다 늦어야 합니다'); return; } S.asstWin={from,to}; S.ui.aswEdit=false; S.ui.aswDraft=null; const st=asstState().st; toast(st==='open'?'보조강사 신청 기간을 저장했습니다. 지금 신청을 받고 있습니다':st==='before'?`저장했습니다. ${awTxt(from)}부터 보조강사 신청을 받습니다`:'저장했습니다. 마감 시각이 지나 신청이 막혀 있습니다'); break; }
     case 'aswclose': { const w=S.asstWin||{}, n=kstNow(); S.asstWin={from:w.from&&w.from<n?w.from:'',to:n}; if(!S.asstWin.from) S.asstWin.from=n; toast('보조강사 신청을 지금 마감했습니다'); break; }
     case 'asdays': S.ui.asDay=S.ui.asDay===el.dataset.id?'':el.dataset.id; break;
     case 'asdall': if(r){ delete r.aDays; toast('보조 참여일을 수업일 전체로 되돌렸습니다'); } break;
@@ -7204,7 +7205,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.58';
+const APP_VER = '11.59';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
