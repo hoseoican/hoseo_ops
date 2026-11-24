@@ -2232,7 +2232,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.62';
+const LIB_VER='11.63';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6009,7 +6009,7 @@ function csGTpl(kind,tgt){ const c=csCfg(), sn=season().name, A={
   return A[kind]||A.etc; }
 function csGFill(g,s){ const c=csCfg(), F=matchRows().filter(r=>r.status==='final'), st=F.map(r=>r.start).filter(Boolean).sort(), en=F.map(r=>r.end).filter(Boolean).sort();
   const dd=d=>{ if(!d) return '(  )'; const [y,m,x]=d.split('-'); return `${y}.${m}.${x}(${DOWS[dowOf(d)]})`; };
-  return String(s||'').replace(/\{차수\}/g,`${csYear()}년 ${season().name.replace(/^\d{4}\s*/,'')}`).replace(/\{기한\}/g,g.due?dd(g.due)+(g.dueT?' '+g.dueT:''):'(  )').replace(/\{보내는곳\}/g,'호서대학교 앵커늘봄총괄센터').replace(/\{전화번호\}/g,c.tel||'').replace(/\{메일\}/g,c.mail||'')
+  return String(s||'').replace(/\{차수\}/g,`${csYear()}년 ${season().name.replace(/^\d{4}\s*/,'')}`).replace(/\{기한\}/g,g.due?dd(g.due)+(g.dueT?' '+g.dueT:''):'(  )').replace(/\{보내는곳\}/g,'호서대학교 앵커늘봄총괄센터').replace(/\{전화번호\}/g,c.tel||'041-423-2420').replace(/\{메일\}/g,c.mail||(S.ops||{}).email||'hjy@hoseo.edu')
     .replace(/\{운영기간\}/g,st.length?`${dd(st[0])} ~ ${dd(en[en.length-1])}`:'(  )').replace(/\{대상수\}/g,String((g.rc||[]).length)); }
 const csRcName = (g,r) => g.tgt==='univ'?`${r.name}총장`:`${r.name.replace(/\s/g,'')}${/학교$/.test(r.name)?'장':''}`;
 function csGNew(kind,tgt){ const [t,b]=csGTpl(kind,tgt); let rc;
@@ -6034,7 +6034,7 @@ function csGDetail(g){ const i=csGong().indexOf(g), cp=`gongmun.items.${i}`, K=C
   return `<div class="panel stack cs-gd" style="gap:10px"><div class="row between"><h3 style="margin:0">${esc(g.title||'새 공문')}</h3><div class="row" style="gap:6px"><span class="chip ${csGSt(g)[1]}">${csGSt(g)[0]}</span><button class="btn sm" data-act="csgclose">닫기</button></div></div>
    <div class="cs-g2"><div class="stack" style="gap:8px">
      <div class="row" style="gap:8px;flex-wrap:wrap"><label class="f">종류<select data-cp="${cp}.kind" data-cat="${cp}">${K.map(([k,l])=>`<option value="${k}" ${g.kind===k?'selected':''}>${l}</option>`).join('')}</select></label>
-      <label class="f">문서번호<input data-cp="${cp}.no" data-cat="${cp}" value="${esc(g.no||'')}" placeholder="${esc(c.docPre)}-000" style="width:170px"></label><label class="f">발송일<input type="date" data-cp="${cp}.sent" data-cat="${cp}" value="${esc(g.sent||'')}"></label></div>
+      <label class="f">문서번호<input data-cp="${cp}.no" data-cat="${cp}" value="${esc(g.no||'')}" placeholder="그룹웨어에서 부여된 번호" style="width:170px"></label><label class="f">발송일<input type="date" data-cp="${cp}.sent" data-cat="${cp}" value="${esc(g.sent||'')}"></label></div>
      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="row small" style="gap:4px"><input type="checkbox" data-cp="${cp}.reply" data-cat="${cp}" ${g.reply?'checked':''}> 회신(제출) 받음</label>${g.reply?`<label class="f">회신 기한<input type="date" data-cp="${cp}.due" data-cat="${cp}" value="${esc(g.due||'')}"></label><label class="f">시각<input data-cp="${cp}.dueT" data-cat="${cp}" value="${esc(g.dueT||'')}" placeholder="15:00" style="width:70px"></label>`:''}${g.kind==='meet'?`<label class="f">협의회 날짜<input type="date" data-cp="${cp}.meetDate" data-cat="${cp}" value="${esc(g.meetDate||'')}"></label>`:''}</div>
      <label class="f">제목<input data-cp="${cp}.title" data-cat="${cp}" value="${esc(g.title||'')}"></label>
      <label class="f">본문<textarea data-cp="${cp}.body" data-cat="${cp}" rows="14" style="font-family:inherit;line-height:1.6">${esc(g.body||'')}</textarea></label>
@@ -6080,9 +6080,7 @@ function csRule(){ const c=csCfg(), f=(p,v,w,t)=>`<input ${t||'type="number"'} d
    <div class="panel stack" style="gap:8px"><b>마일스톤 점검표 마감</b>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span>매월</span>${f('mileDay',c.mileDay,'60px')}<span>일까지 제출 (실무협의회 전)</span><span class="small muted">감점 시작 월</span><input type="month" data-cp="consCfg.mileFrom" value="${esc(c.mileFrom||'')}"></div>
     <details><summary class="small">월별로 마감일 따로 정하기</summary><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">${months.map(m=>`<label class="f small">${+m.slice(5)}월<input type="date" data-cp="consCfg.mileDue.${m}" value="${esc(c.mileDue[m]||'')}"></label>`).join('')}</div></details></div>
-   <div class="panel stack" style="gap:8px"><b>공문 기본값</b>
-    <div class="cs-rule"><span>사업 연도</span>${f('fiscal',c.fiscal,'80px')}<span class="small muted">비우면 자동 (${csYear()})</span><span>문서번호 앞부분</span>${f('docPre',c.docPre,'200px','')}<span></span><span>전화번호</span>${f('tel',c.tel,'160px','')}<span></span><span>메일</span>${f('mail',c.mail,'200px','')}<span></span></div>
-    <div class="small muted">연간 학급수 KPI(목표 달성률 기준)는 「6 운영 통계 → KPI 목표」의 대학별 학급 수를 씁니다.</div></div>`; }
+   <div class="small muted">연간 학급수 KPI(목표 달성률 기준)는 「6 운영 통계 → KPI 목표」의 대학별 학급 수를 씁니다.</div></div>`; }
 /* ---------- 저장: data-cp 경로에 값 넣기, data-cat 묶음에 수정 시각 기록(서버에서 대학별 병합) ---------- */
 function csSet(path,val){ const ks=path.split('.'), root=ks.shift(); if(!S[root]) S[root]=root==='gongmun'?{items:[]}:{};
   let o=S[root]; for(let i=0;i<ks.length-1;i++){ const k=ks[i]; if(o[k]==null||typeof o[k]!=='object') o[k]=/^\d+$/.test(ks[i+1])&&['items','rc','dev','press'].includes(k)?[]:{}; o=o[k]; } o[ks[ks.length-1]]=val; }
