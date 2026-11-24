@@ -17,7 +17,7 @@
 // ==/UserScript==
 (function () {
   'use strict';
-  var VER = '0.1.1';
+  var VER = '0.1.2';
   var CAMPUS_HOME = 'https://campus.ibk.co.kr/admin/';
   var JOB_TTL = 60 * 60 * 1000; /* 문자 목록은 1시간 동안만 유효 */
   var host = location.hostname;
