@@ -1285,7 +1285,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-13';
+var APP_VERSION = '2026.11.24-14';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -3276,7 +3276,7 @@ var DEFAULT_MAIL = {
   ver: 10,
   sender: { name: '', tel: '041-423-2427', email: '' }
 };
-var PLACEHOLDERS = [['학교명','받는 학교·기관 이름'],['담당자','담당자 이름 (없으면 「담당」)'],['강사수','고른 강사 수'],['강사목록','강사·구분·프로그램·기간 목록'],['첨부목록','ZIP 파일 이름과 강사 폴더'],['날짜','오늘 날짜'],['보내는사람','발신자 이름·직함'],['보내는사람연락처','발신자 연락처'],['보내는사람이메일','발신자 이메일']];
+var PLACEHOLDERS = [['학교명','받는 학교·기관 이름'],['담당자','담당자 이름 (없으면 「담당」)'],['강사수','고른 강사 수'],['강사목록','강사·구분·프로그램·기간 목록'],['첨부목록','ZIP 파일 이름과 강사 폴더'],['계약안내','보조강사가 있을 때만: 주강사만 계약 · 보조강사 운영대학 지급 · 출근부 회신 (본문에 없으면 강사목록 아래에 자동으로 들어감)'],['날짜','오늘 날짜'],['보내는사람','발신자 이름·직함'],['보내는사람연락처','발신자 연락처'],['보내는사람이메일','발신자 이메일']];
 function mailSchoolList(){
   var m={};
   opsSchools().forEach(function(s){ m[s.school]=1; });
@@ -3308,7 +3308,11 @@ function mailValues(school, picked){
   });
   var att=['  - '+schoolZipName(school, picked.length)].concat(picked.map(function(x){ return '      └ '+subject(x.person); }));
   var t=today().split('-');
-  return { '학교명':school, '담당자':c.name||'담당', '강사수':String(picked.length), '강사목록':lines.join('\n')||'  (고른 강사가 없습니다)', '첨부목록':att.join('\n'),
+  /* 보조강사가 있으면 계약 안내: 주강사만 계약, 보조강사는 운영대학 지급, 출근부 회신 */
+  var mains=picked.filter(function(x){ return x.role!=='보조강사'; }).map(function(x){ return x.name; }), assts=picked.filter(function(x){ return x.role==='보조강사'; }).map(function(x){ return x.name; });
+  var ct=assts.length ? [mains.length?'  - 주강사('+mains.join(', ')+')만 계약 체결 바랍니다.':'', '  - 보조강사('+assts.join(', ')+')는 운영대학에서 지급됩니다.(강사 계약 x)', '  - 매월 보조강사료 증빙을 위해 수업 종료 후 3근무일 내로 강사출근부 스캔본을 '+(sd.email||'jihun@hoseo.edu')+'로 회신 바랍니다.'].filter(Boolean).join('\n') : '';
+  var tpl=mailBodyOf(school)||'', inList=ct && tpl.indexOf('{계약안내}')<0;
+  return { '학교명':school, '담당자':c.name||'담당', '강사수':String(picked.length), '강사목록':(lines.join('\n')||'  (고른 강사가 없습니다)')+(inList?'\n\n'+ct:''), '계약안내':ct, '첨부목록':att.join('\n'),
     '날짜':t[0]+'. '+(+t[1])+'. '+(+t[2])+'.', '보내는사람':sd.name||'담당자', '보내는사람연락처':sd.tel||'', '보내는사람이메일':sd.email||'' };
 }
 function renderMail(){
