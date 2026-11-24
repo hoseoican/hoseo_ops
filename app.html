@@ -546,6 +546,16 @@ table.mtt td{vertical-align:top}
 .awb{border:1px solid var(--line);border-left:4px solid var(--warn);background:var(--surface);border-radius:var(--r);padding:10px 14px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
 .awb>div{flex-basis:100%}.awb em{font-style:normal;font-weight:700;color:var(--accent-ink)}
 .awb.open{border-left-color:var(--ok)}.awb.closed{border-left-color:var(--crit);background:var(--blk-bg)}
+.dinfo{display:grid;grid-template-columns:auto auto auto minmax(0,1fr);border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;font-size:13px}
+.dinfo>div{padding:7px 12px;border-top:1px solid var(--line);min-width:0;align-self:stretch;display:flex;align-items:center;gap:4px}
+.dinfo>div:nth-child(-n+4){border-top:0}
+.dinfo .di-k{background:var(--sunk);color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap}
+.dinfo .di-n{font-weight:700;white-space:nowrap}
+.dinfo .di-p{white-space:nowrap;font-variant-numeric:tabular-nums}
+.dinfo .di-e{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dinfo .di-none{grid-column:2 / -1}
+.dinfo a{color:inherit;text-decoration:none}.dinfo a:hover{text-decoration:underline}
+@media (max-width:560px){.dinfo{grid-template-columns:auto minmax(0,1fr)}.dinfo>div:nth-child(-n+4){border-top:1px solid var(--line)}.dinfo>div:first-child,.dinfo>div:nth-child(2){border-top:0}.dinfo .di-p,.dinfo .di-e{grid-column:2;border-top:0;padding-top:0}.dinfo .di-k{grid-row:span 3}.dinfo .di-none{grid-column:2}}
 .aw-form{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
 .awsec{gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
 .awt{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -1645,6 +1655,20 @@ function seasonBar(sc){
 /* 시기 바꾸기 (웹앱에서는 App.html이 서버에서 그 시기 자료를 불러오도록 다시 정의) */
 function seasonGo(k,after){ if(!k||k===curSK()){ if(after) after(); return; } S.ctxSeason=k; Object.assign(S.ui,{st:'',q:'',sel:'',mDrawer:'',drawer:'',asOpen:false,afAsk:false,spAsk:false,pending:null,spubAsk:false,sdelAsk:false}); render(); toast(`${season().name} 운영 관리로 바꿨습니다`); if(after) after(); }
 const contactOf = s => (S.contacts[s] = S.contacts[s] || {name:'',phone:'',mobile:'',email:'',consent:'',share:'',kakao:false});
+/* 학급 상세 상단: 배치 확정 학급의 학교 담당자 · 주강사 · 보조강사 연락처 */
+function dInfoBox(r){ if(!r||r.status!=='final') return '';
+  const c=S.contacts[r.school]||{}, W=isOut(r)?'기관 담당자':'학교 담당자';
+  const tel=v=>v?`<a href="tel:${esc(String(v).replace(/[^0-9+]/g,''))}">${esc(v)}</a>`:'<span class="muted">-</span>';
+  const mail=v=>v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:'<span class="muted">-</span>';
+  const row=(k,nm,ph,em,tag)=>`<div class="di-k">${k}</div><div class="di-n">${nm?esc(nm):'<span class="muted">-</span>'}${tag||''}</div><div class="di-p">${ph}</div><div class="di-e">${em}</div>`;
+  const ti=id=>S.instructors.find(t=>t.id===id)||{};
+  const a=ti(r.asst), m=ti(r.inst);
+  const phs=[c.phone,c.mobile].filter(x=>x&&String(x).trim());
+  return `<div class="dinfo" aria-label="담당자 · 배치 강사">
+   ${row(W,c.name,phs.length?phs.map(tel).join(' <span class="muted">/</span> '):tel(''),mail(c.email))}
+   ${row('주강사',instName(r.inst)||'',tel(m.phone),mail(m.email))}
+   ${r.asst?row('보조강사',instName(r.asst)||'',tel(a.phone),mail(a.email),r.asstPend?' <span class="chip warn">가배치</span>':''):`<div class="di-k">보조강사</div><div class="di-none muted">보조강사 없음</div>`}
+  </div>`; }
 const cPhones = (c, sep) => [c.phone, c.mobile].filter(x=>x&&String(x).trim()).join(sep||' / ');
 /* 강사가 이미 신청했거나 배정된 수업 중 같은 날 시간이 겹치는 수업 (다른 강사로 배정된 신청은 제외) */
 /* 강사·학교에 보이는 배정: 배치 확정(final) 전에는 운영기관 가배치라 보이지 않음 */
@@ -2199,7 +2223,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.57';
+const LIB_VER='11.58';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4709,6 +4733,7 @@ function renderLayer0(){
    <div class="row">${stPill(r.status)}<select id="d-status" aria-label="상태 바꾸기">${ST_ORDER.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${ST[s][0]}</option>`).join('')}</select>
     <button class="btn sm" data-act="split" data-id="${r.id}">학급 나누기</button>${r.splitFrom?`<button class="btn sm danger" data-act="delsplit" data-id="${r.id}">이 학급 삭제</button>`:''}</div>
    ${matchRows().includes(r)?bundleBox(r,'open'):''}
+   ${dInfoBox(r)}
    ${r.splitFrom?`<div class="small muted">학급 나누기로 추가한 학급입니다${R(r.splitFrom)?` (원래 학급: ${esc(clsName(R(r.splitFrom)))})`:''}. 잘못 만들었으면 삭제할 수 있습니다.</div>`:''}
    ${S.ui.delAsk===r.id?`<div class="notice bad"><b>${esc(clsName(r))} 학급을 지울까요?</b> 이 학급에 입력한 내용, 강사 배정과 신청 내역이 함께 지워지고 되돌릴 수 없습니다.
      <div class="row" style="margin-top:8px"><button class="btn sm pri" data-act="delsplit-ok" data-id="${r.id}">삭제</button><button class="btn sm" data-act="delsplit-no">취소</button></div></div>`:''}
@@ -7179,7 +7204,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.57';
+const APP_VER = '11.58';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
