@@ -2243,7 +2243,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.61';
+const LIB_VER='11.62';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -7501,7 +7501,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.61';
+const APP_VER = '11.62';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -7510,6 +7510,7 @@ function docsFit() {
 function docsShow(on) {
   const pane = document.getElementById('docsPane'), app = document.getElementById('app'), ft = document.querySelector('footer.site');
   if (!pane) return;
+  if (on && pane.firstChild && pane.hidden) { try { const w = pane.firstChild.contentWindow; if (w && w.location.hash !== '#status') w.location.hash = 'status'; } catch (e) {} } /* 9번 탭을 누르면 늘 서류 구비·발송 현황부터 */
   if (on && !pane.firstChild) pane.innerHTML = '<iframe id="docsFrame" src="docs/?v=' + Date.now().toString(36) + '" title="강사서류"></iframe>'; /* 강사서류 화면은 늘 최신 파일로 */
   pane.hidden = !on; app.hidden = on; if (ft) ft.hidden = on;
   document.body.classList.toggle('docs-on', on);

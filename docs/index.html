@@ -425,6 +425,19 @@
   table.stt td small { color: var(--mute); font-size: 11.5px; display: block; line-height: 1.5; }
   table.stt .miss { color: var(--danger); font-size: 12px; line-height: 1.5; }
   table.stt .miss.w { color: var(--warn); }
+  table.stt.cmp td { padding: 4px 8px; vertical-align: middle; }
+  table.stt.cmp td b { font-weight: 700; }
+  table.stt.cmp td small.cm { display: block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 1.35; }
+  table.stt.cmp .tl { display: flex; flex-wrap: wrap; gap: 3px 14px; }
+  table.stt.cmp .tp { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; line-height: 1.6; }
+  table.stt.cmp .tp b { font-weight: 600; }
+  table.stt.cmp .tp i { font-style: normal; font-size: 11px; color: var(--mute); }
+  table.stt.cmp .tp .badge { font-size: 11px; padding: 0 6px; }
+  table.stt.cmp .tp .miss { font-size: 11.5px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+  table.stt.cmp .sc { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  table.stt.cmp .sc small { display: inline; }
+  table.stt.cmp .sc .badge { font-size: 11px; }
+  table.stt.cmp button.sm { padding: 2px 8px; font-size: 12px; white-space: nowrap; }
   .badge { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
   .badge.ok { background: #E3F1E8; color: var(--ok); } .badge.err { background: #FDE4E1; color: var(--danger); } .badge.no { background: #F1EBEA; color: var(--mute); }
   .badge.sent { background: #E4ECF7; color: #2C5282; } .badge.wait { background: #FFF4DE; color: #8A5A00; } .badge.part { background: #EFE7FA; color: #5B3B8C; }
@@ -784,7 +797,7 @@ if(EMBED) document.documentElement.classList.add('embed');
         <div class="modes" id="stView"><label data-v="person" class="on">강사별</label><label data-v="school">기관별</label></div>
         <div class="stseg" id="stSub"></div>
         <span style="flex:1"></span>
-        <button type="button" class="ghost sm" id="stCopySent" title="지금 보이는 범위에서 모든 강사를 발송 완료한 학교·기관 (엑셀에 붙여 넣으면 칸이 나뉨)">발송 완료 학교 명단 복사</button>
+        <button type="button" class="ghost sm" id="stCopySent" title="지금 보이는 범위에서 모든 강사를 발송 완료한 학교·기관 이름 (한 줄에 하나)">발송 완료 학교 명단 복사</button>
         <input type="text" id="stQ" placeholder="강사·학교·프로그램 찾기" autocomplete="off" style="width:220px">
       </div>
       <div id="stFilter" hidden></div><div id="stTerm" hidden></div>
@@ -1228,7 +1241,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-8';
+var APP_VERSION = '2026.11.24-10';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -3011,9 +3024,7 @@ function renderStatus(){
   var sg={}; pairs.forEach(function(x){ (sg[x.school]=sg[x.school]||[]).push(x); });
   var sentSch=Object.keys(sg).filter(function(k){ return sg[k].every(function(x){ return x.sent; }); }).sort(function(a,b){ return a.localeCompare(b,'ko'); });
   $('stCopySent').textContent='발송 완료 학교 명단 복사 ('+sentSch.length+'곳)'; $('stCopySent').disabled=!sentSch.length;
-  $('stCopySent').onclick=function(){ var lines=['학교·기관\t구분\t강사\t발송일'].concat(sentSch.map(function(k){ var xs=sg[k], ds=xs.map(function(x){ return fmtSent(x.sent); }).filter(function(v,i,a){ return v&&a.indexOf(v)===i; });
-      return [k, xs[0].out?'학교밖':'학교', xs.map(function(x){ return x.name; }).join(', '), ds.join(', ')].join('\t'); }));
-    copyText(lines.join('\n'), '발송 완료 학교 '+sentSch.length+'곳 명단을 복사했습니다'); };
+  $('stCopySent').onclick=function(){ copyText(sentSch.join('\n'), '발송 완료 학교 '+sentSch.length+'곳 이름을 복사했습니다'); };
   $('stEmpty').hidden = opsLoaded();
   var cnt={ all:pairs.length, sent:0, ready:0, notready:0, none:0, unsent:0 };
   pairs.forEach(function(x){ cnt[x.st]++; if(x.st!=='sent') cnt.unsent++; });
@@ -3034,11 +3045,13 @@ function renderStatus(){
   var rdBadge=function(x){ return x.st==='none' ? '<span class="badge no">미등록</span>' : x.rd.lv==='ok' ? '<span class="badge ok">구비 완료</span>' : '<span class="badge err">미구비</span>'; };
   var sendCell=function(x){ return '<div class="sendcell">'+(x.sent ? '<span class="badge sent">'+fmtSent(x.sent)+' 발송</span><button type="button" class="ghost" data-unsend="'+esc(sentKey(x.school,x.name))+'">취소</button>' : '<span class="badge wait">미발송</span>'+(x.person?'<button type="button" class="ghost" data-send="'+esc(sentKey(x.school,x.name))+'">발송 완료 처리</button>':''))+'</div>'; };
   if(stView==='person' && stPSub==='unplaced'){
+    $('stTable').className='stt';
     var ul=unplaced.filter(function(p){ return !q || String(p.name||'').replace(/\s/g,'').indexOf(q)>=0; }).sort(function(a,b){ return String(a.name).localeCompare(String(b.name),'ko'); });
     $('stTable').innerHTML='<tr><th style="width:140px">강사</th><th style="width:200px">서류 구비</th><th>미비 서류</th><th style="width:70px"></th></tr>'+(ul.length ? ul.map(function(p){ var rd=readyOf(p), miss=missingDocs(p).map(missText).concat(fixDocs(p).map(function(f){ return fixName(f.k)+'(보완)'; }));
       return '<tr><td class="nm"><b>'+esc(p.name)+'</b><small>'+esc(p.role||'')+'</small></td><td>'+(rd.lv==='ok'?'<span class="badge ok">구비 완료</span>':'<span class="badge err">미구비</span>')+'</td><td><span class="miss">'+esc(miss.join(', ')||'-')+'</span></td><td><button type="button" class="ghost sm" data-stopen="'+esc(p.id)+'">열기</button></td></tr>'; }).join('') : '<tr><td colspan="4" class="hint" style="text-align:center;padding:18px">미배치 강사가 없습니다</td></tr>');
     each('[data-stopen]', function(b){ b.onclick=function(){ select(b.dataset.stopen); go('out'); }; }, $('stTable'));
   } else if(stView==='person'){
+    $('stTable').className='stt';
     list.sort(function(a,b){ var o={notready:0,none:1,ready:2,sent:3}; return (o[a.st]-o[b.st]) || a.name.localeCompare(b.name,'ko') || a.school.localeCompare(b.school,'ko'); });
     $('stTable').innerHTML='<tr><th style="width:120px">강사</th><th style="width:170px">학교·기관</th><th>프로그램</th><th style="width:220px">서류 구비</th><th style="width:110px">발송</th><th style="width:70px"></th></tr>'+(list.length ? list.map(function(x){
       var prog=x.classes.map(function(c){ return (c.field?'['+c.field+'] ':'')+c.program; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(', ');
@@ -3049,13 +3062,14 @@ function renderStatus(){
   } else {
     var g={}; list.forEach(function(x){ (g[x.school]=g[x.school]||[]).push(x); });
     var keys=Object.keys(g).sort(function(a,b){ return a.localeCompare(b,'ko'); });
-    $('stTable').innerHTML='<tr><th style="width:180px">학교·기관</th><th>강사 (서류 구비 · 발송)</th><th style="width:150px">상태</th><th style="width:150px"></th></tr>'+(keys.length ? keys.map(function(k){
+    $('stTable').className='stt cmp';
+    $('stTable').innerHTML='<tr><th style="width:230px">학교·기관</th><th>강사 (서류 구비 · 발송)</th><th style="width:150px">상태</th><th style="width:86px"></th></tr>'+(keys.length ? keys.map(function(k){
       var xs=g[k], sentN=xs.filter(function(x){ return x.sent; }).length, readyN=xs.filter(function(x){ return x.rd.lv==='ok'; }).length;
       var badge = sentN===xs.length ? '<span class="badge sent">발송 완료</span>' : sentN ? '<span class="badge part">일부 발송 '+sentN+'/'+xs.length+'</span>' : '<span class="badge wait">미발송</span>';
       var c=contacts[k]||{};
-      return '<tr><td><b>'+esc(k)+'</b><small>'+(c.name?esc(c.name)+' · ':'')+(c.email?esc(c.email):'담당자 이메일 없음')+'</small></td><td>'+xs.map(function(x){
-        return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:2px 0"><b style="font-weight:600">'+esc(x.name)+'</b><small style="display:inline">'+x.role+'</small>'+rdBadge(x)+(x.sent?'<span class="badge sent">'+fmtSent(x.sent)+' 발송</span>':'')+(x.miss.length?'<span class="miss">'+esc(x.miss.join(', '))+'</span>':'')+'</div>';
-      }).join('')+'</td><td>'+badge+'<small>준비 '+readyN+'/'+xs.length+'명</small></td><td><button type="button" class="ghost sm" data-stmail="'+esc(k)+'">메일·ZIP</button></td></tr>';
+      return '<tr><td><b>'+esc(k)+'</b><small class="cm" title="'+esc((c.name||'')+' '+(c.email||''))+'">'+(c.name?esc(c.name)+' · ':'')+(c.email?esc(c.email):'담당자 이메일 없음')+'</small></td><td><div class="tl">'+xs.map(function(x){
+        return '<span class="tp" title="'+esc(x.miss.join(', '))+'"><b>'+esc(x.name)+'</b>'+(x.role==='보조강사'?'<i>보조</i>':'')+(x.sent?'<span class="badge sent">'+fmtSent(x.sent)+'</span>':x.st==='none'?'<span class="badge no">미등록</span>':x.rd.lv==='ok'?'<span class="badge ok">구비</span>':'<span class="badge err">미구비</span>')+(!x.sent&&x.miss.length?'<span class="miss">'+esc(x.miss.join(', '))+'</span>':'')+'</span>';
+      }).join('')+'</div></td><td><div class="sc">'+badge+'<small>준비 '+readyN+'/'+xs.length+'</small></div></td><td><button type="button" class="ghost sm" data-stmail="'+esc(k)+'">메일·ZIP</button></td></tr>';
     }).join('') : '<tr><td colspan="4" class="hint" style="text-align:center;padding:18px">해당하는 학교가 없습니다</td></tr>');
   }
   each('[data-send]', function(b){ b.onclick=function(){ var k=b.dataset.send.split('|'); markSent(k[0], [k[1]], true); renderStatus(); toast(k[1]+' · '+k[0]+' 발송 완료 처리했습니다'); }; }, $('stTable'));
@@ -4241,7 +4255,7 @@ function bindCert(){
 /* ---------- 시작 ---------- */
 mailCfg=JSON.parse(JSON.stringify(DEFAULT_MAIL));
 buildRows(); buildImgs(); buildPdfs(); bind(); bindImport(); bindOpsMail(); bindBackup(); bindSms(); bindCert(); bindSync(); bindDrv();
-var startPage='ops';   /* 처음 열면 항상 운영현황 (새로고침은 주소의 #메뉴 유지) */
+var startPage='status';   /* 처음 열면 항상 서류 구비·발송 현황 (새로고침은 주소의 #메뉴 유지) */
 var hp=(location.hash||'').slice(1); if(PAGES.indexOf(hp)>=0) startPage=hp;
 page=startPage;
 try{ history.replaceState({ page: startPage }, '', '#'+startPage); }catch(e){}
