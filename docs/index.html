@@ -323,6 +323,9 @@
   .sheets label { display: inline-flex; gap: 5px; align-items: center; border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; cursor: pointer; background: #fff; }
   .sheets label.on { border-color: var(--hs-200); background: var(--hs-50); color: var(--hs-d); font-weight: 700; }
   .sheets b { color: var(--mute); font-size: 12px; font-weight: 600; margin-right: 2px; }
+  .sheets .pbg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 3px 8px 3px 4px; border: 1px solid var(--line); border-radius: 12px; background: #FCFAFA; }
+  .sheets .pbg > i { font-style: normal; font-size: 12px; font-weight: 700; color: var(--mute); padding: 0 6px 0 4px; }
+  .sheets .pbg label { padding: 3px 10px; }
   .sheets .sgi { display: inline-flex; gap: 4px; align-items: center; padding: 2px 6px 2px 8px; margin-right: 6px; border-left: 2px solid var(--hs-200); }
   .sheets .sgi label { padding: 2px 8px; font-size: 12px; }
   .bizbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; max-width: 1180px; margin: 0 0 14px; padding: 8px 12px; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
@@ -1220,7 +1223,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-5';
+var APP_VERSION = '2026.11.24-6';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2351,14 +2354,38 @@ function openNames(){ renderNames(); $('namesDlg').classList.add('on'); }
 /* ---------- 쪽 이동 ---------- */
 // 현황·강사 목록·발송·요청 화면 위의 적용 학기 선택(운영현황의 「적용 학기」와 같은 설정)
 var PER_PAGES={ status:1, roster:1, review:1, mail:1, sms:1 };
+/* 적용 학기: 「학교」는 학기 파일(1학기·여름방학·2학기·겨울방학), 「학교밖」은 학교밖 파일 안 시기(같은 뜻의 이름은 하나로 묶음) */
+var PB_ORDER=['1학기','여름방학','2학기','겨울방학','집합'];
+function pbTerm(v){ v=String(v||''); return /1학기/.test(v)?'1학기':/하계|여름/.test(v)?'여름방학':/2학기/.test(v)?'2학기':/동계|겨울/.test(v)?'겨울방학':/집합/.test(v)?'집합':(v||'시기 미기재'); }
+function pbSort(a,b){ var x=PB_ORDER.indexOf(a.t), y=PB_ORDER.indexOf(b.t); return (a.y||'').localeCompare(b.y||'') || ((x<0?99:x)-(y<0?99:y)) || a.t.localeCompare(b.t,'ko'); }
 function renderPerBar(){
   var el=$('perBar'), fl=(typeof opsHasRows==='function' && opsHasRows()) ? opsFileList() : [];
   var ex=fl.length ? people.filter(function(p){ return p.name.trim() && schoolsOf(p).length && !opsKnown(p); }).length : 0;
-  el.hidden = !PER_PAGES[page] || (fl.length<2 && !ex && !(fl.length===1 && sigiList(fl[0]).length>1)); if(el.hidden) return;
-  el.innerHTML=(fl.length>1 ? '<b>적용 학기</b>' : '')+(fl.length>1 ? fl : []).map(function(f){ var o=!ops.per||ops.per.indexOf(f)>=0; return '<label class="'+(o?'on':'')+'"><input type="checkbox" data-pb="'+esc(f)+'"'+(o?' checked':'')+'>'+esc(f)+'</label>'+(o?sigiChips(f):''); }).join('')+(fl.length===1?'<b>시기</b>'+sigiChips(fl[0]):'')+''+((ex && (page==='status' || page==='mail')) ? '<label class="'+(opsExtra?'on':'')+'" style="margin-left:auto" title="운영현황(모든 학기)에 이름이 없는 등록 강사입니다. 켜면 그 강사가 배치 학교로 넣은 학교의 현황·발송 대상에 함께 나옵니다"><input type="checkbox" id="pbExtra"'+(opsExtra?' checked':'')+'>운영현황에 없는 등록 강사 포함 <small>'+ex+'명</small></label>' : '');
-  bindSigi(el, function(){ go(page, true); refresh(); });
+  var outF=fl.filter(function(f){ return /학교밖/.test(f); }), schF=fl.filter(function(f){ return !/학교밖/.test(f); });
+  var years={}; fl.forEach(function(f){ var m=/\d{4}/.exec(f); years[m?m[0]:'']=1; }); var multiY=Object.keys(years).length>1;
+  var per=ops.per||fl, ps=ops.perSigi||{};
+  /* 학교 학기 파일 안 시기 나누기는 더 쓰지 않음(같은 학기): 남아 있으면 풀어 줌 */
+  if(schF.some(function(f){ return ps[f]; })){ schF.forEach(function(f){ delete ps[f]; }); setTimeout(function(){ opsChanged(); go(page, true); }, 0); }
+  var sch=schF.map(function(f){ var m=/\d{4}/.exec(f); return { k:'f', f:f, t:pbTerm(f.replace(/\d{4}/,'')), y:m?m[0]:'', on:per.indexOf(f)>=0 }; }).sort(pbSort);
+  var out=[]; outF.forEach(function(f){ var m=/\d{4}/.exec(f), g={}; sigiList(f).forEach(function(v){ var t=pbTerm(v); (g[t]=g[t]||[]).push(v); });
+    Object.keys(g).forEach(function(t){ var R=g[t], on=per.indexOf(f)>=0 && (!ps[f] || R.some(function(v){ return ps[f].indexOf(v)>=0; })); out.push({ k:'s', f:f, t:t, y:m?m[0]:'', R:R, on:on }); }); });
+  out.sort(pbSort);
+  var chips=sch.length+out.length;
+  el.hidden = !PER_PAGES[page] || (chips<2 && !ex); if(el.hidden) return;
+  var chip=function(c, i){ var lab=(multiY&&c.y?c.y+' ':'')+c.t; return '<label class="'+(c.on?'on':'')+'"><input type="checkbox" data-pbi="'+i+'"'+(c.on?' checked':'')+'>'+esc(lab)+'</label>'; };
+  var all=sch.concat(out);
+  el.innerHTML=(chips>1?'<b>적용 학기</b>'+(sch.length?'<span class="pbg"><i>학교</i>'+sch.map(function(c){ return chip(c, all.indexOf(c)); }).join('')+'</span>':'')+(out.length?'<span class="pbg"><i>학교밖</i>'+out.map(function(c){ return chip(c, all.indexOf(c)); }).join('')+'</span>':''):'')
+    +((ex && (page==='status' || page==='mail')) ? '<label class="'+(opsExtra?'on':'')+'" style="margin-left:auto" title="운영현황(모든 학기)에 이름이 없는 등록 강사입니다. 켜면 그 강사가 배치 학교로 넣은 학교의 현황·발송 대상에 함께 나옵니다"><input type="checkbox" id="pbExtra"'+(opsExtra?' checked':'')+'>운영현황에 없는 등록 강사 포함 <small>'+ex+'명</small></label>' : '');
   if($('pbExtra')) $('pbExtra').onchange=function(){ opsExtra=$('pbExtra').checked; try{ localStorage.setItem('opsExtra', opsExtra?'1':'0'); }catch(e){} go(page, true); };
-  each('[data-pb]', function(cb){ cb.onchange=function(){ var n=cb.dataset.pb, per=(ops.per||fl).slice(), k=per.indexOf(n); if(cb.checked && k<0) per.push(n); if(!cb.checked && k>=0) per.splice(k,1); if(!per.length){ cb.checked=true; toast('학기를 하나 이상 켜 주세요'); return; } ops.per = per.length===fl.length ? null : per; opsChanged(); go(page, true); refresh(); }; }, el);
+  each('[data-pbi]', function(cb){ cb.onchange=function(){ var c=all[+cb.dataset.pbi], P=(ops.per||fl).slice(), S=ops.perSigi=ops.perSigi||{}, on=cb.checked;
+    var addF=function(f){ if(P.indexOf(f)<0) P.push(f); }, delF=function(f){ var k=P.indexOf(f); if(k>=0) P.splice(k,1); };
+    if(c.k==='f'){ if(on) addF(c.f); else delF(c.f); }
+    else { var L=sigiList(c.f), fileOn=P.indexOf(c.f)>=0, sel=fileOn ? (S[c.f]||L).slice() : [];
+      if(on){ c.R.forEach(function(v){ if(sel.indexOf(v)<0) sel.push(v); }); addF(c.f); }
+      else sel=sel.filter(function(v){ return c.R.indexOf(v)<0; });
+      if(!sel.length){ delF(c.f); delete S[c.f]; } else if(sel.length===L.length) delete S[c.f]; else S[c.f]=sel; }
+    if(!P.length){ cb.checked=!on; toast('적용 학기를 하나 이상 켜 주세요'); return; }
+    ops.per = P.length===fl.length ? null : P; opsChanged(); go(page, true); refresh(); }; }, el);
 }
 var personOpen=false; /* 강사별 화면: 강사를 열었는지(아니면 강사 선택 화면) */
 /* ---------- 왼쪽 메뉴: 아이콘 · 중분류 접고 펴기 (메뉴가 10개를 넘으면) ---------- */
