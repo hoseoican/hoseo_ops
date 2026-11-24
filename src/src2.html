@@ -2246,7 +2246,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.70';
+const LIB_VER='11.71';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4143,7 +4143,7 @@ function stParseA(src,file){
 function stLiveRows(){
   const y=+String(S.season||'').slice(0,4)||new Date().getFullYear();
   return matchRows().filter(r=>r.status!=='cancel').map(r=>{ const p=prog(r.prog)||{}, sc=r.sc||{}, cd=classDays(r), per=+r.perDay||0, st=sc.count!==''&&sc.count!=null?Number(sc.count):+r.expected||0;
-    return {year:y,org:orgOfRow(r),school:r.school,region:r.region||'',size:regionSize(S.addr[r.school]),room:sc.room||r.room||'',prog:p.name||'',field:p.field||'',grade:r.grade||'',exp:+r.expected||0,stu:st,per,days:cd.length,ses:per*cd.length,start:r.start||'',end:r.end||'',dow:daysTxt(r.days),ts:r.ts==null?'':hm(r.ts),te:r.te==null?'':hm(r.te),mc:+sc.multi||0,low:+sc.low||0,inst:r.status==='final'?instName(r.inst):''}; });
+    return {year:y,org:orgOfRow(r),school:r.school,region:r.region||'',size:regionSize(S.addr[r.school]),room:sc.room||r.room||'',prog:p.name||'',field:p.field||'',grade:r.grade||'',exp:+r.expected||0,stu:st,per,days:cd.length,ses:per*cd.length,start:r.start||'',end:r.end||'',dow:daysTxt(r.days),ts:r.ts==null?'':hm(r.ts),te:r.te==null?'':hm(r.te),mc:+sc.multi||0,low:+sc.low||0,out:isOut(r),inst:r.status==='final'?instName(r.inst):''}; });
 }
 const stIsMc=d=>String(d.id).startsWith('mc_');
 /* 운영 시기: 연도마다 5개 */
@@ -4207,7 +4207,7 @@ function stMcApply(out,extra){
   const byY={}; ((S.stats||{}).ds||[]).filter(stIsMc).forEach(d=>{ if(repY.has(d.year)) return; (byY[d.year]=byY[d.year]||[]).push(...d.rows); });
   X.forEach(x=>(byY[x.year]=byY[x.year]||[]).push(...x.rows));
   const rep={};
-  Object.entries(byY).forEach(([y,L])=>{ y=+y; const cls=out.filter(r=>r.year===y), R=rep[y]={n:0,applied:0,unmatched:[],bySch:{}};
+  Object.entries(byY).forEach(([y,L])=>{ y=+y; const cls=out.filter(r=>r.year===y&&!stOutRow(r)), R=rep[y]={n:0,applied:0,unmatched:[],bySch:{}};
     cls.forEach(r=>{ r.mcv=0; const k=schKey(r.school), b=R.bySch[k]=R.bySch[k]||{school:r.school,edu:0,list:0,cls:0}; b.list+=(+r.mc||0); b.cls++; });
     L.forEach(m=>{ const n=+m.n||0; R.n+=n; const C=stMcMatch(cls,m); if(!C.length){ R.unmatched.push(m); return; }
       const W=C.reduce((a,r)=>a+(+r.stu||1),0), sh=C.map(r=>n*(+r.stu||1)/W), fl=sh.map(Math.floor); let left=n-fl.reduce((a,b)=>a+b,0);
@@ -4217,7 +4217,10 @@ function stMcApply(out,extra){
   S.ui._mcRep=rep; return rep;
 }
 const stHasMc=y=>Array.isArray(y)?y.length>0&&y.every(v=>!!((S.ui._mcRep||{})[v])):!!((S.ui._mcRep||{})[y]);
-const stMcN1=(L,y)=>stHasMc(y)?L.reduce((a,r)=>a+(+r.mcv||0),0):L.reduce((a,r)=>a+(+r.mc||0),0);
+/* 다문화 학생 수 = 교육청 확인 자료(학교 학급에 나눠 넣은 값) + 학교밖 학급 중 다문화로 표기된 학급. 학교 운영현황 기재값은 쓰지 않음 */
+const stOutRow=r=>!!r.out||r.period==='학교밖';
+const stMcOut=r=>{ if(!stOutRow(r)) return 0; if(+r.mc>0) return +r.mc; return /다문화/.test([r.school,r.room,r.prog,r.grade].join(' '))?(+r.stu||0):0; };
+const stMcN1=(L,y)=>{ const h=stHasMc(y); return L.reduce((a,r)=>a+(stOutRow(r)?stMcOut(r):h?(+r.mcv||0):0),0); };
 const stMcN=(L,y)=>Array.isArray(y)?y.reduce((a,v)=>a+stMcN1(L.filter(r=>r.year===v),v),0):stMcN1(L,y);
 const stMcBase=()=>+((S.kpi||{}).mcBase)||3691;
 const stMcBaseL=()=>((S.kpi||{}).mcBaseL)||'2024년 기준';
@@ -4275,7 +4278,7 @@ function viewStats(){
   const mcCard=`<div class="skc skc-mc"><div class="skc-l">다문화 참여율 <span class="chip sm">자율지표</span> ${qt(['다문화 참여 학생 ÷ 기준 인원 × 100',`기준 인원: ${stMcBase().toLocaleString('ko-KR')}명(${stMcBaseL()})`,'교육청 확인 자료를 올리면 그 값으로 계산','자료가 없으면 운영현황 「다문화 인원」 기재값(확인 전)','기준·목표는 「KPI 목표」에서 수정'],'r')}</div>
      <div class="skc-v">${mcR}<span>%</span></div><div class="skc-t">다문화 ${stFmt(mcN)}명 / 기준 ${stFmt(stMcBase())}명</div>
      ${mcT?`<div class="skc-bar ${stRateCls(mcP)}"><i style="width:${Math.min(100,mcP)}%"></i></div><div class="skc-t"><b class="${stRateCls(mcP)}">${mcP}%</b> · 목표 ${mcT}% · ${mcR>=mcT?'달성':`남은 ${Math.round((mcT-mcR)*10)/10}%p`}</div>`:'<div class="skc-t muted">목표 미설정</div>'}
-     <div class="skc-d ${mcOk?'up':'dn'}">${mcOk?'교육청 확인 자료 반영':'운영현황 기재값 · 확인 전'}</div></div>`;
+     <div class="skc-d ${mcOk?'up':'dn'}">${mcOk?'교육청 확인 자료 + 학교밖 다문화 학급':'교육청 자료 없음 · 학교밖 다문화 학급만'}</div></div>`;
   const orgRows=orgs.map(o=>{ const L=inY.filter(r=>r.org===o); return [o,stSum(L),stMcN(L,Y)]; }).filter(([,s])=>s.cls);
   const tot=stSum(inY);
   const cell=(v,t)=>{ const p=stRate(v,+t||0); return `<td class="num">${stFmt(v)}${p!=null?`<div class="tsm ${stRateCls(p)}">${p}% / ${stFmt(t)}</div>`:''}</td>`; };
@@ -4299,10 +4302,10 @@ function viewStats(){
   <div class="skcards">${ST_M.map(card).join('')}${mcCard}</div>
   ${dups.length?`<div class="small lv-warn">같은 연도·시기·기관 자료가 2개 이상: ${esc(dups.join(', '))} ${qt(['같은 학급이 두 번 집계될 수 있음','「자료 관리」에서 겹치는 자료 삭제'])}</div>`:''}
   <div class="st-grid">
-   <div class="panel stack st-sec"><div class="row" style="gap:6px;align-items:center"><h3>운영기관별 · ${stYL(Y)}</h3>${qt(['기관별 학급·학생·차시·학교 수','작은 글씨 = 기관 KPI 달성률 / 목표','기관 목표는 「KPI 목표」에서 입력'])}</div>
-    <div class="tw"><table class="st-t"><thead><tr><th>운영기관</th><th class="num">학급</th><th class="num">학생</th><th class="num">차시</th><th class="num">학교</th><th class="num">다문화</th><th class="num">비중</th></tr></thead><tbody>
-    ${orgRows.map(([o,s,mn])=>{ const t=stTarget(Y,o), r=stPct(mn,stMcBase()); return `<tr class="${o===O?'on':''}"><td><button class="lnk" data-act="st-org" data-v="${esc(o)}">${uDot(o)}${esc(o)}</button></td>${cell(s.cls,t.cls)}${cell(s.stu,t.stu)}${cell(s.ses,t.ses)}${cell(s.sch,t.sch)}<td class="num">${stFmt(mn)}<div class="tsm ${t.mcr?stRateCls(r/t.mcr*100):''}">${r}%${t.mcr?` / ${t.mcr}%`:''}</div></td><td class="num small">${tot.cls?Math.round(s.cls/tot.cls*100):0}%</td></tr>`; }).join('')||'<tr><td colspan="7" class="muted">이 연도 자료 없음</td></tr>'}
-    </tbody>${orgRows.length>1?`<tfoot><tr><td><b>합계</b></td>${cell(tot.cls,stTarget(Y).cls)}${cell(tot.stu,stTarget(Y).stu)}${cell(tot.ses,stTarget(Y).ses)}${cell(tot.sch,stTarget(Y).sch)}<td class="num">${stFmt(stMcN(inY,Y))}<div class="tsm">${stPct(stMcN(inY,Y),stMcBase())}%</div></td><td class="num small">100%</td></tr></tfoot>`:''}</table></div></div>
+   <div class="panel stack st-sec"><div class="row" style="gap:6px;align-items:center"><h3>운영기관별 · ${stYL(Y)}</h3>${qt(['기관별 학급·학생·차시·학교 수','작은 글씨 = 기관 KPI 달성률 / 목표','비중(학급) = 전체 학급 중 그 기관 학급 비율, 비중(차시) = 전체 차시 중 그 기관 차시 비율','다문화 = 교육청 확인 자료 + 학교밖 다문화 학급','기관 목표는 「KPI 목표」에서 입력'])}</div>
+    <div class="tw"><table class="st-t"><thead><tr><th>운영기관</th><th class="num">학급</th><th class="num">학생</th><th class="num">차시</th><th class="num">학교</th><th class="num">다문화</th><th class="num">비중(학급)</th><th class="num">비중(차시)</th></tr></thead><tbody>
+    ${orgRows.map(([o,s,mn])=>{ const t=stTarget(Y,o), r=stPct(mn,stMcBase()); return `<tr class="${o===O?'on':''}"><td><button class="lnk" data-act="st-org" data-v="${esc(o)}">${uDot(o)}${esc(o)}</button></td>${cell(s.cls,t.cls)}${cell(s.stu,t.stu)}${cell(s.ses,t.ses)}${cell(s.sch,t.sch)}<td class="num">${stFmt(mn)}<div class="tsm ${t.mcr?stRateCls(r/t.mcr*100):''}">${r}%${t.mcr?` / ${t.mcr}%`:''}</div></td><td class="num small">${tot.cls?Math.round(s.cls/tot.cls*1000)/10:0}%</td><td class="num small">${tot.ses?Math.round(s.ses/tot.ses*1000)/10:0}%</td></tr>`; }).join('')||'<tr><td colspan="8" class="muted">이 연도 자료 없음</td></tr>'}
+    </tbody>${orgRows.length>1?`<tfoot><tr><td><b>합계</b></td>${cell(tot.cls,stTarget(Y).cls)}${cell(tot.stu,stTarget(Y).stu)}${cell(tot.ses,stTarget(Y).ses)}${cell(tot.sch,stTarget(Y).sch)}<td class="num">${stFmt(stMcN(inY,Y))}<div class="tsm">${stPct(stMcN(inY,Y),stMcBase())}%</div></td><td class="num small">100%</td><td class="num small">100%</td></tr></tfoot>`:''}</table></div></div>
    <div class="panel stack st-sec"><div class="row" style="gap:6px;align-items:center"><h3>연도별 추이${O?` · ${esc(orgShort(O)||O)}`:''}</h3>${qt(['연도별 합계 비교','막대 = 학급 수','위에서 고른 운영기관 기준'])}</div>
     <div class="tw"><table class="st-t"><thead><tr><th>연도</th><th class="num">학급</th><th class="num">학생</th><th class="num">차시</th><th class="num">학교</th></tr></thead><tbody>
     ${tYears.map(y=>{ const s=stSum(trendBase.filter(r=>r.year===y)); return `<tr class="${Y.includes(y)?'on':''}"><td><b>${y}</b><div class="sbar"><i style="width:${s.cls/tMax*100}%"></i></div></td><td class="num">${stFmt(s.cls)}</td><td class="num">${stFmt(s.stu)}</td><td class="num">${stFmt(s.ses)}</td><td class="num">${stFmt(s.sch)}</td></tr>`; }).join('')}
@@ -4507,9 +4510,9 @@ async function stXBase(sel,Y,O){
   const sheet=(name,head,rows,widths)=>{ const ws=wb.addWorksheet(name,{views:[{state:'frozen',ySplit:1}]}); ws.addRow(head).eachCell(c=>{ Object.assign(c,{style:{...HEAD,border:bd}}); }); rows.forEach(r=>ws.addRow(r).eachCell({includeEmpty:true},c=>{ c.border=bd; if(c.value instanceof Date) c.numFmt='yyyy-mm-dd'; })); widths.forEach((w,i)=>ws.getColumn(i+1).width=w); ws.getRow(1).height=30; return ws; };
   const orgs=[...new Set(sel.map(r=>r.org))], pct=(v,t)=>t>0?Math.round(v/t*1000)/1000:null;
   const sumRows=[...orgs.map(o=>[o,stSum(sel.filter(r=>r.org===o)),stTarget(Y,o)]),...(orgs.length>1?[['합계',stSum(sel),stTarget(Y)]]:[])];
-  const ws1=sheet('요약',['운영기관','학급 수','학생 수','차시 수','학교 수','학급 목표','학급 달성률','학생 목표','학생 달성률','차시 목표','차시 달성률','학교 목표','학교 달성률',`다문화 학생(${stHasMc(Y)?'교육청 확인':'운영현황 기재'})`,`다문화 참여율(기준 ${stMcBase()}명)`,'참여율 목표(%)'],
-    sumRows.map(([o,s,t])=>{ const L=o==='합계'?sel:sel.filter(r=>r.org===o), mn=stMcN(L,Y); return [o,s.cls,s.stu,s.ses,s.sch,+t.cls||null,pct(s.cls,+t.cls),+t.stu||null,pct(s.stu,+t.stu),+t.ses||null,pct(s.ses,+t.ses),+t.sch||null,pct(s.sch,+t.sch),mn,mn/stMcBase(),+t.mcr||null]; }),[18,9,9,9,9,9,10,9,10,9,10,9,10,14,14,11]);
-  ws1.eachRow((row,ri)=>{ if(ri>1) [7,9,11,13,15].forEach(c=>row.getCell(c).numFmt='0.0%'); if(ri>1&&row.getCell(1).value==='합계') row.font={bold:true}; });
+  const ws1=sheet('요약',['운영기관','학급 수','학생 수','차시 수','학교 수','학급 목표','학급 달성률','학생 목표','학생 달성률','차시 목표','차시 달성률','학교 목표','학교 달성률',`다문화 학생(${stHasMc(Y)?'교육청 확인 + 학교밖 다문화 학급':'학교밖 다문화 학급만'})`,`다문화 참여율(기준 ${stMcBase()}명)`,'참여율 목표(%)','학급 비중','차시 비중'],
+    (TT=>sumRows.map(([o,s,t])=>{ const L=o==='합계'?sel:sel.filter(r=>r.org===o), mn=stMcN(L,Y); return [o,s.cls,s.stu,s.ses,s.sch,+t.cls||null,pct(s.cls,+t.cls),+t.stu||null,pct(s.stu,+t.stu),+t.ses||null,pct(s.ses,+t.ses),+t.sch||null,pct(s.sch,+t.sch),mn,mn/stMcBase(),+t.mcr||null,pct(s.cls,TT.cls),pct(s.ses,TT.ses)]; }))(stSum(sel)),[18,9,9,9,9,9,10,9,10,9,10,9,10,14,14,11,9,9]);
+  ws1.eachRow((row,ri)=>{ if(ri>1) [7,9,11,13,15,17,18].forEach(c=>row.getCell(c).numFmt='0.0%'); if(ri>1&&row.getCell(1).value==='합계') row.font={bold:true}; });
   ws1.insertRow(1,[`${stYL(Y)} 운영 통계 · ${O||'전체 기관'} · ${new Date().toLocaleDateString('ko-KR')} 기준`]); ws1.getRow(1).font={bold:true,size:13}; ws1.views=[{state:'frozen',ySplit:2}];
   const brk=key=>{ const m={}; sel.forEach(r=>{ const k=r[key]||'(빈 칸)'; (m[k]=m[k]||[]).push(r); }); return Object.entries(m).map(([k,v])=>[k,...Object.values(stSum(v))]).sort((a,b)=>b[1]-a[1]); };
   if(Array.isArray(Y)&&Y.length>1) sheet('연도별',['연도','학급 수','학생 수','차시 수','학교 수'],Y.map(y=>[y,...Object.values(stSum(sel.filter(r=>r.year===y)))]),[10,10,10,10,10]);
