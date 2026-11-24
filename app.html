@@ -1465,6 +1465,8 @@ const mine = r => (r.extOrg||r.org||prog(r.origProg)?.org)===MY_ORG;
 const isOut = r => !!(r&&r.out);
 /* 방학집중형 등 앵커늘봄 외 사업은 학교/학교밖을 나누지 않고 한 목록으로 */
 const noScope = () => curBiz()!=='anchor';
+/* 단체 카톡방: 학교(link) · 학교밖(linkOut) 따로 */
+const kakaoOf = (out, ss) => { ss=ss||season(); return out ? (ss.linkOut||'') : (ss.link||''); };
 const scopeOut = () => { if(!S||!S.ui||noScope()) return false; if(S.ui.scope===undefined) S.ui.scope=''; return S.ui.scope==='out'; };
 const inScope = r => !S||!S.ui||S.ui.role!=='admin'||((noScope()||(scopeOut()?isOut(r):!isOut(r)))&&rowSeason(r)===curSK()&&rowBiz(r)===curBiz());
 const outNameSet = () => new Set(S.rows.filter(isOut).map(r=>r.school));
@@ -2249,7 +2251,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.66';
+const LIB_VER='11.67';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2431,7 +2433,7 @@ function viewBoard(){
   <div class="row small"><span class="iss lv-warn"><i>△</i>확인이 필요한 학급 ${probs}</span><span class="iss lv-crit"><i>!</i>운영 조건이 있는 학급 ${condRows.length} (학교 체크 전 ${condUnchecked})</span><span class="iss lv-info"><i>i</i>날짜 자동 보정 ${fixed}건</span><span class="iss lv-info"><i>i</i>카톡방 입장 ${schools.filter(x=>(S.contacts[x]||{}).kakao).length}/${schools.length}개교</span></div>
   ${cxPanel()}
   ${offPanel()}
-  ${season().link?'':`<div class="notice">${esc(season().name)} 단체 카톡방 링크가 없습니다. ${qt('학교 화면과 확인 요청 문구에 입장 안내로 들어감')} <button class="btn sm" data-act="tab" data-v="setup">기준정보로 가기</button></div>`}
+  ${kakaoOf(scopeOut())?'':`<div class="notice">${esc(season().name)} ${scopeOut()?'학교밖(기관)':'학교'} 단체 카톡방 링크가 없습니다. ${qt('학교 화면과 확인 요청 문구에 입장 안내로 들어감')} <button class="btn sm" data-act="tab" data-v="setup">기준정보로 가기</button></div>`}
   ${overCap().length?`<div class="notice bad">공급 학급수를 넘은 프로그램: ${overCap().map(x=>`${esc(x.p.name)} ${x.n}/${x.p.cap}`).join(', ')}. 기준정보에서 공급 학급수를 조정하거나 일부 학급의 프로그램을 바꿔 주세요.</div>`:''}
   <div class="row between"><div class="seg" role="tablist" aria-label="보기 방식"><button class="${u.bview==='school'?'':'on'}" data-act="bview" data-v="class">학급별 보기</button><button class="${u.bview==='school'?'on':''}" data-act="bview" data-v="school">학교별 진행 현황</button></div></div>
   ${u.bview==='school'?schoolProgressHtml():`<div class="row orgf" role="group" aria-label="운영 대학"><span class="tb-l small">운영 대학</span><div class="fchips"><button class="fchip ${!uorgs.length?'on':''}" data-act="borg" data-v="*" aria-pressed="${!uorgs.length}">전체 <em>${SR.length}</em></button>${orgList.sort((a,b)=>tOrgIdx(a)-tOrgIdx(b)).map(o=>`<button class="fchip org og${tOrgIdx(o)} ${uorgs.includes(o)?'on':''}" data-act="borg" data-v="${esc(o)}" aria-pressed="${uorgs.includes(o)}"><i class="odot"></i>${esc(orgShort(o))} <em>${orgCnt(o)}</em></button>`).join('')}<span class="tb-hint">여러 대학을 함께 고를 수 있습니다</span></div></div>
@@ -2996,7 +2998,7 @@ function viewSchool(){
        ${FC.texts.agree?`<label class="row small" style="gap:6px;align-items:flex-start"><input type="checkbox" data-c="orAgree" ${c.orAgree?'checked':''}> <span>${esc(FC.texts.agree)}</span></label>`:''}</div>`; })():''}
    ${fcSch().kakao?`<div class="panel stack"><div><h3>${esc(ss.name)} 단체 카톡방 입장 </h3>
      <div class="small" style="margin-top:4px">운영 공지는 <b>단체 카톡방과 이메일</b>로 안내합니다. 꼭 입장해 주세요. ${qt(['일정 변경·강사 배정·서류 제출 공지가 카톡방으로 전달됨','개별 확인 내용은 담당자 이메일로','입장 후 「○○초 입장했습니다」라고 남기기'])}</div></div>
-     ${ss.link?`<div class="row"><a class="btn pri" href="${esc(ss.link)}" target="_blank" rel="noopener">카톡방 입장하기</a><span class="mono small" style="word-break:break-all">${esc(ss.link)}</span><button class="btn sm" data-act="copylink">링크 복사</button></div>`:''}
+     ${kakaoOf(schIsOut(),ss)?`<div class="row"><a class="btn pri" href="${esc(kakaoOf(schIsOut(),ss))}" target="_blank" rel="noopener">카톡방 입장하기</a><span class="mono small" style="word-break:break-all">${esc(kakaoOf(schIsOut(),ss))}</span><button class="btn sm" data-act="copylink">링크 복사</button></div>`:''}
      <label class="row small"><input type="checkbox" id="c-kakao" data-c="kakao" ${c.kakao?'checked':''}> 단체 카톡방에 입장했습니다</label></div>`:''}
    ${S.ui.role==='school'?tHelp(false,true):''}
   </div>`;
@@ -3962,10 +3964,10 @@ function viewSetupAll(){
   const ed=S.programs.find(p=>p.key===S.ui.condEdit);
   return `<div class="stack"><div><h2>기준정보</h2><div class="muted small">차수 시작 때 1번부터 차례로 확인 ${qt(['「프로그램 · 조건」 설정대로 교육청 목록이 대학별로 나뉨','그래서 목록을 업로드 전에 맞춰 두기','다 마치면 「2 목록 업로드」에서 목록 업로드'])}</div></div>
   <!--§cycle-->
-  <div class="panel stack"><div><h3><span class="stepno">1</span>차수 · 단체 카톡방</h3><div class="muted small" style="margin-top:2px">차수별 학교 담당자 단체 카톡방 ${qt(['학교 화면과 확인 요청 문구에 입장 안내로 나감','공지 전용: 카톡방 설정에서 방장만 메시지 보내기'])}</div></div>
+  <div class="panel stack"><div><h3><span class="stepno">1</span>차수 · 단체 카톡방</h3><div class="muted small" style="margin-top:2px">차수별 학교 · 학교밖(기관) 담당자 단체 카톡방 ${qt(['학교 화면과 확인 요청 문구에 입장 안내로 나감','학교밖 기관 화면에는 학교밖 카톡방이 나감(비어 있으면 안내 없음)','공지 전용: 카톡방 설정에서 방장만 메시지 보내기'])}</div></div>
    <div class="row" style="align-items:flex-end"><label class="f"><span class="flab">학교·강사 공개 시기 ${qt(['학교 접속 신청 화면과 강사 신청 화면에 보이는 시기','운영 화면 위 「시기」에서 다른 시기도 관리 가능'])}</span><select id="curSeason" style="min-width:180px">${S.seasons.map(x=>`<option value="${x.k}" ${S.season===x.k?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
     <label class="f" style="flex:1 1 260px">담당자 개인정보 보유기간 (동의 문구에 표시)<input id="retention" value="${esc(S.retention)}"></label></div>
-   <div class="tw"><table class="va-m"><thead><tr><th>차수</th><th>단체 카톡방 링크</th></tr></thead><tbody>${S.seasons.map((x,i)=>[x,i]).reverse().map(([x,i])=>`<tr><td class="nowrap">${esc(x.name)}${S.season===x.k?' <span class="chip">현재</span>':''}</td><td><input id="season-${i}" data-season="${i}" value="${esc(x.link)}" placeholder="예: invite.kakao.com/tc/…" style="width:100%" aria-label="${esc(x.name)} 카톡방 링크"></td></tr>`).join('')}</tbody></table></div>
+   <div class="tw noenh"><table class="va-m"><thead><tr><th>차수</th><th>학교 단체 카톡방</th><th>학교밖(기관) 단체 카톡방</th></tr></thead><tbody>${S.seasons.map((x,i)=>[x,i]).reverse().map(([x,i])=>`<tr><td class="nowrap">${esc(x.name)}${S.season===x.k?' <span class="chip">현재</span>':''}</td><td><input id="season-${i}" data-season="${i}" value="${esc(x.link||'')}" placeholder="예: invite.kakao.com/tc/…" style="width:100%" aria-label="${esc(x.name)} 학교 카톡방 링크"></td><td><input id="season-o-${i}" data-season-out="${i}" value="${esc(x.linkOut||'')}" placeholder="예: invite.kakao.com/tc/…" style="width:100%" aria-label="${esc(x.name)} 학교밖 카톡방 링크"></td></tr>`).join('')}</tbody></table></div>
    <div class="small muted">보유기간은 대학 개인정보보호 담당 부서와 정한 기준으로 바꿔 주세요.</div></div>
   <!--§orgs-->
   ${orgsPanel()}
@@ -4846,11 +4848,11 @@ function renderLayer0(){
 function remindHtml(){
   const rows=myRows(), pend=[...new Set(rows.filter(r=>r.status==='wait').map(r=>r.school))];
   const ss=season(), noKakao=[...new Set(rows.map(r=>r.school))].filter(x=>!(S.contacts[x]||{}).kakao).length;
-  const msg=`[충남 1권역 앵커늘봄] 안녕하세요. ${ss.name} 앵커늘봄 프로그램 운영 정보를 학급별로 확인해 주세요. 확정 인원, 교실, 일정, 프로그램 운영 조건(예: 태블릿 제공)을 입력하시면 강사 배정이 시작됩니다. 운영 조건을 충족하지 못하면 해당 프로그램은 진행이 어렵습니다. 경력 강사·보조강사·동일 강사 요청은 우선 고려하지만 강사 수급에 따라 반영되지 않을 수 있습니다. 담당자 연락처(업무번호 또는 휴대폰)와 이메일을 꼭 입력해 주세요.\n\n■ 이번 차수부터 운영 공지는 단체 문자 대신 단체 카톡방과 이메일로 안내합니다. 중요 공지가 모두 카톡방으로 전달되니 꼭 입장해 주세요(입장 후 학교명을 남겨 주세요).\n단체 카톡방: ${ss.link||'(기준정보에서 링크를 등록해 주세요)'}\n\n확인 링크: (학교별 링크)\n마감: 11월 13일(금)`;
+  const msg=`[충남 1권역 앵커늘봄] 안녕하세요. ${ss.name} 앵커늘봄 프로그램 운영 정보를 학급별로 확인해 주세요. 확정 인원, 교실, 일정, 프로그램 운영 조건(예: 태블릿 제공)을 입력하시면 강사 배정이 시작됩니다. 운영 조건을 충족하지 못하면 해당 프로그램은 진행이 어렵습니다. 경력 강사·보조강사·동일 강사 요청은 우선 고려하지만 강사 수급에 따라 반영되지 않을 수 있습니다. 담당자 연락처(업무번호 또는 휴대폰)와 이메일을 꼭 입력해 주세요.\n\n■ 이번 차수부터 운영 공지는 단체 문자 대신 단체 카톡방과 이메일로 안내합니다. 중요 공지가 모두 카톡방으로 전달되니 꼭 입장해 주세요(입장 후 학교명을 남겨 주세요).\n단체 카톡방: ${kakaoOf(scopeOut(),ss)||'(기준정보에서 링크를 등록해 주세요)'}\n\n확인 링크: (학교별 링크)\n마감: 11월 13일(금)`;
   return `<div class="ov" data-act="close"><div class="drawer" role="dialog" aria-label="확인 요청"><div class="stack">
    <div class="row between"><h2>확인 요청 보내기</h2><button class="btn" data-act="close">닫기</button></div>
    <div class="muted small">미확인 학교 ${pend.length}곳</div>
-   ${ss.link?'':`<div class="notice bad">${esc(ss.name)} 단체 카톡방 링크가 아직 없습니다. 기준정보에서 등록하면 문구에 들어갑니다.</div>`}<div class="small">카톡방에 아직 입장하지 않은 학교 ${noKakao}곳</div>
+   ${kakaoOf(scopeOut(),ss)?'':`<div class="notice bad">${esc(ss.name)} ${scopeOut()?'학교밖(기관)':'학교'} 단체 카톡방 링크가 아직 없습니다. 기준정보에서 등록하면 문구에 들어갑니다.</div>`}<div class="small">카톡방에 아직 입장하지 않은 학교 ${noKakao}곳</div>
    <textarea id="rm-text" rows="11">${esc(msg)}</textarea><div><button class="btn pri" data-act="copy">문구 복사</button></div>
    <div class="tw"><table><thead><tr><th>학교</th><th>학급</th><th>운영 조건 체크</th><th>담당자</th><th>카톡방</th><th>확인 링크</th></tr></thead><tbody>${pend.map(s=>{const rs=rows.filter(r=>r.school===s), L=(S.schoolLinks||[]).find(x=>x.school===s);return `<tr><td>${esc(s)}</td><td class="mono">${rs.length}</td><td class="small">${rs.some(r=>condState(r).has)?'<span class="lv-warn">필요</span>':'-'}</td><td class="muted">${S.contacts[s]?esc(S.contacts[s].name||'대표번호'):'미등록'}</td><td class="small">${(S.contacts[s]||{}).kakao?'<span class="lv-ok">입장</span>':'<span class="muted">미입장</span>'}</td><td>${L&&L.link?`<button class="btn sm" data-act="copytext" data-t="${esc(L.link)}">링크 복사</button>`:'<span class="small muted">배포 후 생성</span>'}</td></tr>`}).join('')}</tbody></table></div>
    ${(()=>{const withMail=pend.filter(s=>(S.contacts[s]||{}).email);return `<div class="panel stack"><h3>이메일로 보내기</h3><div class="small muted">이메일 등록 학교 ${withMail.length}곳</div><div><button class="btn" data-act="mail-send" ${withMail.length?'':'disabled'}>${withMail.length}곳에 메일 보내기</button> <span class="small muted" id="mailmsg"></span></div></div>`;})()}
@@ -4899,7 +4901,7 @@ function resultFill(tpl,sch){
   const ss=season(), c=S.contacts[sch]||{}, link=schoolLinkOf(sch);
   const list=resultRowsOf(sch).map(r=>{ const t=S.instructors.find(x=>x.id===r.inst), a=S.instructors.find(x=>x.id===r.asst), n=classDays(r).length;
     return `· ${clsName(r)} (${r.grade||''}, ${r.sc.count||r.expected||'-'}명) - ${prog(r.prog).name}\n  ${md(r.start)}~${md(r.end)} ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)} · ${n}회 ${n*r.perDay}차시\n  강사 ${t?`${t.name} ${t.phone||''}`.trim():'미배정'}${a?` · 보조 ${a.name} ${a.phone||''}`.trim():''}`; }).join('\n');
-  const m={학교:sch,담당자:c.name||'',차수:ss.name,학급목록:list,링크:link?`▶ 우리 학교 확인 링크: ${link}`:'',운영담당자:S.ops.name||'',운영연락처:S.ops.phone||'',운영메일:S.ops.email||'',카톡방:ss.link||''};
+  const m={학교:sch,담당자:c.name||'',차수:ss.name,학급목록:list,링크:link?`▶ 우리 학교 확인 링크: ${link}`:'',운영담당자:S.ops.name||'',운영연락처:S.ops.phone||'',운영메일:S.ops.email||'',카톡방:kakaoOf(S.rows.some(r=>r.school===sch&&isOut(r)),ss)};
   return bizWords(String(tpl||'').replace(/\{([^{}\s]+)\}/g,(all,k)=>k in m?m[k]:all));
 }
 function resultMailOf(sch){
@@ -5040,7 +5042,7 @@ const joinMailTpl = () => { const m=S.joinMail||{}; return {subject:m.subject!=n
 const joinUrl = () => (S.webAppUrl||'https:\/\/script.google.com/macros/s/(웹앱 주소)/exec')+'?join=1'+(curBiz()!=='anchor'?'&b='+curBiz():'');
 const schoolLinkOf = sch => ((S.schoolLinks||[]).find(x=>x.school===sch)||{}).link||'';
 function joinFill(tpl,q){
-  const ss=season(), m={학교:q.school,담당자:q.name,링크:q.link||schoolLinkOf(q.school)||'(링크 없음)',차수:ss.name,운영담당자:S.ops.name||'',운영연락처:S.ops.phone||'',운영메일:S.ops.email||'',카톡방:ss.link||''};
+  const ss=season(), m={학교:q.school,담당자:q.name,링크:q.link||schoolLinkOf(q.school)||'(링크 없음)',차수:ss.name,운영담당자:S.ops.name||'',운영연락처:S.ops.phone||'',운영메일:S.ops.email||'',카톡방:kakaoOf(q.out||q.type==='out'||S.rows.some(r=>r.school===q.school&&isOut(r)),ss)};
   return bizWords(String(tpl||'').replace(/\{([^{}\s]+)\}/g,(all,k)=>k in m?m[k]:all));
 }
 const joinSmsTpl = () => S.joinSms!=null ? S.joinSms : JOIN_SMS_DEFAULT;
@@ -5154,7 +5156,7 @@ function viewJoin(){
       <div class="yn" style="margin-top:8px"><label><input type="radio" name="jf-share" id="jf-share-y" data-jf="share" value="yes" ${f.share==='yes'?'checked':''}>동의합니다</label><label><input type="radio" name="jf-share" id="jf-share-n" data-jf="share" value="no" ${f.share==='no'?'checked':''}>동의하지 않습니다</label></div></div></div>
     ${formCfg(u.jType==='out'?'out':'school').kakao?`<div class="conds"><div class="conds-h"><span>${esc(ss.name)} 단체 카톡방 입장 안내</span>${f.kakao?'<span class="lv-ok">입장함</span>':''}</div>
      <div style="padding:10px 12px" class="stack"><div class="small">일정 변경, 강사 배정, 서류 제출 같은 <b>운영 공지는 단체 카톡방과 이메일로 안내</b>합니다. 꼭 입장해 주세요. 입장 후 "○○초 입장했습니다"라고 남겨 주시면 확인이 쉽습니다.</div>
-      ${ss.link?`<div class="row"><a class="btn sm" href="${esc(ss.link)}" target="_blank" rel="noopener">카톡방 입장하기 ↗</a><span class="mono small" style="word-break:break-all">${esc(ss.link)}</span></div>`:''}
+      ${kakaoOf(u.jType==='out',ss)?`<div class="row"><a class="btn sm" href="${esc(kakaoOf(u.jType==='out',ss))}" target="_blank" rel="noopener">카톡방 입장하기 ↗</a><span class="mono small" style="word-break:break-all">${esc(kakaoOf(u.jType==='out',ss))}</span></div>`:''}
       <label class="row small"><input type="checkbox" id="jf-kakao" data-jf="kakao" ${f.kakao?'checked':''}> 단체 카톡방에 입장했습니다</label></div></div>`:''}
     <div class="row" style="justify-content:flex-end"><button class="btn pri" data-act="jsubmit">접속 신청하기</button></div>
    </div>`}
@@ -6669,7 +6671,7 @@ document.addEventListener('click',async e=>{
     case 'copy': { const t=document.getElementById('rm-text'); try{ await navigator.clipboard.writeText(t.value); toast('문구를 복사했습니다'); }catch(_){ t.select(); toast('문구를 선택했습니다. 복사해서 쓰세요'); } return; }
     case 'cedit': S.ui.cEdit=true; break;
     case 'cedit-done': S.ui.cEdit=false; break;
-    case 'copylink': { const v=season().link; try{ await navigator.clipboard.writeText(v); toast('링크를 복사했습니다'); }catch(_){ toast('링크를 길게 눌러 복사해 주세요'); } return; }
+    case 'copylink': { const v=kakaoOf(S.ui.role==='school'?schIsOut():scopeOut()); try{ await navigator.clipboard.writeText(v); toast('링크를 복사했습니다'); }catch(_){ toast('링크를 길게 눌러 복사해 주세요'); } return; }
     case 'up-ok': { const p=S.ui.pending, O=!!p.out, reset=(document.getElementById('up-reset')||{}).checked!==false, other=S.rows.filter(r=>rowSeason(r)!==curSK()||rowBiz(r)!==curBiz()||(!p.mixed&&(O?!isOut(r):isOut(r))));
       const nw=buildRows(p.rows,{out:O}); if((document.getElementById('up-fixed')||{}).checked) nw.forEach(r=>{ r.status='fixed'; r.reviewedAt=now(); r.preFixed=true; }); S.rows=O?other.concat(nw):nw.concat(other); if(O) S.fileOut=p.file; else S.file=p.file;
       S.ui.pending=null;
@@ -7259,6 +7261,7 @@ document.addEventListener('change',e=>{
     else { c[k]=t.value; if(k==='consent'){ c.consentAt=now(); if(t.value==='no'){ c.name=''; c.mobile=''; c.email=''; c.share=''; } } }
     delete c.example; }
   else if(t.dataset.season!=null){ S.seasons[+t.dataset.season].link=t.value.trim(); }
+  else if(t.dataset.seasonOut!=null){ S.seasons[+t.dataset.seasonOut].linkOut=t.value.trim(); }
   else if(t.id==='curSeason') S.season=t.value;
   else if(t.id==='retention') S.retention=t.value;
   else if(t.id==='webAppUrl') S.webAppUrl=t.value.trim();
@@ -7517,7 +7520,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.66';
+const APP_VER = '11.67';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
