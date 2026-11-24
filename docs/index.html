@@ -1223,7 +1223,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-6';
+var APP_VERSION = '2026.11.24-7';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2355,7 +2355,7 @@ function openNames(){ renderNames(); $('namesDlg').classList.add('on'); }
 // 현황·강사 목록·발송·요청 화면 위의 적용 학기 선택(운영현황의 「적용 학기」와 같은 설정)
 var PER_PAGES={ status:1, roster:1, review:1, mail:1, sms:1 };
 /* 적용 학기: 「학교」는 학기 파일(1학기·여름방학·2학기·겨울방학), 「학교밖」은 학교밖 파일 안 시기(같은 뜻의 이름은 하나로 묶음) */
-var PB_ORDER=['1학기','여름방학','2학기','겨울방학','집합'];
+var PB_ORDER=['1학기','여름방학','2학기','겨울방학','시기 미기재'];
 function pbTerm(v){ v=String(v||''); return /1학기/.test(v)?'1학기':/하계|여름/.test(v)?'여름방학':/2학기/.test(v)?'2학기':/동계|겨울/.test(v)?'겨울방학':/집합/.test(v)?'집합':(v||'시기 미기재'); }
 function pbSort(a,b){ var x=PB_ORDER.indexOf(a.t), y=PB_ORDER.indexOf(b.t); return (a.y||'').localeCompare(b.y||'') || ((x<0?99:x)-(y<0?99:y)) || a.t.localeCompare(b.t,'ko'); }
 function renderPerBar(){
@@ -2367,14 +2367,15 @@ function renderPerBar(){
   /* 학교 학기 파일 안 시기 나누기는 더 쓰지 않음(같은 학기): 남아 있으면 풀어 줌 */
   if(schF.some(function(f){ return ps[f]; })){ schF.forEach(function(f){ delete ps[f]; }); setTimeout(function(){ opsChanged(); go(page, true); }, 0); }
   var sch=schF.map(function(f){ var m=/\d{4}/.exec(f); return { k:'f', f:f, t:pbTerm(f.replace(/\d{4}/,'')), y:m?m[0]:'', on:per.indexOf(f)>=0 }; }).sort(pbSort);
-  var out=[]; outF.forEach(function(f){ var m=/\d{4}/.exec(f), g={}; sigiList(f).forEach(function(v){ var t=pbTerm(v); (g[t]=g[t]||[]).push(v); });
+  outF.forEach(function(f){ if(!ps[f]) return; var L=sigiList(f), k=ps[f].filter(function(v){ return L.indexOf(v)>=0; }); if(k.length!==ps[f].length){ if(k.length) ps[f]=k; else delete ps[f]; setTimeout(function(){ opsChanged(); go(page, true); }, 0); } });
+  var out=[]; outF.forEach(function(f){ var m=/\d{4}/.exec(f), g={}; sigiList(f).forEach(function(v){ (g[v]=g[v]||[]).push(v); });
     Object.keys(g).forEach(function(t){ var R=g[t], on=per.indexOf(f)>=0 && (!ps[f] || R.some(function(v){ return ps[f].indexOf(v)>=0; })); out.push({ k:'s', f:f, t:t, y:m?m[0]:'', R:R, on:on }); }); });
   out.sort(pbSort);
   var chips=sch.length+out.length;
   el.hidden = !PER_PAGES[page] || (chips<2 && !ex); if(el.hidden) return;
   var chip=function(c, i){ var lab=(multiY&&c.y?c.y+' ':'')+c.t; return '<label class="'+(c.on?'on':'')+'"><input type="checkbox" data-pbi="'+i+'"'+(c.on?' checked':'')+'>'+esc(lab)+'</label>'; };
   var all=sch.concat(out);
-  el.innerHTML=(chips>1?'<b>적용 학기</b>'+(sch.length?'<span class="pbg"><i>학교</i>'+sch.map(function(c){ return chip(c, all.indexOf(c)); }).join('')+'</span>':'')+(out.length?'<span class="pbg"><i>학교밖</i>'+out.map(function(c){ return chip(c, all.indexOf(c)); }).join('')+'</span>':''):'')
+  el.innerHTML=(chips>1?'<b>적용 학기</b>'+(sch.length?'<span class="pbg"><i>학교</i>'+sch.map(function(c){ return chip(c, all.indexOf(c)); }).join('')+'</span>':'')+(out.length?'<span class="pbg"><i>학교밖(집합형)</i>'+out.map(function(c){ return chip(c, all.indexOf(c)); }).join('')+'</span>':''):'')
     +((ex && (page==='status' || page==='mail')) ? '<label class="'+(opsExtra?'on':'')+'" style="margin-left:auto" title="운영현황(모든 학기)에 이름이 없는 등록 강사입니다. 켜면 그 강사가 배치 학교로 넣은 학교의 현황·발송 대상에 함께 나옵니다"><input type="checkbox" id="pbExtra"'+(opsExtra?' checked':'')+'>운영현황에 없는 등록 강사 포함 <small>'+ex+'명</small></label>' : '');
   if($('pbExtra')) $('pbExtra').onchange=function(){ opsExtra=$('pbExtra').checked; try{ localStorage.setItem('opsExtra', opsExtra?'1':'0'); }catch(e){} go(page, true); };
   each('[data-pbi]', function(cb){ cb.onchange=function(){ var c=all[+cb.dataset.pbi], P=(ops.per||fl).slice(), S=ops.perSigi=ops.perSigi||{}, on=cb.checked;
@@ -2788,7 +2789,10 @@ function renderBizBar(){ var el=$('bizBar'); if(!el) return; var d=bizDef(docBiz
 /* ---------- 학기 안 시기(학교밖처럼 한 시트에 여러 시기): 「시기」 칸, 없으면 시작일로 ---------- */
 function sigiOf(r){ var v=String(r.sigi||'').trim(); if(v) return v; var m=/^(\d{4})-(\d{2})/.exec(r.start||''); if(!m) return ''; var y=+m[1], mo=+m[2];
   return mo<=2 ? (y-1)+' 겨울' : mo<=6 ? y+' 1학기' : mo<=8 ? y+' 여름' : mo<=11 ? y+' 2학기' : y+' 겨울'; }
-function sigiList(f){ var m={}; (ops.rows||[]).forEach(function(r){ if(rowFile(r)===f) m[sigiOf(r)]=1; }); return Object.keys(m).sort(function(a,b){ return !a ? 1 : !b ? -1 : a.localeCompare(b,'ko'); }); }
+/* 학교밖 파일은 시기를 학기 이름(1학기·여름방학·2학기·겨울방학)으로 맞춤. 「집합」 등 학기가 아닌 값은 시작일로 */
+function dateTerm(d){ var m=/^(\d{4})-(\d{2})/.exec(d||''); if(!m) return ''; var mo=+m[2]; return mo<=2?'겨울방학':mo<=6?'1학기':mo<=8?'여름방학':mo<=11?'2학기':'겨울방학'; }
+function outTerm(r){ var v=String(r.sigi||''), t=/1학기/.test(v)?'1학기':/하계|여름/.test(v)?'여름방학':/2학기/.test(v)?'2학기':/동계|겨울/.test(v)?'겨울방학':''; return t||dateTerm(r.start)||'시기 미기재'; }
+function sigiList(f){ var m={}, out=/학교밖/.test(f); (ops.rows||[]).forEach(function(r){ if(rowFile(r)===f) m[out?outTerm(r):sigiOf(r)]=1; }); if(out){ var O=['1학기','여름방학','2학기','겨울방학','시기 미기재']; return Object.keys(m).sort(function(a,b){ return O.indexOf(a)-O.indexOf(b); }); } return Object.keys(m).sort(function(a,b){ return !a ? 1 : !b ? -1 : a.localeCompare(b,'ko'); }); }
 function sigiChips(f){ var L=sigiList(f); if(L.length<2) return ''; var sel=(ops.perSigi||{})[f];
   return '<span class="sgi">'+L.map(function(v){ var o=!sel||sel.indexOf(v)>=0; return '<label class="'+(o?'on':'')+'"><input type="checkbox" data-psg="'+esc(f)+'" data-psv="'+esc(v)+'"'+(o?' checked':'')+'>'+esc(v||'시기 미기재')+'</label>'; }).join('')+'</span>'; }
 function bindSigi(el, after){ each('[data-psg]', function(cb){ cb.onchange=function(){ var f=cb.dataset.psg, v=cb.dataset.psv, L=sigiList(f), ps=ops.perSigi=ops.perSigi||{}, sel=(ps[f]||L).slice(), k=sel.indexOf(v);
@@ -2796,7 +2800,7 @@ function bindSigi(el, after){ each('[data-psg]', function(cb){ cb.onchange=funct
 function opsRows(){ var on=ops.on, per=ops.per, ps=ops.perSigi||{};
   var perB=per ? per.filter(function(f){ return fileBiz(f)===docBiz; }) : null; if(perB && !perB.length) perB=null;
   return (ops.rows||[]).filter(function(r){ if(!rowBizOk(r)) return false; var f=rowFile(r);
-    return (!on || !r.sheet || on.indexOf(r.sheet)>=0) && (!perB || r.src==='직접 추가' || perB.indexOf(f)>=0) && (!ps[f] || ps[f].indexOf(sigiOf(r))>=0); }); }
+    return (!on || !r.sheet || on.indexOf(r.sheet)>=0) && (!perB || r.src==='직접 추가' || perB.indexOf(f)>=0) && (!ps[f] || ps[f].indexOf(/학교밖/.test(f)?outTerm(r):sigiOf(r))>=0); }); }
 function opsSchools(){ if(!opsSchoolsCache) opsSchoolsCache = Ops.bySchool(opsRows()); return opsSchoolsCache; }
 function opsPeople(){ if(!opsPeopleCache) opsPeopleCache = Ops.byPerson(opsRows()); return opsPeopleCache; }
 function opsSchoolSet(){ var m={}; opsSchools().forEach(function(s){ m[s.school]=1; }); return m; }
@@ -2916,7 +2920,7 @@ function renderOps(){
 var sent = {}, stFilter = 'all', stView = 'person', stPSub = 'placed', stSSub = 'all', stTerm = '';
 /* 시기: 운영현황 파일 이름(1학기·하계·2학기·동계) → 없으면(학교밖 파일) 행의 시기·시작일 */
 var ST_TERMS=['1학기','여름방학','2학기','겨울방학'];
-function termOfRow(r){ var f=rowFile(r)+' '+(r.sheet||''), t=/1학기/.test(f)?'1학기':/하계|여름/.test(f)?'여름방학':/2학기/.test(f)?'2학기':/동계|겨울/.test(f)?'겨울방학':''; if(t) return t; var g=sigiOf(r); return /1학기/.test(g)?'1학기':/여름|하계/.test(g)?'여름방학':/2학기/.test(g)?'2학기':/겨울|동계/.test(g)?'겨울방학':''; }
+function termOfRow(r){ if(/학교밖/.test(rowFile(r))){ var o=outTerm(r); return o==='시기 미기재'?'':o; } var f=rowFile(r)+' '+(r.sheet||''), t=/1학기/.test(f)?'1학기':/하계|여름/.test(f)?'여름방학':/2학기/.test(f)?'2학기':/동계|겨울/.test(f)?'겨울방학':''; if(t) return t; var g=sigiOf(r); return /1학기/.test(g)?'1학기':/여름|하계/.test(g)?'여름방학':/2학기/.test(g)?'2학기':/겨울|동계/.test(g)?'겨울방학':''; }
 function isOutSchool(school, classes){ return (classes||[]).some(function(r){ return /학교밖/.test(rowFile(r)+' '+(r.sheet||'')); }) || !/학교$/.test(String(school||'').replace(/\s/g,'')); }
 function sentKey(school, name){ return String(school||'').replace(/\s/g,'')+'|'+String(name||'').replace(/\s/g,''); }
 // 강사×학교 짝이 어느 학기(운영현황 파일)에 있는지: { '학교|강사': { 파일: {s: 가장 이른 시작일, e: 가장 늦은 종료일} } }
