@@ -2246,7 +2246,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.69';
+const LIB_VER='11.70';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6077,10 +6077,11 @@ function csGDetail(g){ const i=csGong().indexOf(g), cp=`gongmun.items.${i}`, K=C
      <div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>수신처</th>${g.reply?'<th>회신일</th><th>상태</th>':''}<th></th><th style="min-width:110px">메모</th><th></th></tr></thead><tbody>${rcs||'<tr><td colspan="6" class="small muted">수신처 없음</td></tr>'}</tbody></table></div>
      <div class="row" style="gap:6px"><input id="cs-grc" placeholder="수신처 추가 (학교·기관·대학 이름)" style="flex:1"><button class="btn sm" data-act="csgradd" data-id="${g.id}">추가</button></div></div></div>
    <div class="row" style="gap:6px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px">
+    <button class="btn sm pri" data-act="csghwx" data-id="${g.id}" title="제목 · 본문이 채워진 일반기안문(.hwx). 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열기">기안문 파일 받기</button>
     <button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="title">제목 복사</button><button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="body">본문 복사</button><button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="rc">수신자 복사</button>
     ${g.tgt==='school'?`<button class="btn sm" data-act="csgxlsx" data-id="${g.id}">붙임: 운영 확정 목록 엑셀</button>`:''}<button class="btn sm" data-act="csgretpl" data-id="${g.id}">양식대로 다시 채우기</button>
     <span style="flex:1"></span><button class="btn sm danger" data-act="csgdel" data-id="${g.id}">삭제</button></div>
-   <div class="small muted">전자결재 기안 화면에 제목 · 본문 · 수신자를 붙여 넣으세요. 수신자는 「${esc(csRcName(g,(g.rc||[])[0]||{name:g.tgt==='univ'?'상명대학교':'○○초등학교'}))}, …」 형식으로 복사됩니다.</div></div>`; }
+   <div class="small muted">「기안문 파일 받기」 → 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열면 제목 · 본문이 채워져 있습니다. 수신처는 기안기에서 지정(「수신자 복사」로 이름 확인). 수신자는 「${esc(csRcName(g,(g.rc||[])[0]||{name:g.tgt==='univ'?'상명대학교':'○○초등학교'}))}, …」 형식으로 복사됩니다.</div></div>`; }
 function csMyGong(){ const o=csMine(), q=S.ui.csQ||csQNow(), P=csPen(o,q), t=csToday();
   const L=csGong().filter(g=>g.tgt==='univ'&&(g.rc||[]).some(r=>r.name===o));
   return `<div class="small muted">우리 대학이 받은 공문과 회신 기한입니다. 회신은 그룹웨어로 해 주세요.</div>
@@ -6157,8 +6158,33 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'csgradd': { const g=csGong().find(x=>x.id===el.dataset.id), v=((document.getElementById('cs-grc')||{}).value||'').trim(); if(!g||!v) return false; if((g.rc||[]).some(r=>r.name===v)){ toast('이미 있는 수신처입니다'); return false; } g.rc=[...(g.rc||[]),{name:v}]; g.at=Date.now(); return true; }
     case 'csgretpl': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; if(!confirm('제목과 본문을 이 종류의 기본 양식으로 다시 채울까요? 고친 내용은 사라집니다.')) return false; const [t,b]=csGTpl(g.kind,g.tgt); if(t) g.title=csGFill(g,t,true); g.body=csGFill(g,b,true); g.at=Date.now(); return true; }
     case 'csgcopy': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; const v=el.dataset.v; copyStr(v==='title'?csGFill(g,g.title):v==='body'?csGFill(g,g.body):(g.rc||[]).map(r=>csRcName(g,r)).join(', ')); toast(v==='rc'?`수신자 ${(g.rc||[]).length}곳을 복사했습니다`:'복사했습니다'); return false; }
+    case 'csghwx': { const g=csGong().find(x=>x.id===el.dataset.id); if(g) csGHwx(g); return false; }
     case 'csgxlsx': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; csGXlsx(g); return false; }
   } return null; }
+/* 그룹웨어 기안문(.hwx): 빈 일반기안문에 제목(결재제목 칸) · 본문(본문 칸)을 채워 내려받기 → 기안기 「읽어오기」로 엶 */
+const csJs = src => new Promise((res,rej)=>{ if(document.querySelector(`script[data-cs="${src}"]`)) return res(); const sc=document.createElement('script'); sc.src=src; sc.dataset.cs=src; sc.onload=res; sc.onerror=()=>rej(new Error('기안문 기능을 불러오지 못했습니다')); document.head.appendChild(sc); });
+async function csGHwx(g){
+  try{
+    toast('기안문 파일을 만드는 중입니다…');
+    for(const f of ['docs/cfb.min.js','docs/pako.min.js','docs/hwpcore.js','docs/gwtpl.js']) await csJs(f);
+    const raw=atob(window.GW_TPL['일반기안문']), hx=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++) hx[i]=raw.charCodeAt(i);
+    const off=hx[42]|(hx[43]<<8)|(hx[44]<<16)|(hx[45]<<24), doc=new HwpCore.Doc({CFB:window.CFB,pako:window.pako},hx.slice(off));
+    const key=new Uint8Array([...'결재제목'].flatMap(c=>{ const v=c.charCodeAt(0); return [v&255,v>>8]; }));
+    const has=(d,k)=>{ outer: for(let i=0;i<=d.length-k.length;i++){ for(let j=0;j<k.length;j++) if(d[i+j]!==k[j]) continue outer; return true; } return false; };
+    const li=doc.recs.findIndex(r=>r.tag===72&&has(r.data,key)), tp=doc.paras.find(p=>p.i>li);
+    const title=csGFill(g,g.title||''), body=csGFill(g,g.body||'').replace(/\*\*/g,'').replace(/\r/g,'');
+    if(li<0||!tp) throw new Error('기안문 양식에서 제목 칸을 찾지 못했습니다');
+    doc.setText(tp,title); doc.reindex();
+    const bp=doc.paras.find(p=>p.text.indexOf('본문')>=0&&p.level===0); if(!bp) throw new Error('기안문 양식에서 본문 칸을 찾지 못했습니다');
+    doc.replaceIn(bp,'본문',body);
+    const out=doc.save(), head=hx.slice(0,off); new DataView(head.buffer).setUint32(38,out.length,true);
+    const blob=new Blob([head,out]), fn=`${(title||'기안문').replace(/[\\/:*?"<>|]/g,'').slice(0,60)}.hwx`;
+    const dl=window.claude?await window.claude.use('downloads'):null;
+    if(dl){ await dl.save({filename:fn,data:blob}); }
+    else { const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+    toast('기안문 파일을 받았습니다. 그룹웨어 결재 → 「읽어오기」로 여세요');
+  }catch(e){ toast(e&&e.code==='declined'?'저장을 취소했습니다':(e.message||'기안문 파일을 만들지 못했습니다')); }
+}
 function csGXlsx(g){ const names=new Set((g.rc||[]).map(r=>r.name)), F=matchRows().filter(r=>r.status==='final'&&names.has(r.school)).sort((a,b)=>a.school.localeCompare(b.school,'ko')||String(a.start).localeCompare(String(b.start)));
   const aoa=[['순','학교(기관)','학급','학년','프로그램','운영 대학','시작일','종료일','요일','시간','횟수','차시','주강사','보조강사']].concat(F.map((r,i)=>[i+1,r.school,clsName(r),r.grade||'',prog(r.prog).name,orgShort(orgOfRow(r)),r.start||'',r.end||'',daysTxt(r.days),`${hm(r.ts)}~${hm(r.te)}`,classDays(r).length,rowHrs(r),instName(r.inst)||'',instName(r.asst)||'']));
   const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:4},{wch:18},{wch:12},{wch:8},{wch:22},{wch:10},{wch:11},{wch:11},{wch:8},{wch:12},{wch:6},{wch:6},{wch:8},{wch:8}];
