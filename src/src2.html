@@ -2246,7 +2246,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.71';
+const LIB_VER='11.72';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4219,7 +4219,7 @@ function stMcApply(out,extra){
 const stHasMc=y=>Array.isArray(y)?y.length>0&&y.every(v=>!!((S.ui._mcRep||{})[v])):!!((S.ui._mcRep||{})[y]);
 /* 다문화 학생 수 = 교육청 확인 자료(학교 학급에 나눠 넣은 값) + 학교밖 학급 중 다문화로 표기된 학급. 학교 운영현황 기재값은 쓰지 않음 */
 const stOutRow=r=>!!r.out||r.period==='학교밖';
-const stMcOut=r=>{ if(!stOutRow(r)) return 0; if(+r.mc>0) return +r.mc; return /다문화/.test([r.school,r.room,r.prog,r.grade].join(' '))?(+r.stu||0):0; };
+const stMcOut=r=>stOutRow(r)&&/\(\s*다문화\s*\)/.test(r.school||'')?(+r.stu||0):0;  /* 학교밖: 기관명에 (다문화) 표기된 학급의 학생 수 */
 const stMcN1=(L,y)=>{ const h=stHasMc(y); return L.reduce((a,r)=>a+(stOutRow(r)?stMcOut(r):h?(+r.mcv||0):0),0); };
 const stMcN=(L,y)=>Array.isArray(y)?y.reduce((a,v)=>a+stMcN1(L.filter(r=>r.year===v),v),0):stMcN1(L,y);
 const stMcBase=()=>+((S.kpi||{}).mcBase)||3691;
@@ -4302,7 +4302,7 @@ function viewStats(){
   <div class="skcards">${ST_M.map(card).join('')}${mcCard}</div>
   ${dups.length?`<div class="small lv-warn">같은 연도·시기·기관 자료가 2개 이상: ${esc(dups.join(', '))} ${qt(['같은 학급이 두 번 집계될 수 있음','「자료 관리」에서 겹치는 자료 삭제'])}</div>`:''}
   <div class="st-grid">
-   <div class="panel stack st-sec"><div class="row" style="gap:6px;align-items:center"><h3>운영기관별 · ${stYL(Y)}</h3>${qt(['기관별 학급·학생·차시·학교 수','작은 글씨 = 기관 KPI 달성률 / 목표','비중(학급) = 전체 학급 중 그 기관 학급 비율, 비중(차시) = 전체 차시 중 그 기관 차시 비율','다문화 = 교육청 확인 자료 + 학교밖 다문화 학급','기관 목표는 「KPI 목표」에서 입력'])}</div>
+   <div class="panel stack st-sec"><div class="row" style="gap:6px;align-items:center"><h3>운영기관별 · ${stYL(Y)}</h3>${qt(['기관별 학급·학생·차시·학교 수','작은 글씨 = 기관 KPI 달성률 / 목표','비중(학급) = 전체 학급 중 그 기관 학급 비율, 비중(차시) = 전체 차시 중 그 기관 차시 비율','다문화 = 교육청 확인 자료 + 학교밖 기관명에 (다문화) 표기된 학급 학생 수','기관 목표는 「KPI 목표」에서 입력'])}</div>
     <div class="tw"><table class="st-t"><thead><tr><th>운영기관</th><th class="num">학급</th><th class="num">학생</th><th class="num">차시</th><th class="num">학교</th><th class="num">다문화</th><th class="num">비중(학급)</th><th class="num">비중(차시)</th></tr></thead><tbody>
     ${orgRows.map(([o,s,mn])=>{ const t=stTarget(Y,o), r=stPct(mn,stMcBase()); return `<tr class="${o===O?'on':''}"><td><button class="lnk" data-act="st-org" data-v="${esc(o)}">${uDot(o)}${esc(o)}</button></td>${cell(s.cls,t.cls)}${cell(s.stu,t.stu)}${cell(s.ses,t.ses)}${cell(s.sch,t.sch)}<td class="num">${stFmt(mn)}<div class="tsm ${t.mcr?stRateCls(r/t.mcr*100):''}">${r}%${t.mcr?` / ${t.mcr}%`:''}</div></td><td class="num small">${tot.cls?Math.round(s.cls/tot.cls*1000)/10:0}%</td><td class="num small">${tot.ses?Math.round(s.ses/tot.ses*1000)/10:0}%</td></tr>`; }).join('')||'<tr><td colspan="8" class="muted">이 연도 자료 없음</td></tr>'}
     </tbody>${orgRows.length>1?`<tfoot><tr><td><b>합계</b></td>${cell(tot.cls,stTarget(Y).cls)}${cell(tot.stu,stTarget(Y).stu)}${cell(tot.ses,stTarget(Y).ses)}${cell(tot.sch,stTarget(Y).sch)}<td class="num">${stFmt(stMcN(inY,Y))}<div class="tsm">${stPct(stMcN(inY,Y),stMcBase())}%</div></td><td class="num small">100%</td><td class="num small">100%</td></tr></tfoot>`:''}</table></div></div>
