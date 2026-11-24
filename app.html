@@ -2243,7 +2243,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.63';
+const LIB_VER='11.64';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6010,15 +6010,15 @@ function csGTpl(kind,tgt){ const c=csCfg(), sn=season().name, A={
   att:['{차수} 초등방과후 프로그램 출석부 제출 협조 요청','1. 귀 학교의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화 사업으로 운영 중인 {차수} 프로그램의 운영 실적 확인을 위해 출석부 제출을 요청드리오니 협조하여 주시기 바랍니다.\n\n 가. 제출 자료: 프로그램 출석부(학급별)\n 나. 제출 기한: {기한}\n 다. 제출 방법: \n 라. 문 의 처: {보내는곳} ({전화번호}). 끝.'],
   etc:['',tgt==='univ'?'1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. \n\n끝.':'1. 귀 학교의 무궁한 발전을 기원합니다.\n\n2. \n\n끝.']};
   return A[kind]||A.etc; }
-function csGFill(g,s){ const c=csCfg(), F=matchRows().filter(r=>r.status==='final'), st=F.map(r=>r.start).filter(Boolean).sort(), en=F.map(r=>r.end).filter(Boolean).sort();
+function csGFill(g,s,part){ const c=csCfg(), F=matchRows().filter(r=>r.status==='final'), st=F.map(r=>r.start).filter(Boolean).sort(), en=F.map(r=>r.end).filter(Boolean).sort();
   const dd=d=>{ if(!d) return '(  )'; const [y,m,x]=d.split('-'); return `${y}.${m}.${x}(${DOWS[dowOf(d)]})`; };
-  return String(s||'').replace(/\{차수\}/g,`${csYear()}년 ${season().name.replace(/^\d{4}\s*/,'')}`).replace(/\{기한\}/g,g.due?dd(g.due)+(g.dueT?' '+g.dueT:''):'(  )').replace(/\{보내는곳\}/g,'호서대학교 앵커늘봄총괄센터').replace(/\{전화번호\}/g,c.tel||'041-423-2420').replace(/\{메일\}/g,c.mail||(S.ops||{}).email||'hjy@hoseo.edu')
+  return String(s||'').replace(/\{차수\}/g,`${csYear()}년 ${season().name.replace(/^\d{4}\s*/,'')}`).replace(/\{기한\}/g,m=>part?m:g.due?dd(g.due)+(g.dueT?' '+g.dueT:''):'(  )').replace(/\{보내는곳\}/g,'호서대학교 앵커늘봄총괄센터').replace(/\{전화번호\}/g,m=>part?m:(g.tel||'(  )')).replace(/\{메일\}/g,m=>part?m:(g.mail||'(  )'))
     .replace(/\{운영기간\}/g,st.length?`${dd(st[0])} ~ ${dd(en[en.length-1])}`:'(  )').replace(/\{대상수\}/g,String((g.rc||[]).length)); }
 const csRcName = (g,r) => g.tgt==='univ'?`${r.name}총장`:`${r.name.replace(/\s/g,'')}${/학교$/.test(r.name)?'장':''}`;
 function csGNew(kind,tgt){ const [t,b]=csGTpl(kind,tgt); let rc;
   if(tgt==='univ') rc=CS_UNIVS().filter(o=>o!=='호서대학교').map(name=>({name}));
   else { const F=matchRows().filter(r=>r.status==='final'&&r.status!=='cancel'); rc=[...new Set(F.map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko')).map(name=>({name})); }
-  const g={id:'g'+Date.now().toString(36),tgt,kind,title:'',body:b,reply:tgt==='univ'&&kind!=='work'?true:kind==='att',due:'',sent:'',no:'',rc,at:Date.now()}; g.title=csGFill(g,t); g.body=csGFill(g,b);
+  const g={id:'g'+Date.now().toString(36),tgt,kind,title:'',body:b,reply:tgt==='univ'&&kind!=='work'?true:kind==='att',due:'',sent:'',no:'',rc,at:Date.now()}; const last=csGong().find(x=>x.tel||x.mail)||{}; g.tel=last.tel||''; g.mail=last.mail||''; g.title=csGFill(g,t,true); g.body=csGFill(g,b,true);
   S.gongmun=S.gongmun||{items:[]}; S.gongmun.items=[g,...(S.gongmun.items||[])]; S.ui.csGopen=g.id; return g; }
 function csGSt(g){ const t=csToday(), rc=g.rc||[], left=rc.filter(r=>!r.rep&&!r.ex).length; if(!g.sent) return ['기안 준비','']; if(!g.reply) return ['발송 완료','ok']; if(!left) return ['회신 완료','ok']; if(g.due&&t>g.due) return ['기한 지남','x']; return ['회신 받는 중','info']; }
 function csGongV(){ const f=S.ui.csGf||'', L=csGong().filter(g=>!f||(f==='late'?csGSt(g)[0]==='기한 지남':g.tgt===f)), op=csGong().find(g=>g.id===S.ui.csGopen);
@@ -6039,9 +6039,10 @@ function csGDetail(g){ const i=csGong().indexOf(g), cp=`gongmun.items.${i}`, K=C
      <div class="row" style="gap:8px;flex-wrap:wrap"><label class="f">종류<select data-cp="${cp}.kind" data-cat="${cp}">${K.map(([k,l])=>`<option value="${k}" ${g.kind===k?'selected':''}>${l}</option>`).join('')}</select></label>
       <label class="f">문서번호<input data-cp="${cp}.no" data-cat="${cp}" value="${esc(g.no||'')}" placeholder="그룹웨어에서 부여된 번호" style="width:170px"></label><label class="f">발송일<input type="date" data-cp="${cp}.sent" data-cat="${cp}" value="${esc(g.sent||'')}"></label></div>
      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="row small" style="gap:4px"><input type="checkbox" data-cp="${cp}.reply" data-cat="${cp}" ${g.reply?'checked':''}> 회신(제출) 받음</label>${g.reply?`<label class="f">회신 기한<input type="date" data-cp="${cp}.due" data-cat="${cp}" value="${esc(g.due||'')}"></label><label class="f">시각<input data-cp="${cp}.dueT" data-cat="${cp}" value="${esc(g.dueT||'')}" placeholder="15:00" style="width:70px"></label>`:''}${g.kind==='meet'?`<label class="f">협의회 날짜<input type="date" data-cp="${cp}.meetDate" data-cat="${cp}" value="${esc(g.meetDate||'')}"></label>`:''}</div>
+     <div class="row" style="gap:8px;flex-wrap:wrap"><label class="f">문의 전화<input data-cp="${cp}.tel" data-cat="${cp}" value="${esc(g.tel||'')}" placeholder="041-423-2420" style="width:150px"></label><label class="f">제출 · 문의 메일<input data-cp="${cp}.mail" data-cat="${cp}" value="${esc(g.mail||'')}" placeholder="담당자 메일" style="width:210px"></label></div>
      <label class="f">제목<input data-cp="${cp}.title" data-cat="${cp}" value="${esc(g.title||'')}"></label>
      <label class="f">본문<textarea data-cp="${cp}.body" data-cat="${cp}" rows="14" style="font-family:inherit;line-height:1.6">${esc(g.body||'')}</textarea></label>
-     <div class="small muted">자리표시(「양식대로 다시 채우기」 때 바뀜): {차수} {기한} {운영기간} {대상수} {보내는곳} {전화번호} {메일}</div></div>
+     <div class="small muted">본문의 {기한} {전화번호} {메일}은 「본문 복사」 때 위 칸(회신 기한 · 문의 전화 · 메일) 값으로 바뀝니다. 비어 있으면 (  )로 들어갑니다.</div></div>
     <div class="stack" style="gap:8px"><div class="row between"><b>수신처 ${(g.rc||[]).length}곳</b>${g.reply&&g.tgt==='univ'?`<span class="small muted">기한 지난 미회신은 성실도 -${c.pen.gong}점</span>`:''}</div>
      <div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>수신처</th><th>회신일</th><th>상태</th><th></th><th>메모</th><th></th></tr></thead><tbody>${rcs||'<tr><td colspan="6" class="small muted">수신처 없음</td></tr>'}</tbody></table></div>
      <div class="row" style="gap:6px"><input id="cs-grc" placeholder="수신처 추가 (학교·기관·대학 이름)" style="flex:1"><button class="btn sm" data-act="csgradd" data-id="${g.id}">추가</button></div></div></div>
@@ -6124,8 +6125,8 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'csgdel': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g||!confirm(`「${g.title||'제목 없음'}」 공문 기록을 지울까요?`)) return false; S.gongmun.items=csGong().filter(x=>x!==g); U.csGopen=''; return true; }
     case 'csgrdel': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; g.rc=(g.rc||[]).filter((_,j)=>j!==+el.dataset.i); g.at=Date.now(); return true; }
     case 'csgradd': { const g=csGong().find(x=>x.id===el.dataset.id), v=((document.getElementById('cs-grc')||{}).value||'').trim(); if(!g||!v) return false; if((g.rc||[]).some(r=>r.name===v)){ toast('이미 있는 수신처입니다'); return false; } g.rc=[...(g.rc||[]),{name:v}]; g.at=Date.now(); return true; }
-    case 'csgretpl': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; if(!confirm('제목과 본문을 이 종류의 기본 양식으로 다시 채울까요? 고친 내용은 사라집니다.')) return false; const [t,b]=csGTpl(g.kind,g.tgt); if(t) g.title=csGFill(g,t); g.body=csGFill(g,b); g.at=Date.now(); return true; }
-    case 'csgcopy': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; const v=el.dataset.v; copyStr(v==='title'?g.title:v==='body'?csGFill(g,g.body):(g.rc||[]).map(r=>csRcName(g,r)).join(', ')); toast(v==='rc'?`수신자 ${(g.rc||[]).length}곳을 복사했습니다`:'복사했습니다'); return false; }
+    case 'csgretpl': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; if(!confirm('제목과 본문을 이 종류의 기본 양식으로 다시 채울까요? 고친 내용은 사라집니다.')) return false; const [t,b]=csGTpl(g.kind,g.tgt); if(t) g.title=csGFill(g,t,true); g.body=csGFill(g,b,true); g.at=Date.now(); return true; }
+    case 'csgcopy': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; const v=el.dataset.v; copyStr(v==='title'?csGFill(g,g.title):v==='body'?csGFill(g,g.body):(g.rc||[]).map(r=>csRcName(g,r)).join(', ')); toast(v==='rc'?`수신자 ${(g.rc||[]).length}곳을 복사했습니다`:'복사했습니다'); return false; }
     case 'csgxlsx': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; csGXlsx(g); return false; }
   } return null; }
 function csGXlsx(g){ const names=new Set((g.rc||[]).map(r=>r.name)), F=matchRows().filter(r=>r.status==='final'&&names.has(r.school)).sort((a,b)=>a.school.localeCompare(b.school,'ko')||String(a.start).localeCompare(String(b.start)));
@@ -7499,7 +7500,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.63';
+const APP_VER = '11.64';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
