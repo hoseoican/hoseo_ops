@@ -552,6 +552,20 @@ table.mtt td{vertical-align:top}
 .dinfo .di-none{grid-column:2 / -1}
 .dinfo a{color:inherit;text-decoration:none}.dinfo a:hover{text-decoration:underline}
 @media (max-width:560px){.dinfo{grid-template-columns:auto minmax(0,1fr)}.dinfo>div:nth-child(-n+4){border-top:1px solid var(--line)}.dinfo>div:first-child,.dinfo>div:nth-child(2){border-top:0}.dinfo .di-p,.dinfo .di-e{grid-column:2;border-top:0;padding-top:0}.dinfo .di-k{grid-row:span 3}.dinfo .di-none{grid-column:2}}
+.cs-kps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.cs-kp{display:flex;flex-direction:column;gap:2px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}.cs-kp b{font-size:20px;line-height:1.2}.cs-kp span{font-size:12px;color:var(--muted)}
+.cs-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.cs-card{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer}.cs-card:hover{border-color:var(--accent)}
+.cs-rates{display:grid;grid-template-columns:auto 1fr auto;gap:5px 8px;align-items:center;font-size:12.5px}
+.cs-bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden}.cs-bar>div{height:6px;border-radius:3px;background:var(--muted)}.cs-bar .b-g{background:#2f8a5b}.cs-bar .b-y{background:#c98a12}.cs-bar .b-r{background:#b42318}
+.cs-sig{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;white-space:nowrap}.cs-sig i{width:7px;height:7px;border-radius:4px;background:currentColor}
+.cs-g{background:#e7f3ec;color:#2f6b4f}.cs-y{background:#fff4de;color:#8a5a00}.cs-r{background:#fde4e1;color:#b42318}.cs-n{background:var(--sunk);color:var(--muted)}
+.cs-ox{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.cs-ox button{border:0;background:var(--surface);padding:3px 12px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer}.cs-ox button.on{background:var(--accent);color:var(--on-accent)}
+.cs-qh td{background:var(--sunk);font-weight:700;font-size:13px;cursor:pointer}
+.cs-mt td{vertical-align:middle}
+.cs-g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;align-items:start}
+.cs-rule{display:grid;grid-template-columns:auto auto auto;gap:6px 10px;align-items:center;justify-content:start;font-size:13.5px}
+.cs-gd{border-color:var(--accent)}
 .aw-form{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
 .awtab{display:grid;grid-template-columns:auto auto auto auto minmax(0,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
 .awtab>div{padding:7px 12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:4px;white-space:nowrap;min-width:0}
@@ -2124,10 +2138,10 @@ function autoAssign(silent){
 const stPill = s => { const [t,c]=ST[s]; return `<span class="pill st-${c}">${t}</span>`; };
 const issList = (list,max=9) => list.slice(0,max).map(i=>`<span class="iss lv-${i.lv}"><i>${i.lv==='crit'?'!':i.lv==='warn'?'△':'i'}</i>${esc(i.t)}</span>`).join('<br>');
 const thread = r => r.thread.length?`<div class="thread">${r.thread.map(m=>`<div class="msg"><b>${esc(m.who)}</b>${esc(m.text)} <span class="muted small">${esc(m.at)}</span></div>`).join('')}</div>`:'';
-const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>목록 업로드'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영현황 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
+const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>목록 업로드'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영현황 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류'],['cons','<span class="tno">10</span>컨소시엄 관리']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
 /* 보조강사 신청 페이지(?r=asst): 주강사 신청 페이지와 완전히 분리. 강사 DB에 없는 사람도 가입해 보조강사 신청 */
 const tRoleA = () => ((document.body&&document.body.dataset.trole)||new URLSearchParams(location.search).get('r')||'')==='asst';
-const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&x[0]==='stats'&&curBiz()!=='anchor')&&!(role==='admin'&&x[0]==='docs'&&(!window.ON_PAGES||S.adminOrg))).map(x=>role==='teacher'&&tRoleA()&&x[0]==='teacher'?['teacher','보조강사 모집']:x);
+const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&x[0]==='stats'&&curBiz()!=='anchor')&&!(role==='admin'&&x[0]==='docs'&&(!window.ON_PAGES||S.adminOrg))).map(x=>role==='teacher'&&tRoleA()&&x[0]==='teacher'?['teacher','보조강사 모집']:role==='admin'&&x[0]==='cons'&&S.adminOrg?['cons','<span class="tno">10</span>점검 · 보고']:x);
 function route(){ const h=location.hash.slice(1), ok=routesOf(S.ui.role).map(x=>x[0]); return ok.includes(h)?h:homeView(S.ui.role); }
 function homeView(role){ const ok=ROUTES[role].map(x=>x[0]); return ok.includes('board')?'board':ok[0]; }
 function render(){
@@ -2138,7 +2152,7 @@ function render(){
   ['admin','school','teacher'].forEach(k=>document.getElementById('role-'+k).classList.toggle('on',S.ui.role===k));
   { const rj=document.getElementById('role-join'); if(rj) rj.classList.toggle('on',S.ui.role==='join'); }
   { const ru=document.getElementById('role-univ'); if(ru) ru.classList.toggle('on',S.ui.role==='univ'); }
-  const V={univ:viewUniv,join:viewJoin,joinadm:viewJoinAdmin,board:viewBoard,match:viewMatch,setup:viewSetup,export:viewExport,stats:viewStats,dev:viewDev,kit:viewKit,docs:()=>'',school:viewSchool,teacher:viewTeacher,tmine:viewTeacherMine};
+  const V={univ:viewUniv,join:viewJoin,joinadm:viewJoinAdmin,board:viewBoard,match:viewMatch,setup:viewSetup,export:viewExport,stats:viewStats,dev:viewDev,kit:viewKit,cons:viewCons,docs:()=>'',school:viewSchool,teacher:viewTeacher,tmine:viewTeacherMine};
   if(S.ui.role==='teacher') tBizApply();
   document.getElementById('seasonLbl').textContent=S.ui.role==='teacher'&&(S.bizInfo||[]).length>1?'호서대학교 · 초등방과후 프로그램':`${season().name} · ${bizTitle()}`;
   migratePrograms();
@@ -2218,7 +2232,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.60';
+const LIB_VER='11.61';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5844,6 +5858,280 @@ function devApplyPend(){ const P=S.ui.devPend, D=kitDB(), b=curBiz(), M=devKeyMa
 /* 이미 올린 품목 중 도서로 보이는 것을 도서로 (관리자가 품목을 직접 바꾼 것은 그대로) */
 function kitAutoFix(){ const b=curBiz(), F=S.ui.kitFixed||(S.ui.kitFixed={}); if(F[b]) return; F[b]=1;
   kitItems().forEach(x=>{ if(x.catEdit||x.cat==='도서'||x.cat==='활동지') return; if(kitIsBook(x.name,[x.spec,x.note,x.comp].join(' '),x.link,x.unit)){ x.cat='도서'; if(!x.unit||x.unit==='개') x.unit='권'; kitTouch('kit',x.pk); } }); }
+/* ===================== 10 컨소시엄 관리: 참여대학 마일스톤 · 운영 보고 · 공문 · 성실도 · 분기 판정 =====================
+   설정(서버 settings): consCfg(평가 기준) · consOrg[대학](대학 제출 자료, 대학 관리자는 자기 대학만 저장) · gongmun(공문) · consJudge[분기][대학](위원회 판정 · 수기 조정)
+   사업 연도: 3월 ~ 다음 해 2월. 1분기 3~5월, 2분기 6~8월, 3분기 9~11월, 4분기 12~2월 */
+const CS_UNIVS = () => ORGS.filter(o=>o!=='미지정');
+const CS_MILES = [
+ [1,1,'1학기 학교 수요조사·매칭 완료','매칭 결과 늘봄ON 등록','ox'],[2,1,'1학기 늘봄교실 운영 개시','학급 개설·첫 출결 등록','ox','1학기'],[3,1,'강사 연수 1차 실시(프로그램)','이수자 명단 등록','ox'],[4,1,'현장 모니터링 1회 이상','모니터링 보고서','n'],[5,1,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
+ [6,2,'신규 프로그램 지도안·교구 확정','지도안 파일 등록','ox'],[7,2,'1학기 만족도 조사 실시(집합)','조사 결과 보고','ox'],[8,2,'여름방학 프로그램 운영','학급 개설·출결 등록','ox','여름방학'],[9,2,'현장 모니터링 1회 이상','모니터링 보고서','n'],[10,2,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[11,2,'집합 프로그램 운영','운영 결과보고·출결 등록','n'],
+ [12,3,'2학기 매칭 및 운영 개시','학급 개설·첫 출결 등록','ox','2학기'],[13,3,'강사 연수 2차 실시(프로그램)','이수자 명단 등록','ox'],[14,3,'대학별 협의체 협회의 운영','결과보고서','ox'],[15,3,'외부기관 컨설팅 운영','결과보고서','n'],[16,3,'현장 모니터링 1회 이상','모니터링 보고서','n'],[17,3,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[18,3,'집합 프로그램 운영','운영 결과보고·출결 등록','n'],[19,3,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],
+ [20,4,'2학기 만족도 조사 실시(집합)','조사 결과 보고','ox'],[21,4,'겨울방학 프로그램 운영','학급 개설·출결 등록','ox','겨울방학'],[22,4,'프로그램 고도화 최종본 제출','최종 지도안·개선이력','ox'],[23,4,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],[24,4,'집합 프로그램 운영','운영 결과보고·출결 등록','n'],[25,4,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[26,4,'결과보고 및 정산 완료','결과보고서·정산서','ox']];
+const CS_QN = ['','1분기 (3~5월)','2분기 (6~8월)','3분기 (9~11월)','4분기 (12~2월)'];
+const CS_BUD = ['인건비','장학금','교육·연구 프로그램 개발·운영비','교육·연구 환경개선비','실험·실습 장비 및 기자재 구입·운영비','성과 활용·확산 지원비','그 밖의 사업운영 경비','간접비'];
+const CS_PER = ['1학기','여름방학','2학기','겨울방학','학교밖','한마당','집합형(외부)','집합형(캠퍼스)'];
+const CS_SIG = {g:['Green 정상','cs-g'],y:['Yellow 주의','cs-y'],r:['Red 지원','cs-r'],n:['판정 전','cs-n']};
+const CS_GKINDS = {univ:[['meet','협의회 참석 요청'],['work','업무 진행 협조'],['sub','제출 협조 요청'],['etc','기타']],school:[['op','운영 협조 요청'],['sat','만족도 조사 협조'],['att','출석부 제출 협조'],['etc','기타']]};
+const CS_DEF = () => ({pen:{gong:2,mile:2,meet:1},base:100,cut:85,mileDay:25,mileDue:{},mileFrom:csYm(),sender:'앵커늘봄총괄센터장',docPre:'앵커늘봄총괄센터',tel:'041-423-2420',mail:'',fiscal:''});
+const csToday = () => kstNow().slice(0,10);
+const csYm = () => kstNow().slice(0,7);
+const csCfg = () => { const d=CS_DEF(), c=S.consCfg||{}; return {...d,...c,pen:{...d.pen,...(c.pen||{})},mileDue:{...(c.mileDue||{})}}; };
+const csYear = () => { const c=S.consCfg||{}; if(c.fiscal) return +c.fiscal; const [y,m]=csToday().split('-').map(Number); return m>=3?y:y-1; };
+const csQMonths = q => { const Y=csYear(), ms={1:[3,4,5],2:[6,7,8],3:[9,10,11],4:[12,13,14]}[q]; return ms.map(m=>m>12?`${Y+1}-${String(m-12).padStart(2,'0')}`:`${Y}-${String(m).padStart(2,'0')}`); };
+const csQOf = d => { if(!d) return 0; const ym=String(d).slice(0,7); for(let q=1;q<=4;q++) if(csQMonths(q).includes(ym)) return q; return 0; };
+const csQNow = () => csQOf(csToday())||(csToday()<`${csYear()}-03`?1:4);
+const csOrgD = o => { S.consOrg=S.consOrg||{}; return S.consOrg[o]=S.consOrg[o]||{}; };
+const csOrgR = o => (S.consOrg||{})[o]||{};
+const csMine = () => S.adminOrg||'';
+const csUnivList = () => csMine()?[csMine()]:CS_UNIVS();
+const csSig = k => `<span class="cs-sig ${CS_SIG[k][1]}"><i></i>${CS_SIG[k][0]}</span>`;
+const csRateC = p => p==null?'':p>=90?'lv-ok':p>=70?'lv-warn':'lv-crit';
+const csPct = (a,b) => b>0?Math.round(a/b*1000)/10:null;
+const csFmtD = d => { if(!d) return ''; const [y,m,dd]=d.split('-'); return `${+m}.${+dd}(${DOWS[dowOf(d)]})`; };
+const csGong = () => (S.gongmun&&S.gongmun.items)||[];
+/* 마일스톤 완료 판단: O, 또는 횟수 · 건수 입력(민원은 0건도 완료) */
+function csMileDone(it,def){ if(!it) return false; const v=it.v; if(def[4]==='ox') return v==='O'; if(def[4]==='c') return v!==''&&v!=null&&!isNaN(+v); return +v>=1; }
+function csAutoCls(o,per){ if(!S.stats||!S.stats.ds) return null; try{ return stAllRaw().filter(r=>r.year===csYear()&&r.org===o&&(!per||r.period===per)); }catch(e){ return null; } }
+function csProg(o,q){ const M=csOrgR(o).mile||{}, need=CS_MILES.filter(d=>d[1]<=q), done=need.filter(d=>csMileDone(M[d[0]],d)).length; return {done,need:need.length,p:csPct(done,need.length)}; }
+function csGoal(o,q){ const J=((S.consJudge||{})[q]||{})[o]||{}, R=((csOrgR(o).rep||{})[q])||{};
+  const t=+(stTarget1(csYear(),o).cls)||0, L=csAutoCls(o), auto=L&&t?csPct(L.length,t):null;
+  const v=J.goal!=null&&J.goal!==''?+J.goal:R.goal!=null&&R.goal!==''?+R.goal:auto; return {p:v,auto,kpi:t,n:L?L.length:null,src:J.goal!=null&&J.goal!==''?'위원회 수정':R.goal!=null&&R.goal!==''?'대학 입력':auto!=null?'자동':'' }; }
+function csBud(o,q){ const B=(((csOrgR(o).rep||{})[q])||{}).bud||{}; let b=0,s=0; CS_BUD.forEach(k=>{ b+=+((B[k]||{}).b)||0; s+=+((B[k]||{}).s)||0; }); return {b,s,p:b?csPct(s,b):null}; }
+/* 성실도: 100점에서 감점(공문 회신 기한 지남 · 점검표 마감 지남 · 협의회 불참) + 수기 조정 */
+function csMileDueOf(m){ const c=csCfg(); return c.mileDue[m]||`${m}-${String(c.mileDay||25).padStart(2,'0')}`; }
+function csPen(o,q){ const c=csCfg(), t=csToday(), out=[];
+  csGong().forEach(g=>{ if(g.tgt!=='univ') return; (g.rc||[]).forEach(r=>{ if(r.name!==o||r.ex) return;
+      if(g.reply&&g.due&&csQOf(g.due)===q){ const late=r.rep?r.rep>g.due:t>g.due; if(late) out.push({k:'gong',pts:c.pen.gong,t:`공문 회신 기한 지남 · ${g.title}`}); }
+      if(g.kind==='meet'&&r.absent&&csQOf(g.meetDate||g.due||g.sent)===q) out.push({k:'meet',pts:c.pen.meet,t:`협의회 불참 · ${g.title}`}); }); });
+  const sub=csOrgR(o).sub||{}; csQMonths(q).forEach(m=>{ if(m<(c.mileFrom||'0000')||m>csYm()) return; const due=csMileDueOf(m), s=sub[m]; if(s?String(s).slice(0,10)>due:t>due) out.push({k:'mile',pts:c.pen.mile,t:`${+m.slice(5)}월 마일스톤 점검표 마감(${csFmtD(due)}) 지남`}); });
+  const J=((S.consJudge||{})[q]||{})[o]||{}, adj=+J.adj||0, score=Math.round((c.base-out.reduce((a,x)=>a+x.pts,0)+adj)*10)/10;
+  return {list:out,adj,adjWhy:J.adjWhy||'',score}; }
+function csAuto(o,q){ const g=csGoal(o,q).p, p=csProg(o,q).p, b=csBud(o,q).p, P=csPen(o,q), c=csCfg(), why=[];
+  const rs=[g,p,b]; if(rs.some(x=>x==null)) return {k:'n',why:['3률 중 입력되지 않은 값이 있음'],P};
+  const mn=Math.min(...rs); let k=mn>=90?'g':mn>=70?'y':'r'; if(k!=='g') why.push(`최저 ${mn}%`);
+  const prev=q>1?csFinal(o,q-1):''; if(k==='y'&&prev==='y'){ k='r'; why.push('2분기 연속 Yellow'); }
+  if(P.score<c.cut&&k!=='r'){ k=k==='g'?'y':'r'; why.push(`성실도 ${P.score}점 (${c.cut}점 미만)`); }
+  return {k,why,P}; }
+function csFinal(o,q){ const J=((S.consJudge||{})[q]||{})[o]||{}; return J.fin||(q>=1?csAuto(o,q).k:'n'); }
+/* ---------- 화면 ---------- */
+const CS_MENU = [['현황',[['dash','대학별 현황'],['judge','분기 점검 · 판정']]],['대학 제출 자료',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['공문',[['gong','공문 발송 · 회신']]],['기준',[['rule','평가 기준']]]];
+const CS_MENU_ORG = [['우리 대학',[['mile','마일스톤 점검표'],['rep','운영 보고'],['mygong','받은 공문 · 성실도']]]];
+const CS_IC = {dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',judge:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',mile:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',rep:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',gong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',mygong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',rule:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
+function viewCons(){
+  if(!S.consCfg&&!csMine()){ S.consCfg=CS_DEF(); }
+  if(!csMine()&&!S.ui.stLoaded&&!S.ui.stLoading&&typeof statsLoad==='function') setTimeout(statsLoad,0);
+  const M=csMine()?CS_MENU_ORG:CS_MENU, all=M.flatMap(g=>g[1]); let cur=S.ui.csTab; if(!all.some(x=>x[0]===cur)) cur=all[0][0];
+  const btn=([k,l])=>`<button type="button" role="tab" aria-selected="${cur===k}" class="${cur===k?'on':''}" data-act="cstab" data-v="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CS_IC[k]||''}</svg>${esc(l)}</button>`;
+  const menu=`<nav class="lmenu" aria-label="컨소시엄 관리 메뉴">${M.map(([g,L])=>`<div class="lg">${esc(g)}</div>${L.map(btn).join('')}`).join('')}</nav>`;
+  const grp=M.find(g=>g[1].some(x=>x[0]===cur)), lab=all.find(x=>x[0]===cur)[1];
+  const body={dash:csDash,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,mygong:csMyGong,rule:csRule}[cur]();
+  return `<div class="stack noenh"><div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">${csMine()?esc(orgShort(csMine())):'컨소시엄 관리'} › ${esc(grp[0])}</div><h2 style="margin:0">${esc(lab)}</h2>${body}</div></div></div>`; }
+const csQSeg = (k,q) => `<div class="seg2" role="tablist">${[1,2,3,4].map(i=>`<button class="${q===i?'on':''}" data-act="csq" data-k="${k}" data-v="${i}">${CS_QN[i]}</button>`).join('')}</div>`;
+const csKp = (v,t,c) => `<div class="cs-kp"><b class="${c||''}">${v}</b><span>${t}</span></div>`;
+const csBar = p => `<div class="cs-bar"><div style="width:${Math.max(0,Math.min(100,p||0))}%" class="${p==null?'':p>=90?'b-g':p>=70?'b-y':'b-r'}"></div></div>`;
+function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csYm();
+  const st=U.map(o=>({o,a:csAuto(o,q),g:csGoal(o,q),p:csProg(o,q),b:csBud(o,q),fin:csFinal(o,q),sub:(csOrgR(o).sub||{})[ym]}));
+  const lateG=csGong().filter(g=>g.reply&&g.due&&g.due<t).reduce((a,g)=>a+(g.rc||[]).filter(r=>!r.rep&&!r.ex).length,0);
+  const cnt=k=>st.filter(x=>x.fin===k).length;
+  const todo=[]; csGong().forEach(g=>{ if(!g.reply||!g.due) return; const left=(g.rc||[]).filter(r=>!r.rep&&!r.ex); if(left.length) todo.push({d:g.due,who:left.map(r=>shortSch(r.name).replace('대학교','대')).join(' · '),t:g.title,late:g.due<t,id:g.id,n:`회신 ${(g.rc||[]).length-left.length}/${(g.rc||[]).length}`}); });
+  const nos=U.filter(o=>!(csOrgR(o).sub||{})[ym]); if(nos.length) todo.push({d:csMileDueOf(ym),who:nos.map(o=>o.replace('대학교','대')).join(' · '),t:`${+ym.slice(5)}월 마일스톤 점검표 제출`,late:csMileDueOf(ym)<t,n:`제출 ${U.length-nos.length}/${U.length}`});
+  todo.sort((a,b)=>a.d.localeCompare(b.d));
+  return `<div class="row" style="gap:8px;flex-wrap:wrap">${csQSeg('dash',q)}<span class="small muted">사업 연도 ${csYear()}</span></div>
+   <div class="cs-kps">${csKp(U.length+'개교','참여대학')}${csKp(`${cnt('g')} · ${cnt('y')} · ${cnt('r')}`,'Green · Yellow · Red')}${csKp(CS_MILES.filter(d=>d[1]<=q).length+'개','누적 예정 마일스톤')}${csKp(nos.length+'개교',`${+ym.slice(5)}월 점검표 미제출`,nos.length?'lv-warn':'')}${csKp(lateG+'건','기한 지난 미회신 공문',lateG?'lv-crit':'')}</div>
+   ${S.ui.stLoaded?'':'<div class="small muted">운영 통계 자료를 불러오는 중이라 목표 달성률이 잠시 비어 있을 수 있습니다.</div>'}
+   <div class="cs-cards">${st.map(x=>`<section class="cs-card" data-act="csgo" data-v="${esc(x.o)}"><div class="row" style="gap:6px"><b style="flex:1">${esc(x.o)}${x.o==='호서대학교'?' <span class="chip">주관</span>':''}</b>${csSig(x.fin)}</div>
+     <div class="cs-rates">${[['목표 달성률',x.g.p],['사업 진행률',x.p.p],['예산 집행률',x.b.p]].map(([l,p])=>`<span class="small muted">${l}</span>${csBar(p)}<b class="${csRateC(p)}">${p==null?'-':p+'%'}</b>`).join('')}</div>
+     <div class="row" style="gap:4px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px"><span class="chip ${x.a.P.score<csCfg().cut?'x':''}">성실도 ${x.a.P.score}점</span><span class="chip ${x.sub?'ok':'warn'}">${+ym.slice(5)}월 점검표 ${x.sub?'제출':'미제출'}</span></div></section>`).join('')}</div>
+   <div class="panel stack" style="gap:6px"><div class="row between"><b>할 일</b><span class="small muted">기한 순</span></div>
+    ${todo.length?`<div class="tw"><table><thead><tr><th>기한</th><th>대상</th><th>내용</th><th>상태</th></tr></thead><tbody>${todo.map(x=>`<tr><td class="nowrap">${csFmtD(x.d)}${x.late?' <span class="lv-crit small">지남</span>':''}</td><td class="small">${esc(x.who)}</td><td>${x.id?`<button class="lnk" data-act="csgopen" data-id="${x.id}">${esc(x.t)}</button>`:esc(x.t)}</td><td><span class="chip ${x.late?'x':''}">${esc(x.n)}</span></td></tr>`).join('')}</tbody></table></div>`:'<div class="small muted">기한이 남은 일이 없습니다.</div>'}</div>`; }
+/* ---------- 마일스톤 점검표 ---------- */
+function csPickOrg(k){ if(csMine()) return csMine(); const U=CS_UNIVS(); let o=S.ui.csOrg; if(!U.includes(o)) o=U[1]||U[0]; return o; }
+const csOrgSel = o => csMine()?`<b>${esc(o)}</b>`:`<select id="cs-org" aria-label="대학">${CS_UNIVS().map(x=>`<option ${x===o?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
+function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), ym=S.ui.csYm||csYm(), sub=(D.sub||{})[ym], due=csMileDueOf(ym), adm=!csMine();
+  const pr=csProg(o,q), todoN=CS_MILES.filter(d=>d[1]===q&&!csMileDone(M[d[0]],d)).length, fixN=CS_MILES.filter(d=>(M[d[0]]||{}).st==='fix').length;
+  const months=[]; for(let i=0;i<12;i++){ const d=new Date(csYear(),2+i,1); months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
+  const open=S.ui.csMq||{[q]:true};
+  const row=d=>{ const it=M[d[0]]||{}, cp=`consOrg.${o}.mile.${d[0]}`, done=csMileDone(it,d), auto=d[5]?csAutoCls(o,d[5]):null;
+    const inp=d[4]==='ox'?`<span class="cs-ox">${['O','X'].map(v=>`<button type="button" class="${it.v===v?'on':''}" data-act="csox" data-o="${esc(o)}" data-n="${d[0]}" data-v="${v}">${v}</button>`).join('')}</span>`
+      :`<input type="number" min="0" style="width:64px" data-cp="${cp}.v" data-cat="${cp}" value="${esc(it.v??'')}" aria-label="${d[4]==='c'?'건수':'횟수'}"> <span class="small muted">${d[4]==='c'?'건':'회'}</span>`;
+    const stc=it.st==='ok'?'<span class="chip ok">확인 완료</span>':it.st==='fix'?`<span class="chip warn" title="${esc(it.fixWhy||'')}">보완 요청</span>`:done?'<span class="chip">확인 전</span>':'<span class="chip">입력 전</span>';
+    return `<tr><td class="mono muted">${d[0]}</td><td>${esc(d[2])}${auto&&auto.length?`<div class="small lv-ok">운영 목록: ${esc(d[5])} ${auto.length}학급</div>`:''}</td><td class="small muted">${esc(d[3])}</td><td class="nowrap">${inp}</td>
+     <td><input data-cp="${cp}.proof" data-cat="${cp}" value="${esc(it.proof||'')}" placeholder="${d[4]==='c'?'0건이면 해당 없음':'증빙 문서명 · 늘봄ON 등록'}" style="width:100%"></td>
+     <td class="nowrap">${stc}${adm?`<div class="row" style="gap:2px;margin-top:3px;flex-wrap:nowrap"><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="ok">확인</button><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="fix">보완</button></div>`:''}${it.st==='fix'&&it.fixWhy?`<div class="small lv-warn">${esc(it.fixWhy)}</div>`:''}</td>
+     <td><input data-cp="${cp}.note" data-cat="${cp}" value="${esc(it.note||'')}" placeholder="비고" style="width:100%"></td></tr>`; };
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}<span class="small muted">점검 기준월</span><select id="cs-ym">${months.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${m.slice(0,4)}년 ${+m.slice(5)}월</option>`).join('')}</select>
+    ${sub?`<span class="chip ok">${+ym.slice(5)}월 제출 ${esc(String(sub).slice(5,16).replace('-','.'))}</span>`:`<span class="chip ${csToday()>due?'x':'warn'}">${+ym.slice(5)}월 제출 전 · 마감 ${csFmtD(due)}</span>`}
+    <span style="flex:1"></span>${sub?`<button class="btn sm" data-act="csmfin" data-o="${esc(o)}" data-v="">제출 취소</button>`:`<button class="btn sm pri" data-act="csmfin" data-o="${esc(o)}" data-v="1">${+ym.slice(5)}월 점검표 제출</button>`}</div>
+   <div class="cs-kps">${csKp(`${pr.done} / ${pr.need}`,'누적 완료 / 누적 예정')}${csKp(pr.p==null?'-':pr.p+'%','사업 진행률',csRateC(pr.p))}${csKp(todoN+'개','이번 분기 미완료')}${csKp(fixN+'개','보완 요청',fixN?'lv-warn':'')}</div>
+   <div class="tw"><table class="cs-mt"><thead><tr><th style="width:36px">연번</th><th>마일스톤</th><th>완료 기준(증빙)</th><th style="width:130px">실적</th><th style="width:22%">증빙</th><th style="width:150px">확인</th><th style="width:16%">비고</th></tr></thead><tbody>
+   ${[1,2,3,4].map(qq=>`<tr class="cs-qh" data-act="csmq" data-v="${qq}"><td colspan="7">${open[qq]?'▾':'▸'} ${CS_QN[qq]}${qq===q?' · 이번 분기':''} <span class="muted" style="font-weight:400">· 완료 ${CS_MILES.filter(d=>d[1]===qq&&csMileDone(M[d[0]],d)).length}/${CS_MILES.filter(d=>d[1]===qq).length}</span></td></tr>${open[qq]?CS_MILES.filter(d=>d[1]===qq).map(row).join(''):''}`).join('')}
+   </tbody></table></div>
+   <div class="small muted">완료 기준: O 표시, 또는 횟수 1회 이상. 민원은 0건(해당 없음)도 완료. 해당하지 않는 마일스톤은 사업관리위원회 승인 후 비고에 대체 과업을 적어 주세요. 매월 마감(기본 ${csCfg().mileDay}일)까지 「점검표 제출」을 눌러야 성실도 감점이 없습니다.</div>`; }
+/* ---------- 운영 보고 ---------- */
+function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep||{})[q])||{}, cp=`consOrg.${o}.rep.${q}`, sec=S.ui.csRs||'op';
+  const inp=(path,v,w,ph,num)=>`<input ${num===false?'':'type="number"'} data-cp="${cp}.${path}" data-cat="${cp}" value="${esc(v??'')}" style="width:${w||'80px'}" placeholder="${esc(ph||'')}">`;
+  const segs=[['op','1. 프로그램 운영'],['train','2. 강사연수'],['dev','3. 프로그램 개발'],['bud','4. 예산 집행'],['etc','5. 기타']];
+  let body='';
+  if(sec==='op'){ const g=csGoal(o,q), P=R.per||{};
+    body=`<div class="tw"><table><thead><tr><th>운영 시기</th><th>학급수</th><th>차시</th><th>인원</th><th>출처</th></tr></thead><tbody>${CS_PER.map(per=>{ const L=ST_PER.includes(per)?csAutoCls(o,per):null, a=L?stSum(L):null, x=P[per]||{};
+        return `<tr><td>${esc(per)}</td>${['cls','ses','stu'].map(k=>`<td>${inp(`per.${per}.${k}`,x[k],'90px',a?String(a[k]):'')}</td>`).join('')}<td class="small muted">${['cls','ses','stu'].some(k=>x[k]!=null&&x[k]!=='')?'대학 입력':a?'운영 목록 자동':'-'}</td></tr>`; }).join('')}
+      ${(()=>{ const tot={cls:0,ses:0,stu:0}; CS_PER.forEach(per=>{ const L=ST_PER.includes(per)?csAutoCls(o,per):null, a=L?stSum(L):{cls:0,ses:0,stu:0}, x=P[per]||{}; ['cls','ses','stu'].forEach(k=>{ tot[k]+=x[k]!=null&&x[k]!==''?+x[k]:a[k]; }); });
+        return `<tr class="cs-qh"><td>합계</td><td>${tot.cls}</td><td>${tot.ses.toLocaleString()}</td><td>${tot.stu.toLocaleString()}</td><td></td></tr>`; })()}</tbody></table></div>
+     <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center"><b>목표 달성률 (학급수)</b><span>연간 KPI <b>${g.kpi||'-'}</b>학급 · 운영 ${g.n??'-'}학급 → 자동 <b class="${csRateC(g.auto)}">${g.auto==null?'-':g.auto+'%'}</b></span><label class="row small" style="gap:4px">직접 입력 ${inp('goal',R.goal,'80px','%')} %</label>${qt(['자동: 운영 통계의 연간 학급수 KPI 대비 운영 학급 수','칸을 비우면 자동 값을 씀','연간 KPI는 6 운영 통계 「KPI 목표」에서 정함'])}</div>
+     <div class="small muted">운영 시기 칸을 비우면 운영 목록(운영 통계) 값을 씁니다. 숫자를 넣으면 그 값으로 바뀝니다.</div>`; }
+  if(sec==='train'){ const T=R.train||{};
+    body=`<b>가. 연수 일정</b><div class="tw"><table><thead><tr><th>구분</th><th>총 횟수</th><th>총 시수</th><th>인원</th><th>내부</th><th>외부</th><th>비고</th></tr></thead><tbody>${['공통과정','프로그램'].map((k,i)=>`<tr><td>${k}</td>${['n','h','p','pin','pout'].map(f=>`<td>${inp(`train.r${i}.${f}`,(T['r'+i]||{})[f],'70px')}</td>`).join('')}<td>${inp(`train.r${i}.note`,(T['r'+i]||{}).note,'160px','',false)}</td></tr>`).join('')}</tbody></table></div>
+     <b>나. 참여자 수 (성과지표)</b><div class="tw"><table><thead><tr><th>구분</th><th>목표 인원</th><th>수강 인원</th><th>비율</th></tr></thead><tbody>${[['in','내부'],['out','외부']].map(([k,l])=>{ const x=T[k]||{}; const p=csPct(+x.got||0,+x.goal||0); return `<tr><td>${l}</td><td>${inp(`train.${k}.goal`,x.goal)}</td><td>${inp(`train.${k}.got`,x.got)}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td></tr>`; }).join('')}</tbody></table></div>`; }
+  if(sec==='dev'){ const L=R.dev&&R.dev.length?R.dev:(S.programs||[]).filter(p=>p.org===o).map(p=>({name:p.name,kind:'',run:'',st:'',pay:'',note:''}));
+    body=`<div class="tw"><table><thead><tr><th>프로그램</th><th>신규/고도화</th><th>운영 여부</th><th>진행 여부</th><th>지출</th><th>비고</th><th></th></tr></thead><tbody>${L.map((x,i)=>`<tr>${['name','kind','run','st','pay','note'].map(f=>`<td>${inp(`dev.${i}.${f}`,x[f],f==='name'?'180px':f==='note'?'160px':'100px','',false)}</td>`).join('')}<td><button class="btn sm" data-act="csdevdel" data-o="${esc(o)}" data-q="${q}" data-i="${i}">삭제</button></td></tr>`).join('')}</tbody></table></div>
+     <div><button class="btn sm" data-act="csdevadd" data-o="${esc(o)}" data-q="${q}">줄 추가</button> <span class="small muted">처음에는 기준정보의 이 대학 프로그램 목록으로 채워 보여 줍니다.</span></div>`; }
+  if(sec==='bud'){ const B=R.bud||{}, b=csBud(o,q);
+    body=`<div class="tw"><table><thead><tr><th>사업비 항목</th><th>예산액(천원)</th><th>지출액</th><th>남은 금액</th><th>이월 예정</th><th>집행률</th><th>비고</th></tr></thead><tbody>${CS_BUD.map(k=>{ const x=B[k]||{}, p=csPct(+x.s||0,+x.b||0); return `<tr><td>${esc(k)}</td><td>${inp(`bud.${k}.b`,x.b,'100px')}</td><td>${inp(`bud.${k}.s`,x.s,'100px')}</td><td class="mono">${x.b?((+x.b||0)-(+x.s||0)).toLocaleString():'-'}</td><td>${inp(`bud.${k}.c`,x.c,'90px')}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td><td>${inp(`bud.${k}.note`,x.note,'140px','',false)}</td></tr>`; }).join('')}
+     <tr class="cs-qh"><td>합계</td><td>${b.b.toLocaleString()}</td><td>${b.s.toLocaleString()}</td><td>${(b.b-b.s).toLocaleString()}</td><td></td><td class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</td><td></td></tr></tbody></table></div>
+     <div class="row small" style="gap:6px">기준일 ${inp('budAt',R.budAt,'130px','예: 2026.11.24',false)}</div>`; }
+  if(sec==='etc'){ const E=R.press||[];
+    body=`<b>가. 보도자료</b><div class="tw"><table><thead><tr><th>일자</th><th>기사명</th><th>보도기관</th><th>비고</th><th></th></tr></thead><tbody>${E.map((x,i)=>`<tr>${['d','t','by','note'].map(f=>`<td>${inp(`press.${i}.${f}`,x[f],f==='t'?'260px':'110px','',false)}</td>`).join('')}<td><button class="btn sm" data-act="cspdel" data-o="${esc(o)}" data-q="${q}" data-i="${i}">삭제</button></td></tr>`).join('')||'<tr><td colspan="5" class="small muted">아직 없음</td></tr>'}</tbody></table></div>
+     <div><button class="btn sm" data-act="cspadd" data-o="${esc(o)}" data-q="${q}">보도자료 추가</button></div>
+     <label class="stack" style="gap:4px"><b>나. 우수사례</b><textarea data-cp="${cp}.best" data-cat="${cp}" rows="3">${esc(R.best||'')}</textarea></label>
+     <label class="stack" style="gap:4px"><b>다. 건의사항</b><textarea data-cp="${cp}.ask" data-cat="${cp}" rows="3">${esc(R.ask||'')}</textarea></label>`; }
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}${csQSeg('rep',q)}<span style="flex:1"></span>${R.subAt?`<span class="chip ok">제출 ${esc(R.subAt)}</span>`:''}<button class="btn sm ${R.subAt?'':'pri'}" data-act="csrsub" data-o="${esc(o)}" data-q="${q}">${R.subAt?'다시 제출':'분기 보고 제출'}</button></div>
+   <div class="seg2" role="tablist">${segs.map(([k,l])=>`<button class="${sec===k?'on':''}" data-act="csrs" data-v="${k}">${l}</button>`).join('')}</div>
+   <div class="panel stack" style="gap:10px">${body}</div>`; }
+/* ---------- 공문 ---------- */
+function csGTpl(kind,tgt){ const c=csCfg(), sn=season().name, A={
+  meet:['{차수} 실무협의회 참석 요청','1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화(1권역) 컨소시엄 실무협의회를 다음과 같이 개최하오니 사업 담당자가 참석할 수 있도록 협조하여 주시기 바랍니다.\n\n 가. 일    시: \n 나. 장    소: \n 다. 참석 대상: 대학별 사업 담당자\n 라. 회신 사항: 참석자 명단 ({기한}까지)\n 마. 문 의 처: {보내는곳} ({전화번호})\n\n붙임: 실무협의회 안건 1부. 끝.'],
+  work:['충남 앵커늘봄학교 고도화 사업 업무 협조 요청','1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화(1권역) 컨소시엄 사업과 관련하여 다음과 같이 협조를 요청드립니다.\n\n 가. 협조 내용: \n 나. 기    한: {기한}\n 다. 문 의 처: {보내는곳} ({전화번호}). 끝.'],
+  sub:['충남 앵커늘봄학교 고도화 자료 제출 요청','1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화(1권역) 컨소시엄 대학별 자료를 취합하고자 하오니 다음과 같이 제출하여 주시기 바랍니다.\n\n 가. 제출자료: \n 나. 제출기한: {기한}\n 다. 제출방법: 운영 관리 시스템 등록 또는 e-mail 제출({메일})\n 라. 문 의 처: {보내는곳} (전화번호: {전화번호})\n\n붙임: 제출 양식 1부. 끝.'],
+  op:['{차수} 초등방과후 프로그램 운영 협조 요청','1. 귀 학교의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화 사업의 일환으로 {차수} 초등방과후 프로그램 운영이 확정되어 붙임과 같이 안내하오니, 원활한 운영을 위해 협조하여 주시기 바랍니다.\n\n 가. 운영 기간: {운영기간}\n 나. 운영 학교(기관): {대상수}곳\n 다. 협조 사항: 수업 장소 준비, 학생 안내, 강사 출입 협조\n 라. 문 의 처: {보내는곳} ({전화번호})\n\n붙임: {차수} 운영 확정 목록 1부. 끝.'],
+  sat:['{차수} 초등방과후 프로그램 만족도 조사 협조 요청','1. 귀 학교의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화 사업으로 운영한 {차수} 프로그램의 만족도 조사를 실시하오니, 학생·학부모·담당 교사가 참여할 수 있도록 협조하여 주시기 바랍니다.\n\n 가. 조사 기간: ~ {기한}\n 나. 참여 방법: \n 다. 문 의 처: {보내는곳} ({전화번호}). 끝.'],
+  att:['{차수} 초등방과후 프로그램 출석부 제출 협조 요청','1. 귀 학교의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화 사업으로 운영 중인 {차수} 프로그램의 운영 실적 확인을 위해 출석부 제출을 요청드리오니 협조하여 주시기 바랍니다.\n\n 가. 제출 자료: 프로그램 출석부(학급별)\n 나. 제출 기한: {기한}\n 다. 제출 방법: \n 라. 문 의 처: {보내는곳} ({전화번호}). 끝.'],
+  etc:['',tgt==='univ'?'1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. \n\n끝.':'1. 귀 학교의 무궁한 발전을 기원합니다.\n\n2. \n\n끝.']};
+  return A[kind]||A.etc; }
+function csGFill(g,s){ const c=csCfg(), F=matchRows().filter(r=>r.status==='final'), st=F.map(r=>r.start).filter(Boolean).sort(), en=F.map(r=>r.end).filter(Boolean).sort();
+  const dd=d=>{ if(!d) return '(  )'; const [y,m,x]=d.split('-'); return `${y}.${m}.${x}(${DOWS[dowOf(d)]})`; };
+  return String(s||'').replace(/\{차수\}/g,`${csYear()}년 ${season().name.replace(/^\d{4}\s*/,'')}`).replace(/\{기한\}/g,g.due?dd(g.due)+(g.dueT?' '+g.dueT:''):'(  )').replace(/\{보내는곳\}/g,'호서대학교 앵커늘봄총괄센터').replace(/\{전화번호\}/g,c.tel||'').replace(/\{메일\}/g,c.mail||'')
+    .replace(/\{운영기간\}/g,st.length?`${dd(st[0])} ~ ${dd(en[en.length-1])}`:'(  )').replace(/\{대상수\}/g,String((g.rc||[]).length)); }
+const csRcName = (g,r) => g.tgt==='univ'?`${r.name}총장`:`${r.name.replace(/\s/g,'')}${/학교$/.test(r.name)?'장':''}`;
+function csGNew(kind,tgt){ const [t,b]=csGTpl(kind,tgt); let rc;
+  if(tgt==='univ') rc=CS_UNIVS().filter(o=>o!=='호서대학교').map(name=>({name}));
+  else { const F=matchRows().filter(r=>r.status==='final'&&r.status!=='cancel'); rc=[...new Set(F.map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko')).map(name=>({name})); }
+  const g={id:'g'+Date.now().toString(36),tgt,kind,title:'',body:b,reply:tgt==='univ'&&kind!=='work'?true:kind==='att',due:'',sent:'',no:'',rc,at:Date.now()}; g.title=csGFill(g,t); g.body=csGFill(g,b);
+  S.gongmun=S.gongmun||{items:[]}; S.gongmun.items=[g,...(S.gongmun.items||[])]; S.ui.csGopen=g.id; return g; }
+function csGSt(g){ const t=csToday(), rc=g.rc||[], left=rc.filter(r=>!r.rep&&!r.ex).length; if(!g.sent) return ['기안 준비','']; if(!g.reply) return ['발송 완료','ok']; if(!left) return ['회신 완료','ok']; if(g.due&&t>g.due) return ['기한 지남','x']; return ['회신 받는 중','info']; }
+function csGongV(){ const f=S.ui.csGf||'', L=csGong().filter(g=>!f||(f==='late'?csGSt(g)[0]==='기한 지남':g.tgt===f)), op=csGong().find(g=>g.id===S.ui.csGopen);
+  const n=k=>csGong().filter(g=>!k||(k==='late'?csGSt(g)[0]==='기한 지남':g.tgt===k)).length;
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="seg2">${[['','전체'],['univ','타대학'],['school','학교 · 기관'],['late','기한 지남']].map(([k,l])=>`<button class="${f===k?'on':''}" data-act="csgf" data-v="${k}">${l} ${n(k)}</button>`).join('')}</div><span style="flex:1"></span>
+    <select id="cs-gnew" aria-label="새 공문 종류"><option value="">새 공문…</option><optgroup label="타대학">${CS_GKINDS.univ.map(([k,l])=>`<option value="univ:${k}">${l}</option>`).join('')}</optgroup><optgroup label="학교 · 기관">${CS_GKINDS.school.map(([k,l])=>`<option value="school:${k}">${l}</option>`).join('')}</optgroup></select></div>
+   <div class="tw"><table><thead><tr><th>대상</th><th>제목</th><th>문서번호</th><th>발송</th><th>회신 기한</th><th>회신</th><th>상태</th></tr></thead><tbody>
+    ${L.map(g=>{ const [sl,sc]=csGSt(g), rc=g.rc||[]; return `<tr class="click ${op&&op.id===g.id?'on':''}" data-act="csgopen" data-id="${g.id}"><td><span class="chip">${g.tgt==='univ'?'타대학':'학교'}</span></td><td>${esc(g.title||'(제목 없음)')}</td><td class="small muted">${esc(g.no||'')}</td><td class="nowrap">${g.sent?csFmtD(g.sent):'-'}</td><td class="nowrap">${g.reply&&g.due?csFmtD(g.due):'-'}</td><td class="nowrap">${g.reply?`${rc.filter(r=>r.rep).length}/${rc.length}`:`${rc.length}곳`}</td><td><span class="chip ${sc}">${sl}</span></td></tr>`; }).join('')||'<tr><td colspan="7" class="small muted">공문이 없습니다. 오른쪽 위 「새 공문」에서 종류를 고르세요.</td></tr>'}</tbody></table></div>
+   ${op?csGDetail(op):''}`; }
+function csGDetail(g){ const i=csGong().indexOf(g), cp=`gongmun.items.${i}`, K=CS_GKINDS[g.tgt]||[], t=csToday(), c=csCfg();
+  const rcs=(g.rc||[]).map((r,j)=>{ const late=g.reply&&g.due&&!r.ex&&(r.rep?r.rep>g.due:t>g.due), rp=`${cp}.rc.${j}`;
+    return `<tr class="${late?'crit':''}"><td class="nowrap">${esc(r.name)}</td><td><input type="date" data-cp="${rp}.rep" data-cat="${cp}" value="${esc(r.rep||'')}" ${g.reply?'':'disabled'} aria-label="회신일"></td>
+     <td class="nowrap">${!g.reply?'<span class="small muted">회신 없음</span>':r.ex?'<span class="chip">면제</span>':late?`<span class="chip x">기한 지남</span>${g.tgt==='univ'?` <b class="lv-crit">-${c.pen.gong}</b>`:''}`:r.rep?'<span class="chip ok">기한 내</span>':'<span class="chip">대기</span>'}</td>
+     <td class="nowrap"><label class="small"><input type="checkbox" data-cp="${rp}.ex" data-cat="${cp}" ${r.ex?'checked':''}> 면제</label>${g.kind==='meet'?` <label class="small"><input type="checkbox" data-cp="${rp}.absent" data-cat="${cp}" ${r.absent?'checked':''}> 불참</label>`:''}</td>
+     <td><input data-cp="${rp}.memo" data-cat="${cp}" value="${esc(r.memo||'')}" placeholder="메모" style="width:100%"></td><td><button class="btn sm" data-act="csgrdel" data-id="${g.id}" data-i="${j}" aria-label="수신처 빼기">빼기</button></td></tr>`; }).join('');
+  return `<div class="panel stack cs-gd" style="gap:10px"><div class="row between"><h3 style="margin:0">${esc(g.title||'새 공문')}</h3><div class="row" style="gap:6px"><span class="chip ${csGSt(g)[1]}">${csGSt(g)[0]}</span><button class="btn sm" data-act="csgclose">닫기</button></div></div>
+   <div class="cs-g2"><div class="stack" style="gap:8px">
+     <div class="row" style="gap:8px;flex-wrap:wrap"><label class="f">종류<select data-cp="${cp}.kind" data-cat="${cp}">${K.map(([k,l])=>`<option value="${k}" ${g.kind===k?'selected':''}>${l}</option>`).join('')}</select></label>
+      <label class="f">문서번호<input data-cp="${cp}.no" data-cat="${cp}" value="${esc(g.no||'')}" placeholder="${esc(c.docPre)}-000" style="width:170px"></label><label class="f">발송일<input type="date" data-cp="${cp}.sent" data-cat="${cp}" value="${esc(g.sent||'')}"></label></div>
+     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="row small" style="gap:4px"><input type="checkbox" data-cp="${cp}.reply" data-cat="${cp}" ${g.reply?'checked':''}> 회신(제출) 받음</label>${g.reply?`<label class="f">회신 기한<input type="date" data-cp="${cp}.due" data-cat="${cp}" value="${esc(g.due||'')}"></label><label class="f">시각<input data-cp="${cp}.dueT" data-cat="${cp}" value="${esc(g.dueT||'')}" placeholder="15:00" style="width:70px"></label>`:''}${g.kind==='meet'?`<label class="f">협의회 날짜<input type="date" data-cp="${cp}.meetDate" data-cat="${cp}" value="${esc(g.meetDate||'')}"></label>`:''}</div>
+     <label class="f">제목<input data-cp="${cp}.title" data-cat="${cp}" value="${esc(g.title||'')}"></label>
+     <label class="f">본문<textarea data-cp="${cp}.body" data-cat="${cp}" rows="14" style="font-family:inherit;line-height:1.6">${esc(g.body||'')}</textarea></label>
+     <div class="small muted">자리표시(「양식대로 다시 채우기」 때 바뀜): {차수} {기한} {운영기간} {대상수} {보내는곳} {전화번호} {메일}</div></div>
+    <div class="stack" style="gap:8px"><div class="row between"><b>수신처 ${(g.rc||[]).length}곳</b>${g.reply&&g.tgt==='univ'?`<span class="small muted">기한 지난 미회신은 성실도 -${c.pen.gong}점</span>`:''}</div>
+     <div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>수신처</th><th>회신일</th><th>상태</th><th></th><th>메모</th><th></th></tr></thead><tbody>${rcs||'<tr><td colspan="6" class="small muted">수신처 없음</td></tr>'}</tbody></table></div>
+     <div class="row" style="gap:6px"><input id="cs-grc" placeholder="수신처 추가 (학교·기관·대학 이름)" style="flex:1"><button class="btn sm" data-act="csgradd" data-id="${g.id}">추가</button></div></div></div>
+   <div class="row" style="gap:6px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px">
+    <button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="title">제목 복사</button><button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="body">본문 복사</button><button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="rc">수신자 복사</button>
+    ${g.tgt==='school'?`<button class="btn sm" data-act="csgxlsx" data-id="${g.id}">붙임: 운영 확정 목록 엑셀</button>`:''}<button class="btn sm" data-act="csgretpl" data-id="${g.id}">양식대로 다시 채우기</button>
+    <span style="flex:1"></span><button class="btn sm danger" data-act="csgdel" data-id="${g.id}">삭제</button></div>
+   <div class="small muted">전자결재 기안 화면에 제목 · 본문 · 수신자를 붙여 넣으세요. 수신자는 「${esc(csRcName(g,(g.rc||[])[0]||{name:g.tgt==='univ'?'상명대학교':'○○초등학교'}))}, …」 형식으로 복사됩니다.</div></div>`; }
+function csMyGong(){ const o=csMine(), q=S.ui.csQ||csQNow(), P=csPen(o,q), t=csToday();
+  const L=csGong().filter(g=>g.tgt==='univ'&&(g.rc||[]).some(r=>r.name===o));
+  return `<div class="row" style="gap:8px;flex-wrap:wrap">${csQSeg('dash',q)}</div>
+   <div class="cs-kps">${csKp(P.score+'점','성실도 점수',P.score<csCfg().cut?'lv-crit':'')}${csKp(P.list.length+'건','감점 항목')}${csKp(csSig(csFinal(o,q)),'분기 판정')}</div>
+   ${P.list.length?`<div class="panel stack" style="gap:4px"><b>감점 내역</b>${P.list.map(x=>`<div class="row between small"><span>${esc(x.t)}</span><b class="lv-crit">-${x.pts}</b></div>`).join('')}${P.adj?`<div class="row between small"><span>수기 조정 ${esc(P.adjWhy)}</span><b>${P.adj>0?'+':''}${P.adj}</b></div>`:''}</div>`:''}
+   <div class="tw"><table><thead><tr><th>제목</th><th>문서번호</th><th>발송</th><th>회신 기한</th><th>우리 대학 회신</th></tr></thead><tbody>${L.map(g=>{ const r=g.rc.find(x=>x.name===o), late=g.reply&&g.due&&!r.ex&&(r.rep?r.rep>g.due:t>g.due); return `<tr><td>${esc(g.title)}</td><td class="small muted">${esc(g.no||'')}</td><td>${g.sent?csFmtD(g.sent):'-'}</td><td>${g.reply&&g.due?csFmtD(g.due):'-'}</td><td>${!g.reply?'-':r.rep?`<span class="chip ${late?'x':'ok'}">${csFmtD(r.rep)} 회신</span>`:late?'<span class="chip x">기한 지남</span>':'<span class="chip">회신 전</span>'}</td></tr>`; }).join('')||'<tr><td colspan="5" class="small muted">받은 공문이 없습니다.</td></tr>'}</tbody></table></div>`; }
+/* ---------- 분기 점검 · 판정 ---------- */
+function csJudge(){ const q=S.ui.csJq||csQNow(), c=csCfg(), U=CS_UNIVS();
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('judge',q)}<span class="small muted">점검 운영위원회</span><input type="date" data-cp="consJudge.${q}._meta.date" data-cat="consJudge.${q}._meta" value="${esc((((S.consJudge||{})[q]||{})._meta||{}).date||'')}" aria-label="위원회 날짜"></div>
+   <div class="tw"><table><thead><tr><th>대학</th><th>목표 달성률</th><th>사업 진행률</th><th>예산 집행률</th><th>지난 분기</th><th>성실도</th><th>자동 판정</th><th>판정 근거</th><th>위원회 판정</th></tr></thead><tbody>
+   ${U.map(o=>{ const a=csAuto(o,q), g=csGoal(o,q), p=csProg(o,q), b=csBud(o,q), J=((S.consJudge||{})[q]||{})[o]||{}, jp=`consJudge.${q}.${o}`;
+     return `<tr><td class="nowrap"><b>${esc(o)}</b></td>
+      <td><b class="${csRateC(g.p)}">${g.p==null?'-':g.p+'%'}</b><div class="small muted">${esc(g.src)}</div><input type="number" data-cp="${jp}.goal" data-cat="${jp}" value="${esc(J.goal??'')}" placeholder="수정" style="width:64px"></td>
+      <td><b class="${csRateC(p.p)}">${p.p==null?'-':p.p+'%'}</b><div class="small muted">${p.done}/${p.need}</div></td>
+      <td><b class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</b></td>
+      <td>${q>1?csSig(csFinal(o,q-1)):'-'}</td>
+      <td class="nowrap"><b class="${a.P.score<c.cut?'lv-crit':''}">${a.P.score}점</b><div class="small muted">감점 ${a.P.list.length}건</div><div class="row" style="gap:2px"><input type="number" step="0.5" data-cp="${jp}.adj" data-cat="${jp}" value="${esc(J.adj??'')}" placeholder="±조정" style="width:64px"><input data-cp="${jp}.adjWhy" data-cat="${jp}" value="${esc(J.adjWhy||'')}" placeholder="사유" style="width:90px"></div></td>
+      <td>${csSig(a.k)}</td><td class="small">${esc(a.why.join(' · ')||'-')}</td>
+      <td><select data-cp="${jp}.fin" data-cat="${jp}"><option value="">자동 판정 따름</option>${['g','y','r'].map(k=>`<option value="${k}" ${J.fin===k?'selected':''}>${CS_SIG[k][0]}</option>`).join('')}</select><input data-cp="${jp}.note" data-cat="${jp}" value="${esc(J.note||'')}" placeholder="조치 · 메모" style="width:100%;margin-top:3px"></td></tr>`; }).join('')}</tbody></table></div>
+   <details class="panel"><summary><b>감점 내역 펼쳐 보기</b></summary>${U.map(o=>{ const P=csPen(o,q); return `<div style="margin-top:8px"><b>${esc(o)}</b> <span class="small muted">${P.score}점</span>${P.list.map(x=>`<div class="row between small"><span>${esc(x.t)}</span><b class="lv-crit">-${x.pts}</b></div>`).join('')||'<div class="small muted">감점 없음</div>'}</div>`; }).join('')}</details>
+   <div class="cs-g2"><div class="panel stack" style="gap:6px"><b>판정 기준 (3률: 목표 달성률 · 사업 진행률 · 예산 집행률)</b><div class="small">${csSig('g')} 모두 90% 이상 · 자율 운영, 우수사례 공유</div><div class="small">${csSig('y')} 하나라도 70% 이상 ~ 90% 미만 · 2주 내 원인 분석서 · 개선계획, 실무 컨설팅 월 1회</div><div class="small">${csSig('r')} 하나라도 70% 미만, 또는 2분기 연속 Yellow · 지원팀 투입, 회복계획 의결</div></div>
+    <div class="panel stack" style="gap:6px"><b>성실도</b><div class="small">${c.base}점에서 감점 · ${c.cut}점 미만이면 판정 한 단계 낮춤 · 기준은 「평가 기준」에서 바꿈</div></div></div>`; }
+/* ---------- 평가 기준 ---------- */
+function csRule(){ const c=csCfg(), f=(p,v,w,t)=>`<input ${t||'type="number"'} data-cp="consCfg.${p}" value="${esc(v??'')}" style="width:${w||'80px'}">`;
+  const months=csQMonths(1).concat(csQMonths(2),csQMonths(3),csQMonths(4));
+  return `<div class="panel stack" style="gap:8px"><b>성실도 점수</b>
+    <div class="cs-rule"><span>기본 점수</span>${f('base',c.base)}<span>점</span><span>판정 한 단계 낮추는 기준</span>${f('cut',c.cut)}<span>점 미만</span>
+     <span>공문 회신 기한 지남</span>${f('pen.gong',c.pen.gong)}<span>점 / 건</span><span>마일스톤 점검표 마감 지남</span>${f('pen.mile',c.pen.mile)}<span>점 / 월</span>
+     <span>실무협의회 불참</span>${f('pen.meet',c.pen.meet)}<span>점 / 회</span></div>
+    <div class="small muted">대학별 수기 조정(가점 · 감점)은 「분기 점검 · 판정」의 성실도 칸에서 사유와 함께 넣습니다. 공문별 「면제」를 체크하면 그 건은 감점하지 않습니다.</div></div>
+   <div class="panel stack" style="gap:8px"><b>마일스톤 점검표 마감</b>
+    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span>매월</span>${f('mileDay',c.mileDay,'60px')}<span>일까지 제출 (실무협의회 전)</span><span class="small muted">감점 시작 월</span><input type="month" data-cp="consCfg.mileFrom" value="${esc(c.mileFrom||'')}"></div>
+    <details><summary class="small">월별로 마감일 따로 정하기</summary><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">${months.map(m=>`<label class="f small">${+m.slice(5)}월<input type="date" data-cp="consCfg.mileDue.${m}" value="${esc(c.mileDue[m]||'')}"></label>`).join('')}</div></details></div>
+   <div class="panel stack" style="gap:8px"><b>공문 기본값</b>
+    <div class="cs-rule"><span>사업 연도</span>${f('fiscal',c.fiscal,'80px')}<span class="small muted">비우면 자동 (${csYear()})</span><span>문서번호 앞부분</span>${f('docPre',c.docPre,'200px','')}<span></span><span>전화번호</span>${f('tel',c.tel,'160px','')}<span></span><span>메일</span>${f('mail',c.mail,'200px','')}<span></span></div>
+    <div class="small muted">연간 학급수 KPI(목표 달성률 기준)는 「6 운영 통계 → KPI 목표」의 대학별 학급 수를 씁니다.</div></div>`; }
+/* ---------- 저장: data-cp 경로에 값 넣기, data-cat 묶음에 수정 시각 기록(서버에서 대학별 병합) ---------- */
+function csSet(path,val){ const ks=path.split('.'), root=ks.shift(); if(!S[root]) S[root]=root==='gongmun'?{items:[]}:{};
+  let o=S[root]; for(let i=0;i<ks.length-1;i++){ const k=ks[i]; if(o[k]==null||typeof o[k]!=='object') o[k]=/^\d+$/.test(ks[i+1])&&['items','rc','dev','press'].includes(k)?[]:{}; o=o[k]; } o[ks[ks.length-1]]=val; }
+function csGet(path){ const ks=path.split('.'); let o=S; for(const k of ks){ if(o==null) return undefined; o=o[k]; } return o; }
+function csStamp(cat){ if(!cat) return; const o=csGet(cat); if(o&&typeof o==='object') o.at=Date.now(); else csSet(cat+'.at',Date.now()); }
+function csInput(t,final){ const p=t.dataset.cp; if(!p) return false; let v=t.type==='checkbox'?t.checked:t.value; if(t.type==='number') v=v===''?'':+v;
+  if(csMine()&&!p.startsWith('consOrg.'+csMine()+'.')) return true;
+  const dm=p.match(/^(consOrg\.([^.]+)\.rep\.\d)\.dev\./); if(dm&&!Array.isArray(csGet(dm[1]+'.dev'))) csSet(dm[1]+'.dev',(S.programs||[]).filter(x=>x.org===dm[2]).map(x=>({name:x.name})));
+  csSet(p,v); csStamp(t.dataset.cat); if(typeof save==='function') save();
+  if(final){ const soft=t.tagName==='TEXTAREA'||(t.tagName==='INPUT'&&!['checkbox','date','month','radio'].includes(t.type)); if(soft) csNeedR=true; else render(); } return true; }
+/* 글자 · 숫자 칸은 바로 다시 그리지 않음(누른 버튼 · 다음 칸이 사라지지 않게). 입력 칸 밖으로 나가면 다시 그림 */
+let csNeedR=false, csPD=false;
+const csFlush = () => { if(csNeedR&&!csPD){ const a=document.activeElement; if(a&&a.dataset&&a.dataset.cp) return; csNeedR=false; render(); } };
+document.addEventListener('pointerdown',()=>{ csPD=true; },true);
+document.addEventListener('pointerup',()=>{ setTimeout(()=>{ csPD=false; csFlush(); },0); },true);
+document.addEventListener('focusout',e=>{ if(e.target&&e.target.dataset&&e.target.dataset.cp) setTimeout(csFlush,0); },true);
+document.addEventListener('input',e=>{ const t=e.target; if(t&&t.dataset&&t.dataset.cp&&t.type!=='checkbox'&&t.tagName!=='SELECT'&&t.type!=='date'&&t.type!=='month') csInput(t,false); },true);
+document.addEventListener('change',e=>{ const t=e.target; if(!t||!t.dataset) return;
+  if(t.dataset.cp){ csInput(t,true); return; }
+  if(t.id==='cs-org'){ S.ui.csOrg=t.value; render(); } else if(t.id==='cs-ym'){ S.ui.csYm=t.value; render(); }
+  else if(t.id==='cs-gnew'&&t.value){ const [tg,k]=t.value.split(':'); csGNew(k,tg); render(); } },true);
+function csAct(a,el){ const o=el.dataset.o, U=S.ui;
+  switch(a){
+    case 'cstab': U.csTab=el.dataset.v; return true;
+    case 'csq': { const k=el.dataset.k, v=+el.dataset.v; if(k==='rep') U.csRq=v; else if(k==='judge') U.csJq=v; else U.csQ=v; return true; }
+    case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab='mile'; } return true;
+    case 'csmq': { const m=U.csMq||{[csQNow()]:true}; m[el.dataset.v]=!m[el.dataset.v]; U.csMq=m; return true; }
+    case 'csox': { const p=`consOrg.${o}.mile.${el.dataset.n}`, cur=csGet(p+'.v'); csSet(p+'.v',cur===el.dataset.v?'':el.dataset.v); csStamp(p); return true; }
+    case 'csmst': { const p=`consOrg.${o}.mile.${el.dataset.n}`; if(el.dataset.v==='fix'){ const w=prompt('보완 요청 사유',csGet(p+'.fixWhy')||''); if(w===null) return false; csSet(p+'.fixWhy',w.trim()); csSet(p+'.st','fix'); } else { csSet(p+'.st',csGet(p+'.st')==='ok'?'':'ok'); } csStamp(p); return true; }
+    case 'csmfin': { const ym=U.csYm||csYm(), p=`consOrg.${o}.sub.${ym}`; csSet(p,el.dataset.v?kstNow().replace('T',' '):''); csStamp(`consOrg.${o}.sub`); toast(el.dataset.v?`${+ym.slice(5)}월 마일스톤 점검표를 제출했습니다`:'제출을 취소했습니다'); return true; }
+    case 'csrs': U.csRs=el.dataset.v; return true;
+    case 'csrsub': { const p=`consOrg.${o}.rep.${el.dataset.q}`; csSet(p+'.subAt',kstNow().replace('T',' ')); csStamp(p); toast('분기 운영 보고를 제출했습니다'); return true; }
+    case 'csdevadd': case 'csdevdel': { const p=`consOrg.${o}.rep.${el.dataset.q}`; let L=csGet(p+'.dev'); if(!Array.isArray(L)||!L.length) L=(S.programs||[]).filter(x=>x.org===o).map(x=>({name:x.name})); L=L.slice(); if(a==='csdevadd') L.push({}); else L.splice(+el.dataset.i,1); csSet(p+'.dev',L); csStamp(p); return true; }
+    case 'cspadd': case 'cspdel': { const p=`consOrg.${o}.rep.${el.dataset.q}`; let L=(csGet(p+'.press')||[]).slice(); if(a==='cspadd') L.push({}); else L.splice(+el.dataset.i,1); csSet(p+'.press',L); csStamp(p); return true; }
+    case 'csgf': U.csGf=el.dataset.v; return true;
+    case 'csgopen': U.csTab='gong'; U.csGopen=el.dataset.id; return true;
+    case 'csgclose': U.csGopen=''; return true;
+    case 'csgdel': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g||!confirm(`「${g.title||'제목 없음'}」 공문 기록을 지울까요?`)) return false; S.gongmun.items=csGong().filter(x=>x!==g); U.csGopen=''; return true; }
+    case 'csgrdel': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; g.rc=(g.rc||[]).filter((_,j)=>j!==+el.dataset.i); g.at=Date.now(); return true; }
+    case 'csgradd': { const g=csGong().find(x=>x.id===el.dataset.id), v=((document.getElementById('cs-grc')||{}).value||'').trim(); if(!g||!v) return false; if((g.rc||[]).some(r=>r.name===v)){ toast('이미 있는 수신처입니다'); return false; } g.rc=[...(g.rc||[]),{name:v}]; g.at=Date.now(); return true; }
+    case 'csgretpl': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; if(!confirm('제목과 본문을 이 종류의 기본 양식으로 다시 채울까요? 고친 내용은 사라집니다.')) return false; const [t,b]=csGTpl(g.kind,g.tgt); if(t) g.title=csGFill(g,t); g.body=csGFill(g,b); g.at=Date.now(); return true; }
+    case 'csgcopy': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; const v=el.dataset.v; copyStr(v==='title'?g.title:v==='body'?csGFill(g,g.body):(g.rc||[]).map(r=>csRcName(g,r)).join(', ')); toast(v==='rc'?`수신자 ${(g.rc||[]).length}곳을 복사했습니다`:'복사했습니다'); return false; }
+    case 'csgxlsx': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; csGXlsx(g); return false; }
+  } return null; }
+function csGXlsx(g){ const names=new Set((g.rc||[]).map(r=>r.name)), F=matchRows().filter(r=>r.status==='final'&&names.has(r.school)).sort((a,b)=>a.school.localeCompare(b.school,'ko')||String(a.start).localeCompare(String(b.start)));
+  const aoa=[['순','학교(기관)','학급','학년','프로그램','운영 대학','시작일','종료일','요일','시간','횟수','차시','주강사','보조강사']].concat(F.map((r,i)=>[i+1,r.school,clsName(r),r.grade||'',prog(r.prog).name,orgShort(orgOfRow(r)),r.start||'',r.end||'',daysTxt(r.days),`${hm(r.ts)}~${hm(r.te)}`,classDays(r).length,rowHrs(r),instName(r.inst)||'',instName(r.asst)||'']));
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:4},{wch:18},{wch:12},{wch:8},{wch:22},{wch:10},{wch:11},{wch:11},{wch:8},{wch:12},{wch:6},{wch:6},{wch:8},{wch:8}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'운영 확정 목록'); saveXlsx(wb,`${season().name} 운영 확정 목록 (${names.size}곳).xlsx`,{set textContent(v){ toast(v); }}); }
+
 function viewKit(){ const D=kitDB(); if(!D.loaded){ kitLoad(); return `<div class="panel">프로그램 · 교구재 자료를 불러오는 중…</div>`; }
   kitAutoFix();
   const cur=KIT_TABS.some(([k])=>k===S.ui.kitTab)?S.ui.kitTab:'kits';
@@ -6242,6 +6530,7 @@ function tKitHtml(r){ const L=r.kit||[]; if(!L.length) return ''; const nR=L.fil
 document.addEventListener('click',async e=>{
   const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act, r=R(el.dataset.id);
   if((a==='close'||a==='smsbrx')&&el.classList.contains('ov')&&e.target!==el) return;
+  { const ca=csAct(a,el); if(ca===false) return; if(ca===true){ csNeedR=false; render(); return; } }
   switch(a){
     case 'role': S.ui.role=el.dataset.v; S.ui.drawer=''; location.hash=homeView(S.ui.role); break;
     case 'qn-school-go': { const sch=S.ui.qnSchool||[...new Set(myRows().map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko'))[0]; if(!sch) return; S.ui.role='school'; S.ui.school=sch; S.ui.drawer=''; goView('school'); break; }
