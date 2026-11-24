@@ -1062,7 +1062,13 @@ const progLoose = name => { const k=nk(name), l=nkl(name); return S.programs.fin
 /* 강사 분야: 호서대 프로그램의 분야와 짝지어 배치 가능 프로그램을 정합니다 */
 const myFieldMap = () => { const m=new Map(); S.programs.filter(p=>p.org===MY_ORG).forEach(p=>{ const f=p.field||'기타'; if(!m.has(f)) m.set(f,[]); m.get(f).push(p); }); return m; };
 const progsOfField = v => S.programs.filter(p=>p.org===MY_ORG&&nk(p.field)===nk(v));
-const fieldsOf = t => [...new Set((t.progs||[]).map(k=>prog(k)?.field).filter(Boolean))];
+/* 강사 분야: 정해진 6가지(프로그램 목록과 따로 t.fields에 저장, 예전 강사는 프로그램에서 계산) */
+const INST_FIELDS=['창의과학','문화예술','체육','학교적응정서','교과교육','인문사회'];
+const normField = v => { const x=nk(v); return INST_FIELDS.find(f=>nk(f)===x)||''; };
+const fieldsOf = t => [...new Set([...(t.fields||[]).map(normField).filter(Boolean),...(t.progs||[]).map(k=>normField(prog(k)?.field)||prog(k)?.field).filter(Boolean)])];
+/* 이 학급 프로그램을 맡을 수 있는 강사: 프로그램을 직접 골랐거나 분야가 같음 */
+const tFits = (t,r) => (t.progs||[]).includes(r.prog) || (()=>{ const f=normField((prog(r.prog)||{}).field); return !!f&&(t.fields||[]).map(normField).includes(f); })();
+const fieldChecks = (attr,sel) => INST_FIELDS.map(f=>`<label class="row" style="gap:4px"><input type="checkbox" ${attr}="${esc(f)}" ${sel.has(f)?'checked':''}>${esc(f)}</label>`).join('');
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const addDay = (iso,n)=>{const t=new Date(iso+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10)};
 const dowOf = iso => new Date(iso+'T00:00:00Z').getUTCDay();
@@ -1872,11 +1878,11 @@ function parseInstDb(buf){
   if(C.phone<0) throw new Error('"연락처" 머리글을 찾지 못했습니다.');
   const out=[], unknown=new Set(); let skipped=0; const toks=v=>String(v||'').split(/[,/·\n]/).map(x=>x.trim()).filter(Boolean);
   A.slice(hi+1).forEach(r=>{ const name=String(r[C.name]||'').replace(/[\u00a0\u200b-\u200d\ufeff]/g,' ').trim(), rawP=String(r[C.phone]??'').trim(), ps=phonesOf(rawP), phone=ps.length===1?prettyPhone(ps[0]):rawP; if(!name&&!phone) return; if(!name||digits(phone).length<9){ skipped++; return; }
-    const fromField=C.field<0?[]:toks(r[C.field]).flatMap(x=>{ const fp=progsOfField(x); if(fp.length) return fp; const p=progOf(x); if(p) return [p]; unknown.add(x); return []; });
-    const fromProg=C.progs<0?[]:toks(r[C.progs]).map(x=>progOf(x)).filter(Boolean);
+    const fromField=C.field<0?[]:toks(r[C.field]).flatMap(x=>{ const fp=progsOfField(x); if(fp.length) return fp; const p=progOf(x); if(p) return [p]; if(!normField(x)) unknown.add(x); return []; });
+    const fromProg=C.progs<0?[]:toks(r[C.progs]).map(x=>progOf(x)).filter(Boolean), fields=[...new Set((C.field<0?[]:toks(r[C.field]).map(normField)).filter(Boolean))];
     const progs=[...fromField,...fromProg].filter(p=>p.org===MY_ORG).map(p=>p.key);
     const cv=C.career<0?'':String(r[C.career]||'').trim(), senior=/^(예|y|yes|o|○|경력)$/i.test(cv)||(+cv>=3)||/(?:[3-9]|\d{2})\s*년/.test(cv)||/5년 이상|3~5년/.test(cv);
-    out.push({name,phone,email:C.email<0?'':String(r[C.email]||'').trim(),region:C.region<0?'':String(r[C.region]||'').trim(),progs:[...new Set(progs)],senior,note:C.note<0?'':String(r[C.note]||'').trim()}); });
+    out.push({name,phone,email:C.email<0?'':String(r[C.email]||'').trim(),region:C.region<0?'':String(r[C.region]||'').trim(),fields,progs:[...new Set(progs)],senior,note:C.note<0?'':String(r[C.note]||'').trim()}); });
   return {list:out,skipped,unknown:[...unknown]};
 }
 function reviewChecks(r){
@@ -2006,8 +2012,8 @@ function sibApps(r){ const m=new Map(); sibRows(r).forEach(x=>x.apps.forEach(a=>
 function candidates(row){
   const SIB=sibApps(row);
   const req=row.sc.req;
-  return S.instructors.filter(t=>t.progs.includes(row.prog)||row.apps.some(a=>a.tid===t.id)||SIB.has(t.id)).map(t=>{
-    const why=[]; let sc=0; const app=row.apps.find(a=>a.tid===t.id), inField=t.progs.includes(row.prog);
+  return S.instructors.filter(t=>tFits(t,row)||row.apps.some(a=>a.tid===t.id)||SIB.has(t.id)).map(t=>{
+    const why=[]; let sc=0; const app=row.apps.find(a=>a.tid===t.id), inField=tFits(t,row);
     const sib=!app&&SIB.has(t.id)?SIB.get(t.id):null;
     if(app){ sc+=3; why.push(app.round?`${app.round} 신청`:'수업 신청함'); }
     if(sib){ sc+=2; why.push(`같은 시간 ${sibLetter(sib)} 신청 (분반 이동 가능)`); }
@@ -2188,7 +2194,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.53';
+const LIB_VER='11.54';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2548,7 +2554,7 @@ function univData(org){
   return {org, season:season().name, ops:S.ops, rows:rs.map(r=>{ const p=prog(r.prog);
     return {id:r.id,school:r.school,room:r.sc.room||r.room,grade:r.grade,count:r.sc.count||r.expected,prog:p.name,field:p.field||'',start:r.start,end:r.end,days:r.days,ts:r.ts,te:r.te,n:classDays(r).length,perDay:r.perDay,status:r.status,
       sibs:sibRows(r).filter(x=>x.ext&&x.extOrg===r.extOrg&&!['final','cancel'].includes(x.status)).map(x=>({id:x.id,label:clsName(x),wish:x.wish&&x.wish.tid||''})),
-      apps:r.apps.map(a=>{ const t=S.instructors.find(y=>y.id===a.tid)||{}; return {tid:a.tid,clash:uClash(r,a.tid),name:t.name||'',kind:tKind(t),years:t.years,region:t.region||'',inField:(t.progs||[]).includes(r.prog),note:a.note||''}; }),
+      apps:r.apps.map(a=>{ const t=S.instructors.find(y=>y.id===a.tid)||{}; return {tid:a.tid,clash:uClash(r,a.tid),name:t.name||'',kind:tKind(t),years:t.years,region:t.region||'',inField:tFits(t,r),note:a.note||''}; }),
       wish:r.wish||null, finalName:r.status==='final'&&r.inst?instName(r.inst):'', finalPhone:r.status==='final'&&r.inst?((S.instructors.find(y=>y.id===r.inst)||{}).phone||''):'', finalEmail:r.status==='final'&&r.inst?((S.instructors.find(y=>y.id===r.inst)||{}).email||''):''}; })};
 }
 const univView = () => S.univ || univData(S.ui.univOrg||extOrgs()[0]||'');
@@ -2705,7 +2711,7 @@ function asgIndex(){ const byInst=new Map(), dc=new Map(); S.rows.concat(S.extBu
   const days=r=>{ if(!dc.has(r.id)) dc.set(r.id,new Set(classDays(r))); return dc.get(r.id); };
   const clash=(r,tid)=>{ let k=''; (byInst.get(tid)||[]).forEach(x=>{ if(x.id===r.id||(r.bundle&&x.bundle&&x.bundle.id===r.bundle.id)||x.ts==null||r.ts==null||!(x.ts<r.te&&r.ts<x.te)) return; const dx=days(x); if(![...days(r)].some(d=>dx.has(d))) return; if(x.status==='final') k='fin'; else if(!k) k='tent'; }); return k; };
   return {byInst,clash}; }
-function asgChip(r,tid,ix,label,extra){ const mine=r.inst===tid, fin=r.status==='final', cl=mine?'':ix.clash(r,tid), t=S.instructors.find(x=>x.id===tid)||{}, inF=(t.progs||[]).includes(r.prog);
+function asgChip(r,tid,ix,label,extra){ const mine=r.inst===tid, fin=r.status==='final', cl=mine?'':ix.clash(r,tid), t=S.instructors.find(x=>x.id===tid)||{}, inF=tFits(t,r);
   const st=mine?(fin?'fin':'tent'):r.inst?'other':'open', dis=fin||!canAssign(r)||cl==='fin';
   const tip=mine?(fin?'배치 확정됨':'가배치됨 · 누르면 해제'):fin?'배치 확정된 학급입니다':!canAssign(r)?(gateReason(r)||'아직 배치할 수 없는 학급'):cl==='fin'?'같은 시간에 배치 확정된 다른 수업이 있습니다':cl==='tent'?'같은 시간 다른 수업에 가배치되어 있습니다 · 누르면 이 학급으로도 가배치':r.inst?`누르면 ${instName(r.inst)} 대신 이 강사로 가배치`:'누르면 이 강사로 가배치';
   return `<button class="achip s-${st} ${cl?'c-'+cl:''} ${inF?'':'nf'} ${extra||''}" data-act="qasg" data-id="${r.id}" data-t="${tid}" ${dis&&!mine?'disabled':''} ${fin&&mine?'disabled':''} title="${esc(tip)}">${mine?'✓ ':''}${label}${t.id?`<sup class="tgl tg-${tScoreOf(t,r).grade}">${tScoreOf(t,r).grade}</sup>`:''}${trainOn()&&t.id&&!trainOk(t)?'<i>연수</i>':''}${cl?`<i>${cl==='fin'?'확정 겹침':'겹침'}</i>`:''}</button>`; }
@@ -3296,7 +3302,7 @@ function manualLinks(u0,dl0){ const u=u0||manualUrl(); if(!u) return null; const
   if(m) return {view:`https:\/\/docs.google.com/${m[1]}/d/${m[2]}/preview`, dl:own||`https:\/\/docs.google.com/${m[1]}/d/${m[2]}/export?format=${m[1]==='spreadsheets'?'xlsx':'pdf'}`};
   return {view:u, dl:own}; }
 const manualNeed = t => !!manualUrl() && (!t.manualAt || (!!(S.ops||{}).manualRev && t.manualRev!==S.ops.manualRev));
-const tNeed = t => { const A=tRoleA(); return {manual:manualNeed(t),email:!String(t.email||'').trim(), fields:!A&&!(t.progs||[]).length, kind:!A&&!T_KINDS.includes(tKind(t)), years:t.years==null||t.years==='', car:A&&t.car!=='yes'&&t.car!=='no'}; };
+const tNeed = t => { const A=tRoleA(); return {manual:manualNeed(t),email:!String(t.email||'').trim(), fields:!A&&!fieldsOf(t).length, kind:!A&&!T_KINDS.includes(tKind(t)), years:t.years==null||t.years==='', car:A&&t.car!=='yes'&&t.car!=='no'}; };
 /* 보조강사 가입 규칙 (서버 asstSignup과 같음) */
 const ASST_JOBS=['대학생','대학원생','전문강사','일반인'], ASST_FIELDS=['창의과학','문화예술','체육','학교적응정서','기후환경','인문사회','교과교육'], ASST_REGIONS=['천안','아산','당진','홍성','공주','예산','대전','세종','기타'];
 const mobileOk = v => /^010\d{8}$/.test(digits(v));
@@ -3493,7 +3499,7 @@ function teacherInfoForm(t,nd){
     ${nd.car?`<div class="stack" style="gap:6px"><div class="small"><b>차량 운용 가능 여부 *</b> <span class="muted">(보조강사 배치 때 이동 거리 참고)</span></div><div class="yn"><label><input type="radio" name="tinfo-car" data-tinfocar="yes" ${g.car==='yes'?'checked':''}>차량 운용 가능</label><label><input type="radio" name="tinfo-car" data-tinfocar="no" ${g.car==='no'?'checked':''}>차량 없음</label></div></div>`:''}
     ${nd.email?`<label class="f">이메일 *<input id="tinfo-email" type="email" inputmode="email" autocomplete="email" value="${esc(g.email)}" placeholder="name@example.com"></label>`:''}
     ${nd.fields?`<div class="stack" style="gap:6px"><div class="small"><b>맡을 수 있는 분야 *</b> <span class="muted">(여러 개 고를 수 있습니다)</span></div>
-      <div class="stack" style="gap:6px">${[...myFieldMap()].map(([f,ps])=>`<label class="row small" style="gap:8px"><input type="checkbox" data-tinfof="${esc(f)}" ${g.fields.includes(f)?'checked':''}><b>${esc(f)}</b><span class="muted">${ps.map(p=>esc(p.name)).join(', ')}</span></label>`).join('')}</div>
+      <div class="stack" style="gap:6px">${INST_FIELDS.map(f=>`<label class="row small" style="gap:8px"><input type="checkbox" data-tinfof="${esc(f)}" ${g.fields.includes(f)?'checked':''}><b>${esc(f)}</b></label>`).join('')}</div>
       </div>`:''}
     ${nd.email?`<div class="conds"><div class="conds-h"><span>개인정보 수집·이용 동의 (필수)</span></div><div style="padding:10px 12px"><dl class="kv small">
       <dt>수집 목적</dt><dd>수업 배치 결과·일정 안내 메일 발송</dd><dt>수집 항목</dt><dd>이메일</dd><dt>보유·이용 기간</dt><dd>강사 명단 등록 기간 동안 (삭제를 요청하면 바로 파기)</dd><dt>동의 거부 권리</dt><dd>거부할 수 있으나, 이 경우 수업 신청과 배치 안내가 어렵습니다.</dd></dl>
@@ -3791,14 +3797,14 @@ function orgsPanel(){
   </div>`;
 }
 /* 기준정보 강사 명단: 운영기관이 강사 정보 수정 · 삭제 (비밀번호는 그대로 유지) */
-function instEditRow(t){ const regs=[...new Set(['천안','아산','천안·아산',...S.instructors.map(x=>x.region).filter(Boolean)])], fl=[...myFieldMap()].map(([f])=>f), mine=new Set(fieldsOf(t));
+function instEditRow(t){ const regs=[...new Set(['천안','아산','천안·아산',...S.instructors.map(x=>x.region).filter(Boolean)])], mine=new Set(fieldsOf(t));
   const used=S.rows.filter(r=>r.status!=='cancel'&&(r.inst===t.id||r.asst===t.id)).length, apps=S.rows.filter(r=>r.apps.some(a=>a.tid===t.id)).length;
   return `<tr class="iedit"><td colspan="9"><div class="stack" style="gap:8px">
    <div class="fgrid"><label class="f">이름 *<input id="ie-name" value="${esc(t.name)}"></label><label class="f">연락처 *<input id="ie-phone" value="${esc(t.phone||'')}" inputmode="tel"></label><label class="f">이메일<input id="ie-email" type="email" value="${esc(t.email||'')}" inputmode="email"></label>
     <label class="f">지역<select id="ie-region">${regs.map(v=>`<option ${t.region===v?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
     <label class="f">강사 유형<select id="ie-kind"><option value="">미입력</option>${T_KINDS.map(k=>`<option ${tKind(t)===k?'selected':''}>${k}</option>`).join('')}</select></label>
     <label class="f">교육 경력(년)<input id="ie-years" type="number" min="0" max="60" step="1" value="${esc(t.years??'')}" style="width:90px"></label></div>
-   <div class="row small" style="gap:10px"><span class="muted">분야</span>${fl.map(f=>`<label class="row" style="gap:4px"><input type="checkbox" data-ief="${esc(f)}" ${mine.has(f)?'checked':''}>${esc(f)}</label>`).join('')}<label class="row" style="gap:4px;margin-left:8px"><input type="checkbox" id="ie-senior" ${t.senior?'checked':''}>경력 강사로 표시</label></div>
+   <div class="row small" style="gap:10px"><span class="muted">분야</span>${fieldChecks('data-ief',mine)}<label class="row" style="gap:4px;margin-left:8px"><input type="checkbox" id="ie-senior" ${t.senior?'checked':''}>경력 강사로 표시</label></div>
    <label class="f">비고 (특이사항 · 운영기관만 봅니다)<input id="ie-note" value="${esc(t.note||'')}"></label>
    <div class="small muted">이름·연락처를 바꾸면 강사는 바뀐 이름·연락처로 로그인합니다. 비밀번호는 그대로 유지됩니다.</div>
    ${S.ui.iDelAsk===t.id?`<div class="notice bad small stack" style="gap:6px"><b>${esc(t.name)} 강사를 명단에서 삭제할까요?</b>${used?`<div>이 강사는 <b>${used}개 학급에 배정</b>되어 있어 삭제할 수 없습니다. 먼저 「검토 · 매칭」에서 배정을 해제해 주세요.</div>`:`<div>삭제하면 이 강사는 로그인할 수 없고${apps?`, <b>${apps}개 학급의 신청</b>도 함께 지워집니다`:''}. 되돌릴 수 없습니다.</div><div class="row"><button class="btn sm danger" data-act="iedel" data-t="${t.id}">삭제 확정</button><button class="btn sm" data-act="iedelno">취소</button></div>`}</div>`:''}
@@ -3935,7 +3941,7 @@ function viewSetupAll(){
    <div class="small muted">직접 추가</div>
    <div class="fgrid"><label class="f">이름<input id="ni-name"></label><label class="f">연락처<input id="ni-phone" inputmode="tel"></label><label class="f">이메일<input id="ni-email" type="email" inputmode="email"></label><label class="f">지역<select id="ni-region"><option>천안</option><option>아산</option><option>천안·아산</option></select></label></div>
    <label class="f">비고 (특이사항 · 운영기관만 봅니다)<input id="ni-note"></label>
-   <div class="row small"><span class="muted">분야</span>${S.programs.filter(p=>p.org===MY_ORG).map((p,i)=>`<label class="row" style="gap:5px"><input type="checkbox" id="ni-p${i}" data-np="${p.key}">${esc(p.field)} <span class="muted">(${esc(p.name)})</span></label>`).join('')}</div>
+   <div class="row small" style="gap:10px"><span class="muted">분야</span>${fieldChecks('data-nf',new Set())}</div>
    <div><button class="btn" data-act="addinst">강사 추가</button></div></div>
   <!--§eval-->
   ${tsPanel()}
@@ -6521,7 +6527,7 @@ document.addEventListener('click',async e=>{
       const dup=S.instructors.find(x=>x!==t&&digits(x.phone)===digits(phone)&&nname(x.name)===nname(name)); if(dup){ toast('같은 이름·연락처의 강사가 이미 있습니다'); return; }
       const fs=[...document.querySelectorAll('[data-ief]:checked')].map(x=>x.dataset.ief), keep=(t.progs||[]).filter(k=>prog(k)&&prog(k).org!==MY_ORG);
       t.name=name; t.phone=phone; t.email=email; t.region=g('ie-region').value; t.kind=g('ie-kind').value; t.years=yrs===''?'':+yrs; t.note=g('ie-note').value.trim(); t.senior=g('ie-senior').checked;
-      t.progs=[...new Set([...keep,...fs.flatMap(f=>progsOfField(f).map(p=>p.key))])]; if(t.fieldsSelf) t.fieldsReviewed=true; delete t.example;
+      t.fields=fs; t.progs=[...new Set([...keep,...fs.flatMap(f=>progsOfField(f).map(p=>p.key))])]; if(t.fieldsSelf) t.fieldsReviewed=true; delete t.example;
       S.ui.iEdit=''; toast(`${name} 강사 정보를 저장했습니다`); break; }
     case 'iedelask': S.ui.iDelAsk=el.dataset.t; break;
     case 'iedelno': S.ui.iDelAsk=''; break;
@@ -6565,7 +6571,7 @@ document.addEventListener('click',async e=>{
     case 'manrev': S.ops={...S.ops,manualRev:now()}; S.ui.manRevAsk=false; toast('모든 강사가 다음 로그인 때 매뉴얼을 다시 확인하게 했습니다'); break;
     case 'tinfo-save': { const x=tInfoRead(); if(x.err){ toast(x.err); render(); return; }
       if(x.nd.manual){ x.t.manualAt=now(); x.t.manualRev=(S.ops||{}).manualRev||''; } if(x.nd.kind) x.t.kind=x.info.kind; if(x.nd.years) x.t.years=x.info.years; if(x.nd.car) x.t.car=x.info.car;
-      if(x.nd.email) x.t.email=x.info.email; if(x.nd.fields){ x.t.progs=[...new Set(x.info.fields.flatMap(f=>progsOfField(f).map(p=>p.key)))]; x.t.fieldsSelf=true; x.t.fieldsReviewed=false; }
+      if(x.nd.email) x.t.email=x.info.email; if(x.nd.fields){ x.t.fields=x.info.fields.slice(); x.t.progs=[...new Set(x.info.fields.flatMap(f=>progsOfField(f).map(p=>p.key)))]; x.t.fieldsSelf=true; x.t.fieldsReviewed=false; }
       x.t.infoAt=now(); S.ui.tInfo=null; toast('강사 명단에 저장했습니다'); break; }
     case 'tinfo-reset': { const x=S.instructors.find(t=>t.id==='t-info'); if(x){ x.email=''; x.progs=[]; delete x.fieldsSelf; delete x.fieldsReviewed; S.rows.forEach(r=>{ r.apps=r.apps.filter(a=>a.tid!=='t-info'); }); } toast('예시 강사 정보를 비웠습니다'); break; }
     case 'tfreview': { const t=S.instructors.find(x=>x.id===el.dataset.t); if(t){ t.fieldsReviewed=true; toast(t.name+' 강사 분야를 확인했습니다'); } break; }
@@ -6664,12 +6670,12 @@ document.addEventListener('click',async e=>{
     case 'idb-replace': case 'idb-merge': { const P=S.ui.idbPending; if(a==='idb-replace'){ const gone=new Set(S.instructors.filter(t=>t.example).map(t=>t.id));
         S.rows.forEach(r=>{ if(gone.has(r.inst)){ r.inst=''; if(r.status==='final') r.status='fixed'; } if(gone.has(r.asst)) r.asst=''; r.apps=r.apps.filter(x=>!gone.has(x.tid)); });
         S.instructors=S.instructors.filter(t=>!gone.has(t.id)); if(gone.has(S.ui.tAuth)) S.ui.tAuth=''; }
-      let add=0, upd=0; P.list.forEach(x=>{ const ex=S.instructors.find(t=>digits(t.phone)===digits(x.phone)); if(ex){ Object.assign(ex,{name:x.name,email:x.email||ex.email,region:x.region||ex.region,progs:x.progs.length?x.progs:ex.progs,senior:x.senior||ex.senior,note:x.note||ex.note||''}); upd++; } else { S.instructors.push({id:'t'+Date.now().toString(36)+add,...x}); add++; } });
+      let add=0, upd=0; P.list.forEach(x=>{ const ex=S.instructors.find(t=>digits(t.phone)===digits(x.phone)); if(ex){ Object.assign(ex,{name:x.name,email:x.email||ex.email,region:x.region||ex.region,progs:x.progs.length?x.progs:ex.progs,fields:(x.fields||[]).length?x.fields:(ex.fields||[]),senior:x.senior||ex.senior,note:x.note||ex.note||''}); upd++; } else { S.instructors.push({id:'t'+Date.now().toString(36)+add,...x}); add++; } });
       S.ui.idbPending=null; toast(`강사 ${add}명 추가${upd?`, ${upd}명 갱신`:''}`); break; }
-    case 'addinst': { const name=document.getElementById('ni-name').value.trim(), progs=[...document.querySelectorAll('[data-np]:checked')].map(x=>x.dataset.np);
-      if(!name||!progs.length){ toast('이름을 적고 분야를 하나 이상 골라 주세요'); return; }
+    case 'addinst': { const name=document.getElementById('ni-name').value.trim(), fields=[...document.querySelectorAll('[data-nf]:checked')].map(x=>x.dataset.nf), progs=[...new Set(fields.flatMap(f=>progsOfField(f).map(p=>p.key)))];
+      if(!name||!fields.length){ toast('이름을 적고 분야를 하나 이상 골라 주세요'); return; }
       const phone=document.getElementById('ni-phone').value.trim(); if(digits(phone).length<9){ toast('연락처를 입력해 주세요'); return; } if(S.instructors.some(x=>digits(x.phone)===digits(phone))){ toast('같은 연락처의 강사가 이미 있습니다'); return; }
-      S.instructors.push({id:'t'+Date.now().toString(36),name,phone,email:document.getElementById('ni-email').value.trim(),region:document.getElementById('ni-region').value,progs,senior:false,note:document.getElementById('ni-note').value.trim()}); toast(name+' 강사를 추가했습니다'); break; }
+      S.instructors.push({id:'t'+Date.now().toString(36),name,phone,email:document.getElementById('ni-email').value.trim(),region:document.getElementById('ni-region').value,fields,progs,senior:false,note:document.getElementById('ni-note').value.trim()}); toast(name+' 강사를 추가했습니다'); break; }
     case 'export': doExport(); return;
     case 'x-fmt': { S.ui.xfmt=el.dataset.v; const E=S.ui.edu=S.ui.edu||{}; if(el.dataset.v==='edu'&&!E.tpl&&!E.tried){ E.tried=true; const o=eduTplRecall(); if(o) eduReadTpl(o.buf,o.file).then(T=>{ E.tpl=T; render(); }).catch(()=>{}); } E.sys=null; break; }
     case 'edu-tclear': { const E=S.ui.edu||{}; E.tpl=null; E.map={}; try{ localStorage.removeItem('eduTpl'); }catch(e){} break; }
@@ -7141,7 +7147,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.53';
+const APP_VER = '11.54';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
