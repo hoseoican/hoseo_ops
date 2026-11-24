@@ -547,6 +547,9 @@ table.mtt td{vertical-align:top}
 .awb>div{flex-basis:100%}.awb em{font-style:normal;font-weight:700;color:var(--accent-ink)}
 .awb.open{border-left-color:var(--ok)}.awb.closed{border-left-color:var(--crit);background:var(--blk-bg)}
 .aw-form{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.awsec{gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.awt{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.awk{display:inline-block;min-width:56px;padding:2px 8px;border-radius:4px;background:var(--sunk);font-size:12px;font-weight:700;text-align:center}
 .chip.ok{background:var(--fin-bg);color:var(--fin-fg);border-color:transparent}
 .btn.danger-o{color:var(--crit);border-color:var(--crit);background:var(--surface);font-weight:600}
 .btn.danger-o:hover{background:var(--blk-bg)}
@@ -2194,7 +2197,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.55';
+const LIB_VER='11.56';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2429,6 +2432,22 @@ function asDayRow(r){ const c=classDays(r), on=new Set(aDaysOf(r));
   return `<tr class="asday"><td></td><td colspan="6"><div class="stack" style="gap:6px"><div class="small"><b>보조강사 참여일</b> </div>
    <div class="row" style="gap:4px;flex-wrap:wrap">${c.map((d,i)=>`<button class="fchip ${on.has(d)?'on':''}" data-act="asdtog" data-id="${r.id}" data-d="${d}" title="${i+1}회차">${md(d)}(${DOWS[dowOf(d)]})</button>`).join('')}</div>
    <div class="row" style="gap:6px"><button class="btn sm" data-act="asdall" data-id="${r.id}">수업일 전체로</button><button class="btn sm pri" data-act="asdays" data-id="${r.id}">완료</button><span class="small">${on.size}/${c.length}회${r.asst&&!r.asstPend?' · <span class="lv-warn">이미 확정된 보조강사에게도 바로 바뀐 날짜가 보입니다. 필요하면 안내 문자를 다시 보내 주세요</span>':''}</span></div></div></td></tr>`; }
+/* 보조강사 신청자 목록: 주강사 「강사별 신청 현황」처럼 강사마다 신청한 학급을 모아 보고 바로 가배치 */
+function asByTeacher(list){ const u=S.ui, q=String(u.asQ||'').trim();
+  const T=new Map(); list.forEach(r=>asApps(r).forEach(a=>{ if(!T.has(a.tid)) T.set(a.tid,{tid:a.tid,apps:[],asg:[]}); T.get(a.tid).apps.push({r,a}); }));
+  list.forEach(r=>{ if(r.asst){ if(!T.has(r.asst)) T.set(r.asst,{tid:r.asst,apps:[],asg:[]}); T.get(r.asst).asg.push(r); } });
+  const ks=u.asTs||'apps', L=[...T.values()].filter(x=>!q||instName(x.tid).includes(q)||x.apps.some(({r})=>[r.school,clsName(r),prog(r.prog).name].join(' ').includes(q)));
+  L.sort((a,b)=>ks==='name'?instName(a.tid).localeCompare(instName(b.tid),'ko'):ks==='asg'?(a.asg.length-b.asg.length)||(b.apps.length-a.apps.length):(b.apps.length-a.apps.length)||instName(a.tid).localeCompare(instName(b.tid),'ko'));
+  const chipL=r=>`${esc(shortSch(r.school))} ${esc(clsName(r))} · ${daysTxt(r.days)} ${hm(r.ts)}`;
+  const chip=(r,tid,a,extra)=>{ const on=r.asst===tid, pend=on&&r.asstPend, other=!on&&r.asst, hard=!on&&(tid===r.inst||conflictsFor(tid,r,true).some(x=>x.hard));
+    const tip=[prog(r.prog).name,`${md(r.start)}~${md(r.end)}`,a&&a.at?'신청 '+a.at:'',a&&a.note?'메모: '+a.note:'',on?(pend?'가배치됨 · 누르면 해제':'보조강사 확정됨 · 누르면 해제'):other?`${instName(r.asst)} 대신 이 강사로 가배치`:'',hard?(tid===r.inst?'이 학급의 주강사':'같은 시간 다른 수업 배정'):''].filter(Boolean).join(' · ');
+    return `<button class="aschip ${on?'on':''} ${hard?'bad':''}" data-act="${on?'asunpick':'aspick'}" data-id="${r.id}" data-t="${tid}" title="${esc(tip)}">${on?'✓ ':''}${chipL(r)}${extra||''}${other?' · 다른 강사 배치됨':''}${hard?' · 겹침':''}</button>`; };
+  return `<div class="row" style="gap:8px"><span class="small muted">신청 강사 ${L.length}명 · 신청 ${L.reduce((n,x)=>n+x.apps.length,0)}건</span><label class="row small" style="margin-left:auto">정렬 <select id="as-ts"><option value="apps" ${ks==='apps'?'selected':''}>신청 많은 순</option><option value="asg" ${ks==='asg'?'selected':''}>배정 적은 순</option><option value="name" ${ks==='name'?'selected':''}>이름순</option></select></label></div>
+   <div class="tw" style="max-height:480px;overflow:auto"><table class="mt mtt"><thead><tr><th>강사</th><th class="nowrap">신청 · 배정</th><th>신청한 학급</th></tr></thead><tbody>
+   ${L.length?L.map(x=>{ const t=instOf(x.tid)||{}; return `<tr><td class="nowrap"><b>${esc(instName(x.tid)||'(명단에 없음)')}</b>${t.id?tKindChip(t):''}<div class="small muted">${esc([t.region,t.phone].filter(Boolean).join(' · '))}</div></td>
+     <td class="nowrap"><b>${x.apps.length}</b> 신청 · <b class="${x.asg.length?'lv-ok':''}">${x.asg.length}</b> 배정${x.asg.some(r=>r.asstPend)?`<div class="small lv-warn">가배치 ${x.asg.filter(r=>r.asstPend).length}</div>`:''}</td>
+     <td><div class="row" style="gap:4px;flex-wrap:wrap">${x.apps.slice().sort((a,b)=>String(a.r.start).localeCompare(String(b.r.start))||(a.r.ts-b.r.ts)).map(({r,a})=>chip(r,x.tid,a)).join('')}${x.asg.filter(r=>!x.apps.some(y=>y.r.id===r.id)).map(r=>chip(r,x.tid,null,' (미신청)')).join('')}</div></td></tr>`; }).join(''):`<tr><td colspan="3" class="muted small">${list.some(r=>r.aOpen)?'아직 신청한 강사가 없습니다.':'모집 공개한 학급이 없습니다. 「학급별 신청 · 배치」에서 학급을 골라 모집을 공개해 주세요.'}</td></tr>`}
+   </tbody></table></div>`; }
 function asPanel(){
   const u=S.ui, all=asRows(), L=asList(), f=u.asF||'', sl=u.asSel||{};
   const sel=all.filter(r=>sl[r.id]), pend=all.filter(r=>asState(r)==='pend');
@@ -2442,16 +2461,11 @@ function asPanel(){
   return `<div class="panel stack" style="gap:10px;border-color:var(--accent)">
    <div class="row between"><h3>보조강사 배치</h3><button class="btn sm" data-act="asopen">닫기</button></div>
    <div class="small">학급 선택 → 모집 공개 → 신청 강사 이름 눌러 가배치 → 보조강사 확정 ${qt(['배치 확정 학급만 모집할 수 있음','가배치는 운영기관만 보임','확정하면 강사 화면에 공개','학교 화면에는 학교 공개를 마친 학급에만 보임','참여일을 줄이면 강사 화면·문자에 그 날짜만 나감'])}</div>
-   ${(()=>{ const {st,w}=asstState(), ed=S.ui.aswEdit||st==='unset';
-     const lab={unset:['신청 기간 없음 · 신청 받지 않음','lv-crit'],before:['신청 기간 전','lv-warn'],open:['신청 받는 중','lv-ok'],closed:['신청 마감','muted']}[st];
-     return `<div class="aswp row" style="gap:8px;flex-wrap:wrap;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:8px"><b>보조강사 신청 기간</b><span class="small ${lab[1]}"><b>${lab[0]}</b>${st!=='unset'?` · ${esc(asstRange(w))}`:''}</span>
-      ${ed?`<label class="f small">시작<input type="datetime-local" id="asw-from" value="${esc(w.from||'')}"></label><label class="f small">마감<input type="datetime-local" id="asw-to" value="${esc(w.to||'')}"></label><button class="btn sm pri" data-act="aswsave">기간 저장</button>${st!=='unset'?'<button class="btn sm" data-act="aswedit">닫기</button>':''}`
-        :`<button class="btn sm" data-act="aswedit">기간 바꾸기</button>${st==='open'?'<button class="btn sm" data-act="aswclose">지금 마감</button>':''}`}
-      ${qt(['주강사 신청 기간과 따로 정함','이 기간 안에만 보조강사 신청·신청 취소 가능','기간이 없으면 신청 받지 않음','기간 밖에도 모집 학급 정보는 강사 화면에 보임'])}</div>`; })()}
    <div class="row" style="gap:6px;flex-wrap:wrap">${chip('','전체')}${chip('req','학교 요청')}${chip('none','모집 전')}${chip('open','모집 중')}${chip('app','신청 있음 · 미배치')}${chip('pend','가배치')}${chip('fin','확정')}<input id="as-q" type="search" placeholder="학교 · 프로그램 · 강사 검색" value="${esc(u.asQ||'')}" style="flex:1 1 180px" aria-label="보조강사 배치 학급 검색"></div>
-   <div class="tw" style="max-height:480px;overflow:auto"><table><thead><tr><th style="width:32px"><input type="checkbox" data-asall ${L.length&&L.every(r=>sl[r.id])?'checked':''} aria-label="보이는 학급 모두 선택"></th><th>순</th><th>운영 대학</th><th>학교 · 학급</th><th>프로그램</th><th>요일 · 시간 · 기간</th><th>주강사</th><th>보조강사</th><th>신청 강사 <span class="muted small" style="font-weight:400">이름을 누르면 가배치</span></th></tr></thead><tbody>
+   <div class="row" style="gap:8px"><div class="seg2" role="tablist">${[['teacher','신청자 목록 (강사별)'],['class','학급별 신청 · 배치']].map(([k,l])=>`<button class="${(u.asView||'teacher')===k?'on':''}" data-act="asview" data-v="${k}" role="tab" aria-selected="${(u.asView||'teacher')===k}">${l}</button>`).join('')}</div><span class="small muted">학급 이름을 누르면 보조강사로 가배치 · 다시 누르면 해제</span></div>
+   ${(u.asView||'teacher')==='teacher'?asByTeacher(L):`<div class="tw" style="max-height:480px;overflow:auto"><table><thead><tr><th style="width:32px"><input type="checkbox" data-asall ${L.length&&L.every(r=>sl[r.id])?'checked':''} aria-label="보이는 학급 모두 선택"></th><th>순</th><th>운영 대학</th><th>학교 · 학급</th><th>프로그램</th><th>요일 · 시간 · 기간</th><th>주강사</th><th>보조강사</th><th>신청 강사 <span class="muted small" style="font-weight:400">이름을 누르면 가배치</span></th></tr></thead><tbody>
     ${L.length?L.map((r,i)=>{ const [stl,stc]=AS_ST[asState(r)]; return `<tr><td><input type="checkbox" data-assel="${r.id}" ${sl[r.id]?'checked':''} aria-label="선택"></td><td class="mono muted">${i+1}</td><td class="nowrap">${tOrgTag(r)}</td><td class="nowrap"><b>${esc(shortSch(r.school))}</b> · ${esc(clsName(r))}${r.sc.req.assist?' <span class="chip warn">학교 요청</span>':''}</td><td class="small">${esc(prog(r.prog).name)}</td><td class="small nowrap">${daysTxt(r.days)} <span class="mono">${hm(r.ts)}~${hm(r.te)}</span><div class="muted">${md(r.start)}~${md(r.end)} · ${classDays(r).length}회</div><button class="lnk small ${aDaysPart(r)?'lv-warn':''}" data-act="asdays" data-id="${r.id}" style="font-weight:${aDaysPart(r)?700:400}">보조 참여일 ${aDaysOf(r).length}/${classDays(r).length}회 ${u.asDay===r.id?'▲':'▼'}</button></td><td class="small nowrap">${esc(instName(r.inst))}</td><td class="small nowrap ${stc}"><b>${stl}</b>${r.asst?`<div>${esc(instName(r.asst))}</div>`:''}${r.aOpen&&asApps(r).length?`<div class="muted">신청 ${asApps(r).length}명</div>`:''}</td><td><div class="row" style="gap:4px;flex-wrap:wrap">${appsH(r)}</div></td></tr>${u.asDay===r.id?asDayRow(r):''}`; }).join(''):'<tr><td colspan="9" class="muted small">조건에 맞는 학급이 없습니다.</td></tr>'}
-   </tbody></table></div>
+   </tbody></table></div>`}
    <div class="row" style="gap:6px;flex-wrap:wrap"><span class="small">선택 <b>${sel.length}</b>학급</span><button class="btn sm pri" data-act="asrec" ${sel.length?'':'disabled'}>선택 학급 보조강사 모집 공개</button><button class="btn sm" data-act="asclose" ${sel.some(r=>r.aOpen)?'':'disabled'}>선택 학급 모집 닫기</button>${sel.length?'<button class="btn sm" data-act="asselclr">선택 해제</button>':''}
     <span style="flex:1"></span><button class="btn sm pri" data-act="asfin" ${pend.length?'':'disabled'}>보조강사 확정 (강사 공개) ${pend.length}학급</button></div>
    <div class="row" style="gap:6px;flex-wrap:wrap">${(()=>{ const n=instSmsList('asst').length; return `<button class="btn sm" data-act="asstsms" ${n?'':'disabled'} title="확정된 보조강사에게 보낼 문자 내용을 강사별로 정리한 엑셀">보조강사 안내 문자 엑셀 (${n}명)</button>${smsBrBtn('smsinst',n,`보조강사 문자 보내기 (${n}명)`,'data-k="asst"')}<button class="btn sm" data-act="smstpl" data-k="asst">보조강사 문자 문구 수정</button>`; })()}${qt(['확정된 보조강사만 들어감','메일·문자는 자동으로 나가지 않음'])}</div>
@@ -2692,7 +2706,8 @@ function applyWinPanel(){ const w=awObj(), {st}=applyState(), ed=!!S.ui.awEdit;
   const nApps=rec.reduce((a,r)=>a+r.apps.filter(x=>!rnd||x.round===rnd).length,0);
   const OW=Object.entries(S.applyWinOrg||{}).filter(([o])=>o!==S.adminOrg), cw=winSt(S.applyWin).st;
   const pill={none:S.adminOrg?'<span class="chip">대학 추가 기간 없음</span>':'<span class="chip">기간 없음 · 항상 신청 가능</span>',before:'<span class="chip warn">시작 전</span>',open:'<span class="chip ok">신청 받는 중</span>',closed:'<span class="chip x">마감됨</span>'}[st];
-  return `<div class="panel stack awp"><div class="row between" style="align-items:flex-start"><div><h3>${S.adminOrg?`${esc(orgShort(S.adminOrg))} 추가 배치 신청 기간`:'강사 배치 신청 기간'} ${pill} ${qt(S.adminOrg?['공통 신청 기간은 호서대(앵커늘봄총괄센터)가 정함','여기서는 '+orgShort(S.adminOrg)+' 수업만 따로 신청을 더 받는 기간을 정함','공통 기간 또는 이 기간 중 하나라도 열려 있으면 '+orgShort(S.adminOrg)+' 수업 신청 가능']:['모든 대학 공통 신청 기간','대학별 추가 기간은 각 대학 관리자가 정함(아래 표시)'])}</h3>
+  return `<div class="panel stack awp"><div class="row" style="gap:6px;align-items:center"><h3>강사 배치 신청 기간</h3>${qt(['주강사 · 보조강사 신청 기간을 각각 정함','기간 밖에는 강사 화면에서 신청 · 신청 취소가 막힘'])}</div>
+   <div class="awsec stack"><div class="row between" style="align-items:flex-start"><div><div class="awt"><span class="awk">주강사</span><b>${S.adminOrg?`${esc(orgShort(S.adminOrg))} 추가 신청 기간`:'신청 기간'}</b> ${pill} ${qt(S.adminOrg?['공통 신청 기간은 호서대(앵커늘봄총괄센터)가 정함','여기서는 '+orgShort(S.adminOrg)+' 수업만 따로 신청을 더 받는 기간을 정함','공통 기간 또는 이 기간 중 하나라도 열려 있으면 '+orgShort(S.adminOrg)+' 수업 신청 가능']:['모든 대학 공통 신청 기간','대학별 추가 기간은 각 대학 관리자가 정함(아래 표시)'])}</div>
      ${S.adminOrg?`<div class="small muted">공통 기간: ${cw==='none'?'없음(항상 신청 가능)':esc((S.applyWin||{}).round||'')+' '+awRange(S.applyWin||{})+(cw==='open'?' · 신청 받는 중':cw==='closed'?' · 마감':' · 시작 전')}</div>`:OW.length?`<div class="small muted">대학별 추가 기간: ${OW.map(([o,x])=>`${esc(orgShort(o))} ${esc(x.round||'')} ${awRange(x)} (${({none:'없음',before:'시작 전',open:'신청 받는 중',closed:'마감'})[winSt(x).st]})`).join(' · ')}</div>`:''}
      <div class="small muted" style="margin-top:2px">${st==='none'?(S.adminOrg?'추가 기간 없음 · 공통 기간을 따름':'기간 없음 · 항상 신청 가능'):`<b>${esc(rnd||'신청')}</b> ${awRange(w)}${w.onlyOpen?' · 강사 미정 학급만 공개':''} · 모집 중 ${rec.length}학급(강사 미정 ${open}) · ${esc(rnd)} 신청 ${nApps}건`}</div></div>
     ${ed?'':`<div class="row"><button class="btn sm ${st==='none'?'pri':''}" data-act="awedit">${st==='none'?'신청 기간 설정':'기간 변경'}</button>${st==='open'?'<button class="btn sm danger" data-act="awclose">지금 마감</button>':''}${st==='closed'?'<button class="btn sm pri" data-act="awnext">다음 차수 열기…</button>':''}</div>`}</div>
@@ -2703,7 +2718,18 @@ function applyWinPanel(){ const w=awObj(), {st}=applyState(), ed=!!S.ui.awEdit;
      <div class="small muted">한국 시간 기준 ${qt(['마감되면 신청·신청 취소가 자동으로 막힘','배정된 수업의 배정 취소 요청은 계속 가능','시작을 비우면 지금부터, 마감을 비우면 마감 없이'])}</div>
      <div class="row"><button class="btn sm pri" data-act="awsave">저장</button>${st!=='none'||w.from||w.to?'<button class="btn sm" data-act="awclear">기간 없애기 (항상 신청 가능)</button>':''}${S.ui.awEdit?'<button class="btn sm" data-act="awcancel">닫기</button>':''}</div>`:''}
    ${(w.hist||[]).length?`<details class="small"><summary class="muted">지난 신청 기간 ${w.hist.length}건</summary><ul style="margin:4px 0 0;padding-left:18px">${w.hist.map(h=>`<li><b>${esc(h.round||'-')}</b> ${awRange(h)} <span class="muted">(${esc(h.at||'')} 종료)</span></li>`).join('')}</ul></details>`:''}
+   </div>${asstWinSec()}
   </div>`; }
+/* 보조강사 신청 기간(S.asstWin): 「강사 배치 신청 기간」 패널 안에서 주강사와 따로 정함. 대학 관리자는 보기만 */
+function asstWinSec(){ const {st,w}=asstState(), ro=!!S.adminOrg, ed=!ro&&!!S.ui.aswEdit;
+  const pill={unset:'<span class="chip x">기간 없음 · 신청 받지 않음</span>',before:'<span class="chip warn">시작 전</span>',open:'<span class="chip ok">신청 받는 중</span>',closed:'<span class="chip x">마감됨</span>'}[st];
+  const A=asRows(), aO=A.filter(r=>r.aOpen).length, aN=A.filter(r=>r.aOpen).reduce((a,r)=>a+asApps(r).length,0);
+  return `<div class="awsec stack"><div class="row between" style="align-items:flex-start"><div><div class="awt"><span class="awk">보조강사</span><b>신청 기간</b> ${pill} ${qt(['주강사 신청 기간과 따로 정함','이 기간 안에만 보조강사 신청 · 신청 취소 가능','기간이 없으면 신청 받지 않음','기간 밖에도 모집 학급 정보는 강사 화면에 보임',ro?'보조강사 신청 기간은 호서대(앵커늘봄총괄센터)가 정함':''].filter(Boolean))}</div>
+     <div class="small muted" style="margin-top:2px">${st==='unset'?'기간을 정해야 보조강사 신청을 받습니다':`${esc(asstRange(w))}`} · 모집 중 ${aO}학급 · 신청 ${aN}건</div></div>
+    ${ro||ed?'':`<div class="row"><button class="btn sm ${st==='unset'?'pri':''}" data-act="aswedit">${st==='unset'?'신청 기간 설정':'기간 변경'}</button>${st==='open'?'<button class="btn sm danger" data-act="aswclose">지금 마감</button>':''}</div>`}</div>
+   ${ed?`<div class="aw-form"><label class="f">신청 시작<input type="datetime-local" id="asw-from" value="${esc(w.from||'')}"></label><label class="f">신청 마감<input type="datetime-local" id="asw-to" value="${esc(w.to||'')}"></label></div>
+     <div class="small muted">한국 시간 기준 ${qt(['시작을 비우면 지금부터, 마감을 비우면 마감 없이'])}</div>
+     <div class="row"><button class="btn sm pri" data-act="aswsave">저장</button><button class="btn sm" data-act="aswedit">닫기</button></div>`:''}</div>`; }
 /* 검토 · 매칭 학급 표: 현황 표처럼 정리, 행을 누르면 오른쪽 서랍에 수업 정보 · 신청 강사 */
 const MST = [['','전체',()=>true],['rev','검토 대기',r=>toReview(r)],['open','공개 전',r=>toOpen(r)],['recruit','모집 중',r=>r.status==='recruit'],['noinst','강사 미정',r=>['fixed','recruit'].includes(r.status)&&canAssign(r)&&!r.inst],['apps','신청 있음',r=>r.apps.length>0&&r.status!=='final'],['tent','가배치',r=>r.inst&&r.status!=='final'],['final','배치 확정',r=>r.status==='final'],['blocked','진행 불가',r=>['confirmed','proposed','fixed','recruit'].includes(r.status)&&!gate(r)],['bun','묶음',r=>!!r.bundle]];
 /* 한 화면 배치: 신청 강사 칩을 눌러 바로 가배치/해제. 겹침은 그 강사의 다른 배정(확정·가배치) 기준 */
@@ -6351,6 +6377,7 @@ document.addEventListener('click',async e=>{
     case 'srcgonekeep': { delete r.srcGone; r.thread.push({who:'호서대',text:'목록에서 빠졌지만 계속 운영',at:now()}); toast('계속 운영합니다'); break; }
     case 'msel': case 'mopen': S.ui.sel=el.dataset.id; S.ui.mDrawer=el.dataset.id; S.ui.drawer=''; S.ui.bunEdit=''; S.ui.acx=''; break;
     case 'mview': S.ui.mview=el.dataset.v; break;
+    case 'asview': S.ui.asView=el.dataset.v; break;
     case 'mtf': S.ui.mtf=el.dataset.v; break;
     case 'qasg': { const tid=el.dataset.t; if(r.status==='final'){ toast('배치 확정된 학급은 학급을 눌러 서랍에서 바꿔 주세요'); return; } if(!canAssign(r)){ toast(gateReason(r)||'아직 강사를 배치할 수 없는 학급입니다'); return; }
       if(r.inst===tid){ r.inst=''; const bn=bunSync(r); toast(`${instName(tid)} 가배치를 해제했습니다${bn?` (묶음 ${bn+1}학급)`:''}`); break; }
@@ -6884,6 +6911,7 @@ document.addEventListener('change',e=>{
   if((t.id&&t.id.startsWith('ie-'))||t.dataset.ief!=null) return; /* 강사 수정 칸: 저장 버튼을 누를 때 읽음 */
   if(['if-region','if-field','if-kind','if-pin'].includes(t.id)){ S.ui.if={...(S.ui.if||{}),[t.id.slice(3)]:t.value}; render(); return; }
   if(t.id==='mts'){ S.ui.mts=t.value; render(); return; }
+  if(t.id==='as-ts'){ S.ui.asTs=t.value; render(); return; }
   if(t.id==='if-sort'){ S.ui.isort=t.value; S.ui.idir=['years','apps','score'].includes(t.value)?'desc':'asc'; render(); return; }
   if(t.id==='fbprog') u.bprog=t.value; else if(t.id==='fsort'){ u.bsort=t.value; u.bdir=BSORT_DESC0.includes(t.value)?'desc':'asc'; } else if(t.id==='fregion') u.region=t.value; else if(t.id==='fprob') u.probOnly=t.checked; else if(t.id==='showWait') u.showWait=t.checked; else if(t.id==='onlyApps') u.onlyApps=t.checked; else if(t.id==='allCands') u.allCands=t.checked;
   else if(t.dataset.c&&(t.type==='radio'||t.type==='checkbox')){ const c=contactOf(u.school), k=t.dataset.c;
@@ -7150,7 +7178,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.55';
+const APP_VER = '11.56';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
