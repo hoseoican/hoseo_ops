@@ -553,9 +553,15 @@ table.mtt td{vertical-align:top}
 .dinfo a{color:inherit;text-decoration:none}.dinfo a:hover{text-decoration:underline}
 @media (max-width:560px){.dinfo{grid-template-columns:auto minmax(0,1fr)}.dinfo>div:nth-child(-n+4){border-top:1px solid var(--line)}.dinfo>div:first-child,.dinfo>div:nth-child(2){border-top:0}.dinfo .di-p,.dinfo .di-e{grid-column:2;border-top:0;padding-top:0}.dinfo .di-k{grid-row:span 3}.dinfo .di-none{grid-column:2}}
 .aw-form{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
-.awsec{gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:8px}
-.awt{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.awk{display:inline-block;min-width:56px;padding:2px 8px;border-radius:4px;background:var(--sunk);font-size:12px;font-weight:700;text-align:center}
+.awtab{display:grid;grid-template-columns:auto auto auto auto minmax(0,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
+.awtab>div{padding:7px 12px;border-top:1px solid var(--line);display:flex;align-items:center;gap:4px;white-space:nowrap;min-width:0}
+.awtab>div:nth-child(-n+5){border-top:0}
+.awtab .awk{background:var(--sunk);color:var(--muted);font-size:12px;font-weight:700}
+.awtab .awrd{font-size:12px;font-weight:700;color:var(--accent-ink)}
+.awtab .awg{font-variant-numeric:tabular-nums}
+.awtab .awm{white-space:normal}
+.awedit{gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk)}
+@media (max-width:700px){.awtab{grid-template-columns:auto minmax(0,1fr)}.awtab>div{border-top:0}.awtab .awk{grid-row:span 4;border-top:1px solid var(--line)}.awtab .awr,.awtab .awg,.awtab>div:not(.awk){grid-column:2}}
 .chip.ok{background:var(--fin-bg);color:var(--fin-fg);border-color:transparent}
 .btn.danger-o{color:var(--crit);border-color:var(--crit);background:var(--surface);font-weight:600}
 .btn.danger-o:hover{background:var(--blk-bg)}
@@ -2212,7 +2218,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.59';
+const LIB_VER='11.60';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2717,35 +2723,32 @@ function placeClashHtml(){ const L=placeClashes(), crit=L.filter(x=>x.crit).leng
    <div class="tw" style="margin-top:8px"><table><thead><tr><th>강사</th><th>수업 1</th><th>수업 2</th><th>겹치는 날</th></tr></thead><tbody>
    ${L.map(x=>`<tr class="${x.crit?'crit':''}"><td class="nowrap"><b>${esc(instName(x.tid))}</b><div class="small muted">${esc((S.instructors.find(t=>t.id===x.tid)||{}).phone||'')}</div></td><td>${cls(x.a)}</td><td>${cls(x.b)}</td><td class="nowrap"><b>${x.d.length}일</b><div class="small muted">${x.d.slice(0,3).map(md).join(', ')}${x.d.length>3?' …':''}</div></td></tr>`).join('')}
    </tbody></table></div></details>`; }
-function applyWinPanel(){ const w=awObj(), {st}=applyState(), ed=!!S.ui.awEdit;
+function applyWinPanel(){ const w=awObj(), {st}=applyState(), ro=!!S.adminOrg, ed=!!S.ui.awEdit, kind=ro?'main':(S.ui.awKind||'main');
   const rec=matchRows().filter(r=>r.status==='recruit'), open=rec.filter(r=>!r.inst).length, rnd=w.round||'';
   const nApps=rec.reduce((a,r)=>a+r.apps.filter(x=>!rnd||x.round===rnd).length,0);
   const OW=Object.entries(S.applyWinOrg||{}).filter(([o])=>o!==S.adminOrg), cw=winSt(S.applyWin).st;
-  const pill={none:S.adminOrg?'<span class="chip">대학 추가 기간 없음</span>':'<span class="chip">기간 없음 · 항상 신청 가능</span>',before:'<span class="chip warn">시작 전</span>',open:'<span class="chip ok">신청 받는 중</span>',closed:'<span class="chip x">마감됨</span>'}[st];
-  return `<div class="panel stack awp"><div class="row" style="gap:6px;align-items:center"><h3>강사 배치 신청 기간</h3>${qt(['주강사 · 보조강사 신청 기간을 각각 정함','기간 밖에는 강사 화면에서 신청 · 신청 취소가 막힘'])}</div>
-   <div class="awsec stack"><div class="row between" style="align-items:flex-start"><div><div class="awt"><span class="awk">주강사</span><b>${S.adminOrg?`${esc(orgShort(S.adminOrg))} 추가 신청 기간`:'신청 기간'}</b> ${pill} ${qt(S.adminOrg?['공통 신청 기간은 호서대(앵커늘봄총괄센터)가 정함','여기서는 '+orgShort(S.adminOrg)+' 수업만 따로 신청을 더 받는 기간을 정함','공통 기간 또는 이 기간 중 하나라도 열려 있으면 '+orgShort(S.adminOrg)+' 수업 신청 가능']:['모든 대학 공통 신청 기간','대학별 추가 기간은 각 대학 관리자가 정함(아래 표시)'])}</div>
-     ${S.adminOrg?`<div class="small muted">공통 기간: ${cw==='none'?'없음(항상 신청 가능)':esc((S.applyWin||{}).round||'')+' '+awRange(S.applyWin||{})+(cw==='open'?' · 신청 받는 중':cw==='closed'?' · 마감':' · 시작 전')}</div>`:OW.length?`<div class="small muted">대학별 추가 기간: ${OW.map(([o,x])=>`${esc(orgShort(o))} ${esc(x.round||'')} ${awRange(x)} (${({none:'없음',before:'시작 전',open:'신청 받는 중',closed:'마감'})[winSt(x).st]})`).join(' · ')}</div>`:''}
-     <div class="small muted" style="margin-top:2px">${st==='none'?(S.adminOrg?'추가 기간 없음 · 공통 기간을 따름':'기간 없음 · 항상 신청 가능'):`<b>${esc(rnd||'신청')}</b> ${awRange(w)}${w.onlyOpen?' · 강사 미정 학급만 공개':''} · 모집 중 ${rec.length}학급(강사 미정 ${open}) · ${esc(rnd)} 신청 ${nApps}건`}</div></div>
-    ${ed?'':`<div class="row"><button class="btn sm ${st==='none'?'pri':''}" data-act="awedit" ${st==='none'?'':'title="지금 차수의 날짜만 고침"'}>${st==='none'?'신청 기간 설정':'기간 변경'}</button>${st==='open'?'<button class="btn sm danger" data-act="awclose">지금 마감</button>':''}${st==='closed'?'<button class="btn sm pri" data-act="awnext" title="지금 차수는 지난 기록으로 남기고 새 차수 기간을 정함">다음 차수 열기…</button>':''}</div>`}</div>
-   ${ed?`<div class="aw-form"><label class="f">차수 이름<input id="aw-round" value="${esc(S.ui.awDraft?.round??(rnd||'1차'))}" placeholder="예: 1차" style="width:90px"></label>
-     <label class="f">신청 시작<input type="datetime-local" id="aw-from" value="${esc(S.ui.awDraft?.from??(w.from||''))}"></label>
-     <label class="f">신청 마감<input type="datetime-local" id="aw-to" value="${esc(S.ui.awDraft?.to??(w.to||''))}"></label>
-     <label class="row small" style="gap:6px;align-self:end"><input type="checkbox" id="aw-only" ${(S.ui.awDraft?S.ui.awDraft.onlyOpen:w.onlyOpen)?'checked':''}> 강사가 아직 정해지지 않은 학급만 강사 화면에 보이기 <span class="muted">(2차 배치 때 켜기)</span></label></div>
-     <div class="small muted">한국 시간 기준 ${qt(['마감되면 신청·신청 취소가 자동으로 막힘','배정된 수업의 배정 취소 요청은 계속 가능','시작을 비우면 지금부터, 마감을 비우면 마감 없이'])}</div>
-     <div class="row"><button class="btn sm pri" data-act="awsave">저장</button>${st!=='none'||w.from||w.to?'<button class="btn sm" data-act="awclear">기간 없애기 (항상 신청 가능)</button>':''}${S.ui.awEdit?'<button class="btn sm" data-act="awcancel">닫기</button>':''}</div>`:''}
-   ${(w.hist||[]).length?`<details class="small"><summary class="muted">지난 신청 기간 ${w.hist.length}건</summary><ul style="margin:4px 0 0;padding-left:18px">${w.hist.map(h=>`<li><b>${esc(h.round||'-')}</b> ${awRange(h)} <span class="muted">(${esc(h.at||'')} 종료)</span></li>`).join('')}</ul></details>`:''}
-   </div>${asstWinSec()}
+  const {st:ast,w:aw}=asstState(), A=asRows(), aO=A.filter(r=>r.aOpen).length, aN=A.filter(r=>r.aOpen).reduce((a,r)=>a+asApps(r).length,0);
+  const P={none:ro?'<span class="chip">대학 추가 기간 없음</span>':'<span class="chip">기간 없음 · 항상 신청 가능</span>',unset:'<span class="chip x">기간 없음 · 신청 받지 않음</span>',before:'<span class="chip warn">시작 전</span>',open:'<span class="chip ok">신청 받는 중</span>',closed:'<span class="chip x">마감됨</span>'};
+  const row=(k,nm,round,range,pill,meta)=>`<div class="awk">${k}</div><div class="awr">${nm?`<span class="muted small">${esc(nm)}</span> `:''}<b class="awrd">${round?esc(round):'<span class="muted">차수 없음</span>'}</b></div><div class="awg">${range}</div><div>${pill}</div><div class="awm small muted">${meta}</div>`;
+  const cur=kind==='asst'?{round:aw.round||'',from:aw.from||'',to:aw.to||''}:{round:rnd,from:w.from||'',to:w.to||'',onlyOpen:!!w.onlyOpen};
+  const D=S.ui.awDraft||cur, kst=kind==='asst'?ast:st;
+  return `<div class="panel stack awp"><div class="row between"><div class="row" style="gap:6px;align-items:center"><h3>강사 배치 신청 기간</h3>${qt(ro?['공통 신청 기간은 호서대(앵커늘봄총괄센터)가 정함','여기서는 '+orgShort(S.adminOrg)+' 수업만 따로 주강사 신청을 더 받는 기간을 정함','공통 기간 또는 이 기간 중 하나라도 열려 있으면 신청 가능']:['주강사 · 보조강사 신청 기간을 각각 정함','기간 밖에는 강사 화면에서 신청 · 신청 취소가 막힘','주강사: 기간이 없으면 항상 신청 가능','보조강사: 기간이 없으면 신청 받지 않음'])}</div>
+    ${ed?'':`<button class="btn sm" data-act="awedit">기간 설정</button>`}</div>
+   <div class="awtab">
+    ${row('주강사',ro?`${orgShort(S.adminOrg)} 추가`:'',rnd,st==='none'?'<span class="muted">-</span>':esc(awRange(w)),P[st],`${w.onlyOpen&&st!=='none'?'강사 미정 학급만 공개 · ':''}모집 중 ${rec.length}학급(강사 미정 ${open}) · 신청 ${nApps}건`)}
+    ${row('보조강사','',aw.round||'',ast==='unset'?'<span class="muted">-</span>':esc(asstRange(aw)),P[ast],`모집 중 ${aO}학급 · 신청 ${aN}건`)}
+   </div>
+   ${ro?`<div class="small muted">공통 기간: ${cw==='none'?'없음(항상 신청 가능)':esc((S.applyWin||{}).round||'')+' '+awRange(S.applyWin||{})+(cw==='open'?' · 신청 받는 중':cw==='closed'?' · 마감':' · 시작 전')}</div>`:OW.length?`<div class="small muted">대학별 추가 기간: ${OW.map(([o,x])=>`${esc(orgShort(o))} ${esc(x.round||'')} ${awRange(x)} (${({none:'없음',before:'시작 전',open:'신청 받는 중',closed:'마감'})[winSt(x).st]})`).join(' · ')}</div>`:''}
+   ${ed?`<div class="awedit stack"><div class="aw-form">
+     ${ro?'':`<label class="f">대상<select id="aw-kind"><option value="main" ${kind==='main'?'selected':''}>주강사</option><option value="asst" ${kind==='asst'?'selected':''}>보조강사</option></select></label>`}
+     <label class="f">차수 이름<input id="aw-round" value="${esc(D.round||'')}" placeholder="예: 1차" style="width:90px"></label>
+     <label class="f">신청 시작<input type="datetime-local" id="aw-from" value="${esc(D.from||'')}"></label>
+     <label class="f">신청 마감<input type="datetime-local" id="aw-to" value="${esc(D.to||'')}"></label>
+     ${kind==='main'?`<label class="row small" style="gap:6px;align-self:end"><input type="checkbox" id="aw-only" ${D.onlyOpen?'checked':''}> 강사 미정 학급만 강사 화면에 보이기</label>`:''}</div>
+     <div class="small muted">한국 시간 기준 ${qt(['마감되면 신청 · 신청 취소가 자동으로 막힘','배정된 수업의 배정 취소 요청은 계속 가능','시작을 비우면 지금부터, 마감을 비우면 마감 없이'])}</div>
+     <div class="row"><button class="btn sm pri" data-act="awsave">저장</button>${kst==='open'?'<button class="btn sm danger" data-act="awclose">지금 마감</button>':''}${(kind==='asst'?ast!=='unset':(st!=='none'||w.from||w.to))?`<button class="btn sm" data-act="awclear">기간 없애기 (${kind==='asst'?'신청 받지 않음':'항상 신청 가능'})</button>`:''}<button class="btn sm" data-act="awcancel">닫기</button></div></div>`:''}
+   ${(w.hist||[]).length?`<details class="small"><summary class="muted">지난 주강사 신청 기간 ${w.hist.length}건</summary><ul style="margin:4px 0 0;padding-left:18px">${w.hist.map(h=>`<li><b>${esc(h.round||'-')}</b> ${awRange(h)} <span class="muted">(${esc(h.at||'')} 종료)</span></li>`).join('')}</ul></details>`:''}
   </div>`; }
-/* 보조강사 신청 기간(S.asstWin): 「강사 배치 신청 기간」 패널 안에서 주강사와 따로 정함. 대학 관리자는 보기만 */
-function asstWinSec(){ const {st,w}=asstState(), ro=!!S.adminOrg, ed=!ro&&!!S.ui.aswEdit;
-  const pill={unset:'<span class="chip x">기간 없음 · 신청 받지 않음</span>',before:'<span class="chip warn">시작 전</span>',open:'<span class="chip ok">신청 받는 중</span>',closed:'<span class="chip x">마감됨</span>'}[st];
-  const A=asRows(), aO=A.filter(r=>r.aOpen).length, aN=A.filter(r=>r.aOpen).reduce((a,r)=>a+asApps(r).length,0);
-  return `<div class="awsec stack"><div class="row between" style="align-items:flex-start"><div><div class="awt"><span class="awk">보조강사</span><b>신청 기간</b> ${pill} ${qt(['주강사 신청 기간과 따로 정함','이 기간 안에만 보조강사 신청 · 신청 취소 가능','기간이 없으면 신청 받지 않음','기간 밖에도 모집 학급 정보는 강사 화면에 보임',ro?'보조강사 신청 기간은 호서대(앵커늘봄총괄센터)가 정함':''].filter(Boolean))}</div>
-     <div class="small muted" style="margin-top:2px">${st==='unset'?'기간을 정해야 보조강사 신청을 받습니다':`${esc(asstRange(w))}`} · 모집 중 ${aO}학급 · 신청 ${aN}건</div></div>
-    ${ro||ed?'':`<div class="row"><button class="btn sm ${st==='unset'?'pri':''}" data-act="aswedit" ${st==='unset'?'':'title="지금 기간의 날짜만 고침"'}>${st==='unset'?'신청 기간 설정':'기간 변경'}</button>${st==='open'?'<button class="btn sm danger" data-act="aswclose">지금 마감</button>':''}${st==='closed'?'<button class="btn sm pri" data-act="aswnew" title="날짜를 비우고 새 신청 기간을 정함">새 기간 열기…</button>':''}</div>`}</div>
-   ${ed?`<div class="aw-form"><label class="f">신청 시작<input type="datetime-local" id="asw-from" value="${esc(S.ui.aswDraft?S.ui.aswDraft.from:(w.from||''))}"></label><label class="f">신청 마감<input type="datetime-local" id="asw-to" value="${esc(S.ui.aswDraft?S.ui.aswDraft.to:(w.to||''))}"></label></div>
-     <div class="small muted">한국 시간 기준 ${qt(['시작을 비우면 지금부터, 마감을 비우면 마감 없이'])}</div>
-     <div class="row"><button class="btn sm pri" data-act="aswsave">저장</button><button class="btn sm" data-act="aswedit">닫기</button></div>`:''}</div>`; }
 /* 검토 · 매칭 학급 표: 현황 표처럼 정리, 행을 누르면 오른쪽 서랍에 수업 정보 · 신청 강사 */
 const MST = [['','전체',()=>true],['rev','검토 대기',r=>toReview(r)],['open','공개 전',r=>toOpen(r)],['recruit','모집 중',r=>r.status==='recruit'],['noinst','강사 미정',r=>['fixed','recruit'].includes(r.status)&&canAssign(r)&&!r.inst],['apps','신청 있음',r=>r.apps.length>0&&r.status!=='final'],['tent','가배치',r=>r.inst&&r.status!=='final'],['final','배치 확정',r=>r.status==='final'],['blocked','진행 불가',r=>['confirmed','proposed','fixed','recruit'].includes(r.status)&&!gate(r)],['bun','묶음',r=>!!r.bundle]];
 /* 한 화면 배치: 신청 강사 칩을 눌러 바로 가배치/해제. 겹침은 그 강사의 다른 배정(확정·가배치) 기준 */
@@ -3582,7 +3585,7 @@ function tAsstBox(r,t,inTable){
 function tAsstPanel(t){
   const L=tLive().filter(r=>tInBiz(r)&&asOk(r)&&r.aOpen&&fi(r)!==t.id&&fa(r)!==t.id); if(!L.length) return '';
   return `<div class="panel stack tasp" style="gap:8px"><h3>보조강사 모집 <span class="muted small" style="font-weight:400">${L.length}개 수업</span></h3>
-   ${(()=>{ const {st,w}=asstState(); return st==='open'?`<div class="awb open"><b>보조강사 신청 기간</b> <span>${esc(asstRange(w))}</span>${w.to?` <em>${awLeft(w.to)}</em>`:''}</div>`:st==='before'?`<div class="awb"><b>보조강사 신청은 ${esc(awTxt(w.from))}부터 받습니다.</b><div class="small">신청 기간: ${esc(asstRange(w))} · 지금은 수업 정보만 볼 수 있습니다.</div></div>`:`<div class="awb"><b>${st==='closed'?'보조강사 신청이 마감되었습니다.':'보조강사 신청 기간이 아직 정해지지 않았습니다.'}</b>${st==='closed'?`<div class="small">신청 기간: ${esc(asstRange(w))}</div>`:''}</div>`; })()}
+   ${(()=>{ const {st,w}=asstState(); return st==='open'?`<div class="awb open"><b>${w.round?esc(w.round)+' ':''}보조강사 신청 기간</b> <span>${esc(asstRange(w))}</span>${w.to?` <em>${awLeft(w.to)}</em>`:''}</div>`:st==='before'?`<div class="awb"><b>보조강사 신청은 ${esc(awTxt(w.from))}부터 받습니다.</b><div class="small">신청 기간: ${esc(asstRange(w))} · 지금은 수업 정보만 볼 수 있습니다.</div></div>`:`<div class="awb"><b>${st==='closed'?'보조강사 신청이 마감되었습니다.':'보조강사 신청 기간이 아직 정해지지 않았습니다.'}</b>${st==='closed'?`<div class="small">신청 기간: ${esc(asstRange(w))}</div>`:''}</div>`; })()}
    <div class="small muted">주강사가 정해진 수업의 보조강사 모집 ${qt(['신청하면 운영기관이 검토해 배치','확정되면 「내 신청 · 일정」에 보임'])}</div>
    <div class="tw"><table><thead><tr><th>학교 · 학급</th><th>프로그램</th><th>일정</th><th></th></tr></thead><tbody>${L.map(r=>{ const p=prog(r.prog), ap=(r.aApps||[]).some(a=>a.tid===t.id); return `<tr class="${ap?'applied':''}"><td>${tOrgTag(r)} <button class="lnk" data-act="tdetail" data-id="${r.id}">${esc(shortSch(r.school))}</button> <span class="muted small">${esc(r.grade||'')} ${esc(clsName(r))}</span></td><td class="small">${esc(p.name)}<div class="muted">${esc(p.field||'')}</div></td><td class="small nowrap">${daysTxt(r.days)} <span class="mono">${hm(r.ts)}~${hm(r.te)}</span><div class="muted">${asRng(r)} · ${aDaysOf(r).length}회</div></td><td>${tAsstBox(r,t,true)}</td></tr>`; }).join('')}</tbody></table></div></div>`;
 }
@@ -6647,15 +6650,18 @@ document.addEventListener('click',async e=>{
       if(r.apps.some(a=>a.tid===S.ui.teacher)) return; const note=(document.getElementById('an-'+r.id)||{}).value||''; const bg=bunRows(r); bg.forEach(x=>{ if(!x.apps.some(a=>a.tid===S.ui.teacher)) x.apps.push({tid:S.ui.teacher,at:now(),note:note.trim(),allDays:true,round:(S.applyWin||{}).round||'',bundle:bg.length>1?r.bundle.id:''}); }); toast(bg.length>1?`묶음 ${bg.length}개 수업을 함께 신청했습니다`:'수업을 신청했습니다'); break; }
     case 'awedit': S.ui.awEdit=true; S.ui.awDraft=null; break;
     case 'awcancel': S.ui.awEdit=false; S.ui.awDraft=null; break;
-    case 'awnext': { const w=awObj(), m=/^(\d+)차$/.exec(w.round||''); S.ui.awEdit=true; S.ui.awDraft={round:m?`${+m[1]+1}차`:'2차',from:'',to:'',onlyOpen:true}; break; }
-    case 'awsave': { const g=id=>document.getElementById(id), round=g('aw-round').value.trim(), from=g('aw-from').value, to=g('aw-to').value, only=g('aw-only').checked;
+    case 'awnext-old': { const w=awObj(), m=/^(\d+)차$/.exec(w.round||''); S.ui.awEdit=true; S.ui.awDraft={round:m?`${+m[1]+1}차`:'2차',from:'',to:'',onlyOpen:true}; break; }
+    case 'awsave': { const g=id=>document.getElementById(id), kind=S.adminOrg?'main':(S.ui.awKind||'main'), round=g('aw-round').value.trim(), from=g('aw-from').value, to=g('aw-to').value;
       if(from&&to&&from>=to){ toast('마감 시각이 시작 시각보다 늦어야 합니다'); return; }
-      const w=awObj(), hist=(w.hist||[]).slice();
+      if(kind==='asst'){ if(!from&&!to){ toast('시작이나 마감 중 하나는 정해 주세요'); return; } S.asstWin={round,from,to}; S.ui.awEdit=false; S.ui.awDraft=null; const st=asstState().st; toast(st==='open'?'보조강사 신청 기간을 저장했습니다. 지금 신청을 받고 있습니다':st==='before'?`저장했습니다. ${awTxt(from)}부터 보조강사 신청을 받습니다`:'저장했습니다. 마감 시각이 지나 신청이 막혀 있습니다'); break; }
+      const only=!!(g('aw-only')||{}).checked, w=awObj(), hist=(w.hist||[]).slice();
       if((w.from||w.to)&&(w.round||'')!==round) hist.unshift({round:w.round||'',from:w.from||'',to:w.to||'',at:now()});
       awPut({round,from,to,onlyOpen:only,hist}); S.ui.awEdit=false; S.ui.awDraft=null;
-      const st=applyState().st; toast(st==='open'?`${round} 신청 기간을 저장했습니다. 지금 강사 신청을 받고 있습니다`:st==='before'?`${round} 신청 기간을 저장했습니다. ${awTxt(from)}부터 신청을 받습니다`:st==='closed'?'저장했습니다. 마감 시각이 지나 신청이 막혀 있습니다':'저장했습니다'); break; }
-    case 'awclose': { const w=awObj(), nw={...w,to:kstNow()}; if(nw.from&&nw.from>nw.to) nw.from=nw.to; awPut(nw); toast(`${w.round||''} 신청을 지금 마감했습니다`); break; }
-    case 'awclear': { const w=awObj(), hist=(w.hist||[]).slice(); if(w.from||w.to) hist.unshift({round:w.round||'',from:w.from||'',to:w.to||'',at:now()}); awPut({hist}); S.ui.awEdit=false; toast('신청 기간을 없앴습니다. 강사가 언제든 신청할 수 있습니다'); break; }
+      const st=applyState().st; toast(st==='open'?`주강사 ${round} 신청 기간을 저장했습니다. 지금 신청을 받고 있습니다`:st==='before'?`주강사 ${round} 신청 기간을 저장했습니다. ${awTxt(from)}부터 신청을 받습니다`:st==='closed'?'저장했습니다. 마감 시각이 지나 신청이 막혀 있습니다':'저장했습니다'); break; }
+    case 'awclose': { if(!S.adminOrg&&S.ui.awKind==='asst'){ const w=S.asstWin||{}, n=kstNow(); S.asstWin={round:w.round||'',from:w.from&&w.from<n?w.from:n,to:n}; S.ui.awEdit=false; toast('보조강사 신청을 지금 마감했습니다'); break; }
+      const w=awObj(), nw={...w,to:kstNow()}; if(nw.from&&nw.from>nw.to) nw.from=nw.to; awPut(nw); S.ui.awEdit=false; toast(`주강사 ${w.round||''} 신청을 지금 마감했습니다`); break; }
+    case 'awclear': { if(!S.adminOrg&&S.ui.awKind==='asst'){ S.asstWin={}; S.ui.awEdit=false; S.ui.awDraft=null; toast('보조강사 신청 기간을 없앴습니다. 보조강사 신청을 받지 않습니다'); break; }
+      const w=awObj(), hist=(w.hist||[]).slice(); if(w.from||w.to) hist.unshift({round:w.round||'',from:w.from||'',to:w.to||'',at:now()}); awPut({hist}); S.ui.awEdit=false; S.ui.awDraft=null; toast('주강사 신청 기간을 없앴습니다. 강사가 언제든 신청할 수 있습니다'); break; }
     case 'tcxopen': S.ui.tcxOpen=r.id; if(el.dataset.open) S.ui.tDetail=r.id; break;
     case 'tcxclose': S.ui.tcxOpen=''; break;
     case 'unapask': S.ui.unapAsk=r.id; if(el.dataset.open) S.ui.tDetail=r.id; break;
@@ -6936,6 +6942,7 @@ document.addEventListener('change',e=>{
   if((t.id&&t.id.startsWith('ie-'))||t.dataset.ief!=null) return; /* 강사 수정 칸: 저장 버튼을 누를 때 읽음 */
   if(['if-region','if-field','if-kind','if-pin'].includes(t.id)){ S.ui.if={...(S.ui.if||{}),[t.id.slice(3)]:t.value}; render(); return; }
   if(t.id==='mts'){ S.ui.mts=t.value; render(); return; }
+  if(t.id==='aw-kind'){ S.ui.awKind=t.value; S.ui.awDraft=null; render(); return; }
   if(t.id==='as-ts'){ S.ui.asTs=t.value; render(); return; }
   if(t.id==='if-sort'){ S.ui.isort=t.value; S.ui.idir=['years','apps','score'].includes(t.value)?'desc':'asc'; render(); return; }
   if(t.id==='fbprog') u.bprog=t.value; else if(t.id==='fsort'){ u.bsort=t.value; u.bdir=BSORT_DESC0.includes(t.value)?'desc':'asc'; } else if(t.id==='fregion') u.region=t.value; else if(t.id==='fprob') u.probOnly=t.checked; else if(t.id==='showWait') u.showWait=t.checked; else if(t.id==='onlyApps') u.onlyApps=t.checked; else if(t.id==='allCands') u.allCands=t.checked;
