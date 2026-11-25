@@ -988,6 +988,7 @@ tr:first-child>td{border-top:0}
 .lbody{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:14px}
 .lcrumb{font-size:13px;color:var(--muted)}
 @media (max-width:860px){.lmenu{max-width:none;position:static}}
+.cs-modal{position:fixed;inset:0;z-index:60;background:rgba(30,20,20,.45);display:grid;place-items:center;padding:16px}.cs-mbox{background:var(--surface);border-radius:14px;padding:22px 24px;max-width:520px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.25)}
 .acc-new{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}.acc-new .f{display:flex;flex-direction:column;gap:3px}.acc-new input,.acc-new select{width:100%}.ua-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}.ua-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;font:inherit;color:inherit}.ua-card.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(137,23,26,.12)}.ua-card b{font-size:15px}.ua-tabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}.ua-tab{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px}.ua-tab.on{background:var(--sunk)}.ua-tab select{max-width:120px}
 .stepno{width:24px;height:24px;font-size:12.5px;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
 /* 단계 숫자 칸 */
@@ -2259,7 +2260,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.94';
+const LIB_VER='11.95';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6081,9 +6082,17 @@ function viewCons(){
   const btn=([k,l])=>`<button type="button" role="tab" aria-selected="${cur===k}" class="${cur===k?'on':''}" data-act="cstab" data-v="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CS_IC[k]||''}</svg>${esc(l)}</button>`;
   const menu=`<nav class="lmenu" aria-label="컨소시엄 관리 메뉴">${M.map(([g,L])=>`<div class="lg">${esc(g)}</div>${L.map(btn).join('')}`).join('')}</nav>`;
   const grp=M.find(g=>g[1].some(x=>x[0]===cur)), lab=all.find(x=>x[0]===cur)[1];
-  const body={dash:csDash,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,gtpl:csGTplV,mygong:csMyGong,rule:csRule}[cur]();
+  const body={dash:csDash,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,gtpl:csGTplV,mygong:csMyGong,rule:csRule}[cur]()+csAskModal();
   return `<div class="stack noenh"><div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">${csMine()?esc(orgShort(csMine())):'운영 점검'} › ${esc(grp[0])}</div><h2 style="margin:0">${esc(lab)}</h2>${['dash','rep'].includes(cur)?stSyncBar():''}${body}</div></div></div>`; }
 const csQSeg = (k,q) => `<div class="seg2" role="tablist">${[1,2,3,4].map(i=>`<button class="${q===i?'on':''}" data-act="csq" data-k="${k}" data-v="${i}">${CS_QN[i]}</button>`).join('')}</div>`;
+/* 제출 전 확인 창: 제출하면 고칠 수 없음을 한 번 더 확인 */
+function csAskModal(){ const A=S.ui.csAsk; if(!A) return ''; const lab=A.k==='mile'?`${+(S.ui.csYm||csYm()).slice(5)}월 마일스톤 점검표`:`${CS_QN[A.q]} 운영 보고`;
+  return `<div class="cs-modal" role="dialog" aria-modal="true" aria-label="제출 확인"><div class="cs-mbox stack" style="gap:12px">
+   <h3 style="margin:0">${esc(lab)}를 제출할까요?</h3>
+   <div class="notice bad small" style="margin:0"><b>제출한 뒤에는 직접 수정할 수 없습니다.</b><br>호서대가 확인한 뒤 미비한 점이 있으면 보완 요청을 보내며, 그때만 다시 고칠 수 있습니다.</div>
+   <ul class="small" style="margin:0;padding-left:18px;line-height:1.7"><li>빠진 항목이나 잘못 적은 숫자가 없는지</li><li>실적마다 근거(증빙 자료명)를 적었는지</li><li>${A.k==='mile'?'해당 분기 마일스톤을 모두 입력했는지':'운영·강사연수·프로그램 개발·예산 집행·기타를 모두 입력했는지'}</li></ul>
+   <label class="row small" style="gap:6px"><input type="checkbox" id="cs-askok" onchange="document.getElementById('cs-askgo').disabled=!this.checked"> 위 내용을 모두 확인했고, 제출 후에는 수정할 수 없음을 알고 있습니다.</label>
+   <div class="row" style="gap:8px;justify-content:flex-end"><button class="btn" data-act="csaskno">다시 확인하기</button><button class="btn pri" id="cs-askgo" data-act="csaskgo" disabled>제출하기</button></div></div></div>`; }
 const csKp = (v,t,c) => `<div class="cs-kp"><b class="${c||''}">${v}</b><span>${t}</span></div>`;
 const csBar = p => `<div class="cs-bar"><div style="width:${Math.max(0,Math.min(100,p||0))}%" class="${p==null?'':p>=90?'b-g':p>=70?'b-y':'b-r'}"></div></div>`;
 function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csYm();
@@ -6105,6 +6114,7 @@ function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csY
 function csPickOrg(k){ if(csMine()) return csMine(); const U=CS_UNIVS(); let o=S.ui.csOrg; if(!U.includes(o)) o=U[1]||U[0]; return o; }
 const csOrgSel = o => csMine()?`<b>${esc(o)}</b>`:`<select id="cs-org" aria-label="대학">${CS_UNIVS().map(x=>`<option ${x===o?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
 function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), ym=S.ui.csYm||csYm(), sub=(D.sub||{})[ym], due=csMileDueOf(ym), adm=!csMine(), lockM=!adm&&!!(sub||(D.sub||{})[csYm()]);
+  const okd=(D.subOk||{})[ym], fx=(D.subFix||{})[ym], fixOpen=fx&&!sub, reSub=fx&&sub;
   const pr=csProg(o,q), todoN=CS_MILES.filter(d=>d[1]===q&&!csMileDone(M[d[0]],d)).length, fixN=CS_MILES.filter(d=>(M[d[0]]||{}).st==='fix').length;
   const months=[]; for(let i=0;i<12;i++){ const d=new Date(csYear(),2+i,1); months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
   const open=S.ui.csMq||{[q]:true};
@@ -6113,20 +6123,21 @@ function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), y
       :`<input type="number" min="0" ${dis} style="width:64px" data-cp="${cp}.v" data-cat="${cp}" value="${esc(it.v??'')}" aria-label="${d[4]==='c'?'건수':'횟수'}"> <span class="small muted">${d[4]==='c'?'건':'회'}</span>`;
     const stc=it.st==='ok'?'<span class="chip ok">확인 완료</span>':it.st==='fix'?`<span class="chip warn" title="${esc(it.fixWhy||'')}">보완 요청</span>`:done?'<span class="chip">확인 전</span>':'<span class="chip">입력 전</span>';
     return `<tr><td class="mono muted">${d[0]}</td><td>${esc(d[2])}${auto&&auto.length?`<div class="small lv-ok">운영 목록: ${esc(d[5])} ${auto.length}학급</div>`:''}</td><td class="small muted">${esc(d[3])}</td><td class="nowrap">${inp}</td>
-     <td><input ${dis} data-cp="${cp}.proof" data-cat="${cp}" value="${esc(it.proof||'')}" placeholder="${d[4]==='c'?'0건이면 해당 없음':'증빙 문서명 · 늘봄ON 등록'}" style="width:100%"></td>
+     <td><input ${dis} data-cp="${cp}.proof" data-cat="${cp}" value="${esc(it.proof||'')}" placeholder="예: ${esc(d[3])}${d[4]==='c'?' (0건이면 해당 없음)':''}" title="근거 예시: ${esc(d[3])}" style="width:100%"></td>
      <td class="nowrap">${stc}${adm?`<div class="row" style="gap:2px;margin-top:3px;flex-wrap:nowrap"><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="ok">확인</button><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="fix">보완</button></div>`:''}${it.st==='fix'&&it.fixWhy?`<div class="small lv-warn">${esc(it.fixWhy)}</div>`:''}</td>
      <td><input ${dis} data-cp="${cp}.note" data-cat="${cp}" value="${esc(it.note||'')}" placeholder="비고" style="width:100%"></td></tr>`; };
   return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}<span class="small muted">점검 기준월</span><select id="cs-ym">${months.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${m.slice(0,4)}년 ${+m.slice(5)}월</option>`).join('')}</select>
-    ${sub?`<span class="chip ok">${+ym.slice(5)}월 제출 ${esc(String(sub).slice(5,16).replace('-','.'))}</span>`:`<span class="chip ${csToday()>due?'x':'warn'}">${+ym.slice(5)}월 제출 전 · 마감 ${csFmtD(due)}</span>`}
-    <span style="flex:1"></span>${sub&&!adm?`<span class="small muted">제출 후에는 고칠 수 없습니다 · 수정이 필요하면 호서대에 요청</span>`:sub?`<button class="btn sm" data-act="csmfin" data-o="${esc(o)}" data-v="" title="대학이 다시 고치고 제출할 수 있게 엽니다">제출 취소 · 수정 허용</button>`:lockM?`<span class="small muted">${+csYm().slice(5)}월 점검표 제출 완료 · 보완 요청 항목만 고칠 수 있습니다</span>`:`<button class="btn sm pri" data-act="csmfin" data-o="${esc(o)}" data-v="1">${+ym.slice(5)}월 점검표 제출</button>`}</div>
+    ${sub?`<span class="chip ${okd?'ok':'info'}">${+ym.slice(5)}월 ${reSub?'보완 후 재제출':'제출'} ${esc(String(sub).slice(5,16).replace('-','.'))}${okd?' · 확인 완료':' · 확인 대기'}</span>`:fixOpen?`<span class="chip warn">${+ym.slice(5)}월 보완 요청 · 다시 제출 전</span>`:`<span class="chip ${csToday()>due?'x':'warn'}">${+ym.slice(5)}월 제출 전 · 마감 ${csFmtD(due)}</span>`}
+    <span style="flex:1"></span>${adm?(sub?(okd?`<span class="small muted">${esc(String(okd.at||'').slice(5,16).replace('-','.'))} 확인 완료</span> <button class="btn sm" data-act="csmok" data-o="${esc(o)}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csmok" data-o="${esc(o)}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csmfix" data-o="${esc(o)}">보완 요청</button>`:''):sub?`<span class="small muted">제출 후에는 고칠 수 없습니다 · 수정이 필요하면 호서대에 요청</span>`:lockM?`<span class="small muted">${+csYm().slice(5)}월 점검표 제출 완료 · 보완 요청 항목만 고칠 수 있습니다</span>`:`<button class="btn sm pri" data-act="csask" data-k="mile" data-o="${esc(o)}">${fixOpen?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
+   ${fixOpen?`<div class="notice bad stack" style="gap:4px"><b>호서대에서 ${+ym.slice(5)}월 점검표 보완을 요청했습니다</b><div class="small">${esc(fx.why||'')}</div><div class="small">${adm?'대학이 고친 뒤 다시 제출하면 「보완 후 재제출」로 표시됩니다.':'내용을 고쳐 입력한 뒤 「보완 후 다시 제출하기」를 눌러 주세요.'} <span class="muted">(${esc(String(fx.at||'').slice(5,16).replace('-','.'))} 요청)</span></div></div>`:''}
    ${lockM?`<div class="iss lv-info small">제출한 점검표는 고칠 수 없습니다. 호서대가 「보완」을 요청한 항목만 고칠 수 있고, 다른 수정이 필요하면 호서대에 요청해 주세요.</div>`:''}
    <div class="cs-kps">${csKp(`${pr.done} / ${pr.need}`,'누적 완료 / 누적 예정')}${csKp(pr.p==null?'-':pr.p+'%','사업 진행률',csRateC(pr.p))}${csKp(todoN+'개','이번 분기 미완료')}${csKp(fixN+'개','보완 요청',fixN?'lv-warn':'')}</div>
-   <div class="tw"><table class="cs-mt"><thead><tr><th style="width:36px">연번</th><th>마일스톤</th><th>완료 기준(증빙)</th><th style="width:130px">실적</th><th style="width:22%">증빙</th><th style="width:150px">확인</th><th style="width:16%">비고</th></tr></thead><tbody>
+   <div class="tw"><table class="cs-mt"><thead><tr><th style="width:36px">연번</th><th>마일스톤</th><th>완료 기준(증빙)</th><th style="width:130px">실적</th><th style="width:22%">근거 (증빙 자료명)</th><th style="width:150px">확인</th><th style="width:16%">비고</th></tr></thead><tbody>
    ${[1,2,3,4].map(qq=>`<tr class="cs-qh" data-act="csmq" data-v="${qq}"><td colspan="7">${open[qq]?'▾':'▸'} ${CS_QN[qq]}${qq===q?' · 이번 분기':''} <span class="muted" style="font-weight:400">· 완료 ${CS_MILES.filter(d=>d[1]===qq&&csMileDone(M[d[0]],d)).length}/${CS_MILES.filter(d=>d[1]===qq).length}</span></td></tr>${open[qq]?CS_MILES.filter(d=>d[1]===qq).map(row).join(''):''}`).join('')}
    </tbody></table></div>
    <div class="small muted">완료 기준: O 표시, 또는 횟수 1회 이상. 민원은 0건(해당 없음)도 완료. 해당하지 않는 마일스톤은 사업관리위원회 승인 후 비고에 대체 과업을 적어 주세요. 매월 마감(기본 ${csCfg().mileDay}일)까지 「점검표 제출」을 눌러야 성실도 감점이 없습니다.</div>`; }
 /* ---------- 운영 보고 ---------- */
-function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep||{})[q])||{}, cp=`consOrg.${o}.rep.${q}`, sec=S.ui.csRs||'op', adm=!csMine(), lk=!adm&&!!R.subAt, D_=lk?'disabled':'';
+function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep||{})[q])||{}, cp=`consOrg.${o}.rep.${q}`, sec=S.ui.csRs||'op', adm=!csMine(), lk=!adm&&!!R.subAt, D_=lk?'disabled':'', rFix=R.fix&&!R.subAt;
   const inp=(path,v,w,ph,num)=>`<input ${D_} ${num===false?'':'type="number"'} data-cp="${cp}.${path}" data-cat="${cp}" value="${esc(v??'')}" style="width:${w||'80px'}" placeholder="${esc(ph||'')}">`;
   const segs=[['op','1. 프로그램 운영'],['train','2. 강사연수'],['dev','3. 프로그램 개발'],['bud','4. 예산 집행'],['etc','5. 기타']];
   let body='';
@@ -6152,7 +6163,8 @@ function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep|
      <div><button class="btn sm" ${D_} data-act="cspadd" data-o="${esc(o)}" data-q="${q}">보도자료 추가</button></div>
      <label class="stack" style="gap:4px"><b>나. 우수사례</b><textarea ${D_} data-cp="${cp}.best" data-cat="${cp}" rows="3">${esc(R.best||'')}</textarea></label>
      <label class="stack" style="gap:4px"><b>다. 건의사항</b><textarea ${D_} data-cp="${cp}.ask" data-cat="${cp}" rows="3">${esc(R.ask||'')}</textarea></label>`; }
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}${csQSeg('rep',q)}<span style="flex:1"></span>${R.subAt?`<span class="chip ok">제출 ${esc(R.subAt)}</span>`:''}${R.subAt?(adm?`<button class="btn sm" data-act="csrre" data-o="${esc(o)}" data-q="${q}" title="대학이 다시 고치고 제출할 수 있게 엽니다">제출 취소 · 수정 허용</button>`:''):`<button class="btn sm pri" data-act="csrsub" data-o="${esc(o)}" data-q="${q}">분기 보고 제출</button>`}</div>
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}${csQSeg('rep',q)}<span style="flex:1"></span>${R.subAt?`<span class="chip ${R.ok?'ok':'info'}">${R.fix?'보완 후 재제출':'제출'} ${esc(String(R.subAt).slice(5,16).replace('-','.'))}${R.ok?' · 확인 완료':' · 확인 대기'}</span>`:rFix?'<span class="chip warn">보완 요청 · 다시 제출 전</span>':''}${R.subAt?(adm?(R.ok?`<button class="btn sm" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csrfix" data-o="${esc(o)}" data-q="${q}">보완 요청</button>`:''):adm?'<span class="small muted">대학 제출 전</span>':`<button class="btn sm pri" data-act="csask" data-k="rep" data-o="${esc(o)}" data-q="${q}">${rFix?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
+   ${rFix?`<div class="notice bad stack" style="gap:4px"><b>호서대에서 ${CS_QN[q]} 운영 보고 보완을 요청했습니다</b><div class="small">${esc(R.fix.why||'')}</div><div class="small">${adm?'대학이 고친 뒤 다시 제출하면 「보완 후 재제출」로 표시됩니다.':'내용을 고쳐 입력한 뒤 「보완 후 다시 제출하기」를 눌러 주세요.'} <span class="muted">(${esc(String(R.fix.at||'').slice(5,16).replace('-','.'))} 요청)</span></div></div>`:''}
    ${lk?`<div class="iss lv-info small">제출한 보고는 고칠 수 없습니다. 수정이 필요하면 호서대에 요청해 주세요.</div>`:''}
    <div class="seg2" role="tablist">${segs.map(([k,l])=>`<button class="${sec===k?'on':''}" data-act="csrs" data-v="${k}">${l}</button>`).join('')}</div>
    <div class="panel stack" style="gap:10px">${body}</div>`; }
@@ -6298,6 +6310,18 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'csmst': { const p=`consOrg.${o}.mile.${el.dataset.n}`; if(el.dataset.v==='fix'){ const w=prompt('보완 요청 사유',csGet(p+'.fixWhy')||''); if(w===null) return false; csSet(p+'.fixWhy',w.trim()); csSet(p+'.st','fix'); } else { csSet(p+'.st',csGet(p+'.st')==='ok'?'':'ok'); } csStamp(p); return true; }
     case 'csmfin': { const ym=U.csYm||csYm(), p=`consOrg.${o}.sub.${ym}`; if(csMine()&&!el.dataset.v) return false; if(csMine()&&!confirm(`${+ym.slice(5)}월 점검표를 제출할까요?\n제출하면 고칠 수 없습니다(호서대가 보완을 요청한 항목만 수정 가능).`)) return false; csSet(p,el.dataset.v?kstNow().replace('T',' '):''); csStamp(`consOrg.${o}.sub`); toast(el.dataset.v?`${+ym.slice(5)}월 마일스톤 점검표를 제출했습니다`:'제출을 취소했습니다'); return true; }
     case 'csrs': U.csRs=el.dataset.v; return true;
+    case 'csask': U.csAsk={k:el.dataset.k,o:el.dataset.o,q:el.dataset.q?+el.dataset.q:0}; return true;
+    case 'csaskno': U.csAsk=null; return true;
+    case 'csaskgo': { const A=U.csAsk; if(!A) return false; U.csAsk=null; const st=kstNow().replace('T',' ');
+      if(A.k==='mile'){ const ym=U.csYm||csYm(); csSet(`consOrg.${A.o}.sub.${ym}`,st); csStamp(`consOrg.${A.o}.sub`); toast(`${+ym.slice(5)}월 마일스톤 점검표를 제출했습니다`); }
+      else { const p=`consOrg.${A.o}.rep.${A.q}`; csSet(p+'.subAt',st); csSet(p+'.ok',''); csStamp(p); toast('분기 운영 보고를 제출했습니다'); }
+      return true; }
+    case 'csmok': { if(csMine()) return false; const ym=U.csYm||csYm(); csSet(`consOrg.${o}.subOk.${ym}`,el.dataset.v?{at:kstNow().replace('T',' '),by:S.adminName||'호서대'}:''); csStamp(`consOrg.${o}.subOk`); toast(el.dataset.v?'제출 완료로 확인했습니다':'확인을 취소했습니다'); return true; }
+    case 'csmfix': { if(csMine()) return false; const ym=U.csYm||csYm(), why=prompt(`${orgShort(o)} ${+ym.slice(5)}월 점검표 보완 요청\n대학 화면에 보일 보완 사유를 적어 주세요.`,''); if(why===null) return false; if(!why.trim()){ toast('보완 사유를 적어 주세요'); return false; }
+      const st=kstNow().replace('T',' '); csSet(`consOrg.${o}.subFix.${ym}`,{at:st,why:why.trim()}); csStamp(`consOrg.${o}.subFix`); csSet(`consOrg.${o}.sub.${ym}`,''); csStamp(`consOrg.${o}.sub`); csSet(`consOrg.${o}.subOk.${ym}`,''); csStamp(`consOrg.${o}.subOk`); toast('보완을 요청했습니다 · 대학이 고친 뒤 다시 제출합니다'); return true; }
+    case 'csrok': { if(csMine()) return false; const p=`consOrg.${o}.rep.${el.dataset.q}`; csSet(p+'.ok',el.dataset.v?kstNow().replace('T',' '):''); csStamp(p); toast(el.dataset.v?'제출 완료로 확인했습니다':'확인을 취소했습니다'); return true; }
+    case 'csrfix': { if(csMine()) return false; const p=`consOrg.${o}.rep.${el.dataset.q}`, why=prompt(`${orgShort(o)} ${CS_QN[+el.dataset.q]} 운영 보고 보완 요청\n대학 화면에 보일 보완 사유를 적어 주세요.`,''); if(why===null) return false; if(!why.trim()){ toast('보완 사유를 적어 주세요'); return false; }
+      csSet(p+'.fix',{at:kstNow().replace('T',' '),why:why.trim()}); csSet(p+'.subAt',''); csSet(p+'.ok',''); csStamp(p); toast('보완을 요청했습니다 · 대학이 고친 뒤 다시 제출합니다'); return true; }
     case 'csrre': { if(csMine()) return false; const p=`consOrg.${o}.rep.${el.dataset.q}`; csSet(p+'.subAt',''); csStamp(p); toast('제출을 취소했습니다 · 대학이 다시 고칠 수 있습니다'); return true; }
     case 'csrsub': { const p=`consOrg.${o}.rep.${el.dataset.q}`; if(csMine()&&!confirm('분기 운영 보고를 제출할까요?\n제출하면 고칠 수 없습니다.')) return false; csSet(p+'.subAt',kstNow().replace('T',' ')); csStamp(p); toast('분기 운영 보고를 제출했습니다'); return true; }
     case 'csdevadd': case 'csdevdel': { if(el.disabled) return false; const p=`consOrg.${o}.rep.${el.dataset.q}`; let L=csGet(p+'.dev'); if(!Array.isArray(L)||!L.length) L=(S.programs||[]).filter(x=>x.org===o).map(x=>({name:x.name})); L=L.slice(); if(a==='csdevadd') L.push({}); else L.splice(+el.dataset.i,1); csSet(p+'.dev',L); csStamp(p); return true; }
@@ -7809,7 +7833,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.94';
+const APP_VER = '11.95';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
