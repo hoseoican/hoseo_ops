@@ -74,8 +74,8 @@ rep("""  const buf=await wb.xlsx.writeBuffer();
 """  const buf=await wb.xlsx.writeBuffer();
   downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${shortSch(sch)} ${season().name} 앵커늘봄 제출 내용.xlsx`,msg);""")
 rep("H=SEED.header.slice(0,65)","H=OP_HEADER.slice(0,65)")
-rep("""    <div class="row"><button class="btn sm" data-act="export">예전 65개 열 형식으로 다운로드</button> <span class="muted small" id="xmsg"></span></div></div></div>""",
-    """    <div class="row"><button class="btn sm" data-act="export">예전 65개 열 형식으로 다운로드</button><button class="btn sm" data-act="export-sheet">구글 시트 생성</button> <span class="muted small" id="xmsg"></span></div></div></div>""")
+rep("""<button class="lnk small" data-act="export" style="margin-left:auto">예전 65개 열 형식</button></div></div></div>""",
+    """<button class="btn sm" data-act="export-sheet" style="margin-left:auto">구글 시트 생성</button><button class="lnk small" data-act="export">예전 65개 열 형식</button></div></div></div>""")
 # init block removal
 a=js.index("if(!load()){ freshState(); demoSeed(); }"); js=js[:a]
 # export: make aoa builder reusable for sheet export
