@@ -1109,20 +1109,20 @@ if(EMBED) document.documentElement.classList.add('embed');
         <ul class="smslist" id="smList"></ul>
       </div>
       <div class="card smright">
-        <h3>보낼 문자</h3>
-        <details class="smcfg" id="smCfgBox"><summary><span id="smCfgSum"></span><em>수정</em></summary><div class="inner">
+        <h3 style="display:flex;align-items:center;gap:8px">보낼 문자<span style="flex:1"></span><button type="button" class="ghost sm" id="smTplGo">문자 양식 수정</button></h3>
+        <details class="smcfg" id="smCfgBox"><summary><span id="smCfgSum"></span><em>기한·담당자·문자 양식 수정</em></summary><div class="inner">
         <div class="grid g2">
           <label class="fld"><span>제출기한</span><input type="text" id="smDue" autocomplete="off"></label>
           <label class="fld"><span>담당자</span><input type="text" id="smWho" placeholder="예: 연구원 이지훈" autocomplete="off"></label>
           <label class="fld"><span>연락처</span><input type="text" id="smTel" autocomplete="off"></label>
           <label class="fld"><span>제출 이메일</span><input type="text" id="smMail" autocomplete="off"></label>
         </div>
-        <details class="tpl" id="smTplBox"><summary>문자 양식 편집</summary><div class="inner">
+        <div id="smTplBox" style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px"><b style="font-size:13px">문자 양식</b>
           <label class="fld" style="margin:8px 0"><span>본문 (등록 강사 · 미제출·보완 요청)</span><textarea id="smBody" style="min-height:150px"></textarea></label>
           <label class="fld" style="margin:8px 0"><span>본문 (미등록 강사 · 서류 전체 제출 요청)</span><textarea id="smBodyNew" style="min-height:130px"></textarea></label>
           <div class="ph-list" id="smPh"></div>
           <div class="row" style="margin:0"><button type="button" class="ghost sm" id="smReset">기본값 초기화</button></div>
-        </div></details>
+        </div>
         </div></details>
         <div class="smsprev" id="smPrev"></div>
         <div class="smsend">
@@ -1290,7 +1290,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.25-2';
+var APP_VERSION = '2026.11.25-3';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2337,6 +2337,7 @@ function bindSms(){
   $('smBody').addEventListener('input', function(){ smsCfg.body=$('smBody').value; kvPut('smsCfg', smsCfg); renderSmsPreview(); });
   $('smBodyNew').addEventListener('input', function(){ smsCfg.bodyNew=$('smBodyNew').value; kvPut('smsCfg', smsCfg); renderSmsPreview(); });
   $('smBody').addEventListener('focus', function(){ smsLastTa='body'; }); $('smBodyNew').addEventListener('focus', function(){ smsLastTa='bodyNew'; });
+  $('smTplGo').onclick=function(){ var b=$('smCfgBox'); b.open=true; $('smBody').scrollIntoView({behavior:'smooth', block:'center'}); setTimeout(function(){ $('smBody').focus(); }, 300); };
   $('smReset').onclick=function(){ smsCfg.body=DEFAULT_SMS.body; smsCfg.bodyNew=DEFAULT_SMS.bodyNew; smsCfg.ver=DEFAULT_SMS.ver; kvPut('smsCfg', smsCfg); $('smBody').value=smsCfg.body; $('smBodyNew').value=smsCfg.bodyNew; renderSmsPreview(); toast('문자 양식을 기본값으로 초기화했습니다'); };
   $('smCopyAll').onclick=function(){ var pk=smsPicked(); copyText(pk.map(function(x){ var ph=phoneOf(x.p); return x.name+' '+(ph.length>=10?Forms.fmtPhone(ph):'(연락처 없음)')+'\n'+smsText(x); }).join('\n\n'), pk.length+'명의 문자 내용을 복사했습니다'); };
   $('smCsv').onclick=smsCsv;
