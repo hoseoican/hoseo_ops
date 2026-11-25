@@ -2252,7 +2252,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.100';
+const LIB_VER='11.101';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4159,7 +4159,7 @@ function stParseA(src,file){
     A.slice(hr+1).forEach((a,ri)=>{ const g=i=>i>=0?a[i]:'', sch=String(g(C.sch)).trim(), xrow=(r0||0)+hr+2+ri, pn=String(g(C.prog)).split('\n').filter(Boolean).pop()||'', what=`${sch} ${String(g(C.room)).trim()} · ${pn.replace(/->/g,'').trim()}`;
       if(!sch||/예시|합계|소계/.test(sch)||/예시/.test(String(g(C.seq)))) return;
       const nd=dayCols.filter(i=>a[i]!==''&&a[i]!=null).length, per=stN(g(C.per)), days=stN(g(C.days))||nd, ses=stN(g(C.ses))||per*days;
-      const rawOrg=String(g(C.org)).trim();
+      const rawOrg=String(g(C.org)).trim().replace(/^#(REF!|N\/A|VALUE!|NAME\?|ERROR!|DIV\/0!).*$/i,'');   /* 수식 오류 칸은 빈 칸으로 보고 시트 대학으로 */
       const raw={}; RK.forEach((k,ci)=>{ if(k&&(raw[k]==null||raw[k]==='')) raw[k]=a[ci]; });
       const rec=({_raw:raw,...(VAC?{biz:'vac'}:{}),org:VAC?MY_ORG:(orgByName(rawOrg)||rawOrg||sheetOrgF||''),school:sch,region:String(g(C.reg)).trim(),size:String(g(C.size)).trim(),room:String(g(C.room)).trim(),
         prog:String(g(C.prog)).split('\n').filter(Boolean).pop()?.replace(/->/g,'').trim()||'',field:String(g(C.field)).trim(),grade:String(g(C.grade)).trim(),
@@ -4425,7 +4425,7 @@ function stSheetSync(btn){
   const lb=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='시트 읽는 중…'; }
   return getList.then(L=>{ if(!L.length) throw new Error(org?'운영현황 시트 목록이 아직 없습니다. 호서대에서 한 번 반영한 뒤 쓸 수 있습니다':'강사서류 「운영현황」에 등록된 구글 시트가 없습니다');
     const grp={}, bad=[]; let ch=opsFilesLoad(true).then(F=>{ L._F=F; }), i=0;
-    L.forEach(o=>{ ch=ch.then(()=>{ i++; if(btn) btn.textContent=`시트 읽는 중… ${i}/${L.length}`; return opsSheetRead(o,L._F); }).then(d=>{ if(!d) return; const p=stParseA(d.sheets.map(x=>({name:x.name,A:x.values})),((o.label||'')+' '+d.name).trim());
+    L.forEach(o=>{ ch=ch.then(()=>{ i++; if(btn) btn.textContent=`시트 읽는 중… ${i}/${L.length}`; return opsSheetRead(o,L._F); }).then(d=>{ if(!d) return; const U=d.sheets.filter(x=>stOrgSheet(x.name)), SH=U.length?U:d.sheets; /* 대학 이름 탭만 읽음(강사료 검토·모니터링·공통과정 같은 작업용 탭 제외) */ const p=stParseA(SH.map(x=>({name:x.name,A:x.values})),((o.label||'')+' '+d.name).trim());
         if(!p.period||!p.year){ bad.push(`${o.label||d.name}: 연도·시기를 알 수 없음(시트 이름에 연도와 1학기·하계·2학기·동계·학교밖을 넣어 주세요)`); return; }
         const k=p.year+'_'+p.period, g=grp[k]=grp[k]||{id:'gs_'+k,name:`운영현황 시트 · ${p.year} ${p.period}`,year:+p.year,period:p.period,at:now(),rows:[],files:[]};
         g.rows.push(...[...p.rows,...p.cx].map(r=>{ const x={...r,period:p.period}; delete x._raw; return x; })); g.files.push(o.label||d.name); }).catch(e=>{ bad.push((o.label||o.id)+': '+(e&&e.message||String(e))); }); });
@@ -4449,7 +4449,7 @@ function sheetPeekLoad(O,force){ const k=sheetPeekKey(O), P=S.ui.shPeek=S.ui.shP
   const getL=S.adminOrg?Promise.resolve(saved):docsOpsList().then(L=>(L&&L.length)?L:saved).catch(()=>saved);
   getL.then(L=>{ const hit=(L||[]).filter(o=>{ const lb=String(o.label||''); return (!y||lb.includes(y))&&stPerOf(lb)===per; })[0];
       if(!hit) throw new Error(`강사서류에 「${y||''} ${per}」 운영현황 시트가 등록되어 있지 않습니다`);
-      return opsFilesLoad(true).then(F=>opsSheetRead(hit,F)).then(d=>{ const p=stParseA(d.sheets.map(x=>({name:x.name,A:x.values})),(hit.label||'')+' '+d.name); P[k]={rows:p.rows,cx:p.cx.length,label:hit.label||d.name,at:now()}; }); })
+      return opsFilesLoad(true).then(F=>opsSheetRead(hit,F)).then(d=>{ const p=stParseA((d.sheets.filter(x=>stOrgSheet(x.name)).length?d.sheets.filter(x=>stOrgSheet(x.name)):d.sheets).map(x=>({name:x.name,A:x.values})),(hit.label||'')+' '+d.name); P[k]={rows:p.rows,cx:p.cx.length,label:hit.label||d.name,at:now()}; }); })
     .catch(e=>{ P[k]={err:e&&e.message||String(e)}; }).finally(()=>render()); }
 function sheetPeekPanel(O){ const k=sheetPeekKey(O), P=(S.ui.shPeek||{})[k]; if(!P){ setTimeout(()=>sheetPeekLoad(O),0); }
   const head=`<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><b>운영현황 시트 학급</b><span class="small muted">이 시기에 시스템 학급이 없어 강사서류에 등록된 구글 운영현황 시트 내용을 보여 줍니다 (읽기 전용)</span><span style="flex:1"></span>${P&&!P.busy?`<button class="btn sm" data-act="shpeek">다시 읽기</button>`:''}</div>`;
