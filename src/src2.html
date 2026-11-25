@@ -2291,7 +2291,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.106';
+const LIB_VER='11.107';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4802,10 +4802,10 @@ function viewExport(){
   stCss();
   const rows=myRows(), crit=rows.filter(r=>worst(issues(r))==='crit').length, notConf=rows.filter(r=>r.status==='wait').length, VB=curBiz()!=='anchor', F0=S.ui.xfmt||(VB?'ops':'ours'), F=VB?(['ops','found'].includes(F0)?F0:'ops'):(['ours','edu'].includes(F0)?F0:'ours');
   const tabs=`<div class="xfmt" role="tablist">${(curBiz()!=='anchor'?[['ops','실무자용 운영시트','학교 확인을 마친 학급 → 운영시트(신청자 정보·실적 제출용·강사 매칭·수업 일자)'],['found','재단 보고용 목록','매칭 실적(한 행 = 한 학급) → 재단 제출 양식']]:[['ours','앵커 운영현황 양식','시스템 학급 → 앵커 운영현황(58개 열)'],['edu','도교육청 보고 양식','교육청 양식 + 정리된 엑셀 → 교육청 방식 목록']]).map(([k,t,d])=>`<button role="tab" class="${F===k?'on':''}" data-act="x-fmt" data-v="${k}"><b>${t}</b><span>${d}</span></button>`).join('')}</div>`;
-  if(F==='edu') return `<div class="stack"><div><h2>운영현황 내보내기</h2></div>${tabs}${eduPanel()}</div>`;
-  if(F==='ops') return `<div class="stack"><div><h2>운영현황 내보내기</h2></div>${tabs}${opsSheetPanel()}</div>`;
-  if(F==='found') return `<div class="stack"><div><h2>운영현황 내보내기</h2></div>${tabs}${foundPanel()}</div>`;
-  return `<div class="stack"><div><h2>운영현황 내보내기</h2></div>${tabs}
+  if(F==='edu') return `<div class="stack"><div><h2>운영현황 내보내기</h2></div>${allBizBar()}${tabs}${eduPanel()}</div>`;
+  if(F==='ops') return `<div class="stack"><div><h2>운영현황 내보내기</h2></div>${allBizBar()}${tabs}${opsSheetPanel()}</div>`;
+  if(F==='found') return `<div class="stack"><div><h2>운영현황 내보내기</h2></div>${allBizBar()}${tabs}${foundPanel()}</div>`;
+  return `<div class="stack"><div><h2>운영현황 내보내기</h2></div>${allBizBar()}${tabs}
   <div class="panel stack"><div class="small muted">앵커 운영현황 양식 · 한 학급 한 행 ${qt('「2026-동계 1권역 RISE 늘봄프로그램 운영 목록」 양식에 맞춰 채움')}</div><div class="row"><span class="chip">${rows.length}학급</span>${notConf?`<span class="iss lv-warn"><i>△</i>학교 확인 전 ${notConf}학급은 교육청 원본 값으로 채웁니다</span>`:''}${crit?`<span class="iss lv-crit"><i>!</i>조건 미충족·겹침 ${crit}학급</span>`:''}</div>
    <div class="stack" style="gap:6px"><div class="small"><b>① 저장할 범위</b></div>
     <div class="yn">${[['all',`전체 ${rows.length}학급`],['sub',`학교 제출 완료 학급만 ${rows.filter(r=>r.sc.at).length}학급`],['school','특정 학교만']].map(([k,t])=>`<label><input type="radio" name="xscope" id="xscope-${k}" data-xscope="${k}" ${(S.ui.xscope||'all')===k?'checked':''}>${t}</label>`).join('')}
@@ -5663,6 +5663,32 @@ function opsMemo(r,forSchool){
     sc.spYn==='yes'?`특수학생 ${+sc.sp||''}${+sc.sp?'명':'있음'}`:'',
     !forSchool&&r.memo?cut(r.memo,30):''].filter(Boolean).join(' / ');
 }
+/* 늘봄센터 칸: 방학집중형 = 한국과학창의재단, 앵커늘봄 = 충남앵커센터(구 충남RISE센터) */
+const nbCenter = r => rowBiz(r)==='vac'?'한국과학창의재단':'충남앵커센터';
+/* ===== 전체 사업 운영현황(총괄관리자): 사업마다 현재 운영 시기 학급을 같은 양식으로 한 파일에 ===== */
+let allBizCall = () => Promise.resolve([{biz:curBiz(),name:(ST_BIZ||{})[curBiz()]||curBiz(),cur:true}]);
+let bizSwap = (it,fn) => fn();
+const allBizOk = () => S.ui.role==='admin'&&!S.adminOrg&&(S.isMaster||typeof persist!=='function');
+const allBizBar = () => !allBizOk()?'':`<div class="panel row between" style="gap:8px;flex-wrap:wrap;align-items:center"><div><b>전체 사업 운영현황</b> <span class="small muted">앵커늘봄 + 방학집중형 · 사업마다 현재 운영 시기</span>${qt(['총괄관리자만 보임','시트: 전체(모든 사업) + 사업별','늘봄센터 칸: 앵커늘봄 = 충남앵커센터, 방학집중형 = 한국과학창의재단','운영 취소 학급 제외'])}</div><div class="row" style="gap:6px;align-items:center"><span class="small muted" id="xamsg"></span><button class="btn sm pri" data-act="export-allbiz">전체 사업 운영현황 받기</button></div></div>`;
+async function doAllBizExport(btn){
+  const msg=document.getElementById('xamsg'); if(btn) btn.disabled=true; if(msg) msg.textContent='자료를 모으는 중…';
+  try{
+    const L=await allBizCall(), parts=[];
+    L.forEach(it=>{ const B=it.cur?buildExportAoa(S.rows.filter(r=>rowSeason(r)===S.season&&rowBiz(r)===curBiz())):bizSwap(it,()=>buildExportAoa(S.rows.filter(r=>rowSeason(r)===S.season).map(r=>r.biz?r:{...r,biz:it.biz})));
+      parts.push({name:it.name||it.biz,season:it.cur?season().name:(it.seasonName||''),B}); });
+    const has=parts.filter(x=>x.B); if(!has.length){ if(msg) msg.textContent='저장할 학급이 없습니다.'; return; }
+    const head=has[0].B.head, all=[head]; let n=0; has.forEach(x=>x.B.aoa.slice(1).forEach(r=>{ const y=r.slice(); y[0]=++n; all.push(y); }));
+    const sheet=aoa=>{ const ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true}), rng=XLSX.utils.decode_range(ws['!ref']);
+      for(let R=1;R<=rng.e.r;R++) for(let C=0;C<=rng.e.c;C++){ const cell=ws[XLSX.utils.encode_cell({r:R,c:C})]; if(!cell) continue; if(cell.t==='d') cell.z='yyyy-mm-dd'; if((C===28||C===29)&&cell.t==='n') cell.z='hh:mm'; }
+      ws['!cols']=head.map((h,i)=>({wch:i===8||i===33?28:i===6||i===15?18:i>=39&&i<59?11:10})); return ws; };
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,sheet(all),'전체');
+    has.forEach(x=>XLSX.utils.book_append_sheet(wb,sheet(x.B.aoa),String(x.name).replace(/[\\/?*\[\]:]/g,'').slice(0,28)||x.name));
+    const d=new Date(), ymd=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+    await saveXlsx(wb,`전체 사업 운영현황 (${has.map(x=>`${x.name} ${x.season}`.trim()).join(' · ')}) ${ymd}.xlsx`,msg||{});
+    if(msg&&/저장했습니다/.test(msg.textContent)) msg.textContent=`저장했습니다 · ${has.map(x=>`${x.name} ${x.B.aoa.length-1}학급`).join(', ')}`;
+  }catch(e){ if(msg) msg.textContent=e&&e.message||String(e); }
+  finally{ if(btn) btn.disabled=false; }
+}
 function buildExportAoa(rowsArg,opt){
   opt=opt||{};
   const H=SEED.header.slice(0,65), extra=!!S.ui.extra;
@@ -5674,7 +5700,7 @@ function buildExportAoa(rowsArg,opt){
     const tab=cs.list.find(x=>/태블릿/.test(x.c.text));
     const memo=opsMemo(r,opt.school);
     const row=new Array(65).fill('');
-    Object.assign(row,{0:i+1,1:'-',2:'충남RISE센터',3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:regionParts(r)[0],5:regionParts(r)[1],6:r.school,7:'동계',8:memo,
+    Object.assign(row,{0:i+1,1:'-',2:nbCenter(r),3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:regionParts(r)[0],5:regionParts(r)[1],6:r.school,7:seasonTerm(),8:memo,
       9:tab?(tab.a.ans==='yes'?'가능':tab.a.ans==='no'?'불가':'미확인'):'해당 없음',10:tab&&tab.a.ans==='yes'&&tab.a.qty!==''?Number(tab.a.qty):'',11:sc.room||r.room,12:c.name||'',13:cPhones(c,'\n'),14:c.email||'',
       15:p.name,16:p.field,17:days.length,18:r.perDay,19:days.length*r.perDay,20:1,21:rowGrade(r),22:CL[r.id]||'A',23:r.expected,24:sc.count===''?'':Number(sc.count),25:D(r.start),26:D(r.end),27:daysTxt(r.days),
       28:r.ts==null?'':r.ts/1440,29:r.te==null?'':r.te/1440,30:sc.multi===''?'':Number(sc.multi),31:sc.low===''?'':Number(sc.low),32:regionSize(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr||''):S.addr[r.school]),33:(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr):S.addr[r.school])||'',34:t?t.name:'',35:t?t.phone||'':'',36:t?t.email||'':'',37:a?a.name:'-',38:a?a.phone||'':''});
@@ -7537,6 +7563,7 @@ document.addEventListener('click',async e=>{
       const phone=document.getElementById('ni-phone').value.trim(); if(digits(phone).length<9){ toast('연락처를 입력해 주세요'); return; } if(S.instructors.some(x=>digits(x.phone)===digits(phone))){ toast('같은 연락처의 강사가 이미 있습니다'); return; }
       S.instructors.push({id:'t'+Date.now().toString(36),name,phone,email:document.getElementById('ni-email').value.trim(),region:document.getElementById('ni-region').value,fields,progs,senior:false,note:document.getElementById('ni-note').value.trim()}); toast(name+' 강사를 추가했습니다'); break; }
     case 'export': doExport(); return;
+    case 'export-allbiz': doAllBizExport(el); return;
     case 'x-fmt': { S.ui.xfmt=el.dataset.v; const E=S.ui.edu=S.ui.edu||{}; if(el.dataset.v==='edu'&&!E.tpl&&!E.tried){ E.tried=true; const o=eduTplRecall(); if(o) eduReadTpl(o.buf,o.file).then(T=>{ E.tpl=T; render(); }).catch(()=>{}); } E.sys=null; break; }
     case 'edu-tclear': { const E=S.ui.edu||{}; E.tpl=null; E.map={}; try{ localStorage.removeItem('eduTpl'); }catch(e){} break; }
     case 'edu-sh': { const E=S.ui.edu||{}, f=E.file; if(!f||!f.stat) return; const p=f.stat, pick={...p.pick,[el.dataset.s]:!p.pick[el.dataset.s]}; E.file=eduFromStat(stParsePick(p._src,p.file,p.cand,pick,p)); break; }
