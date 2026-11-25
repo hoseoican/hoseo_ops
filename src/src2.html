@@ -833,6 +833,11 @@ table.mtt td{vertical-align:top}
 .dvf-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .dvdoc.ro{cursor:default}.dvck{display:inline-flex;align-items:center;gap:3px}.dvck input{margin:0;width:13px;height:13px}
 tr.dv-ed>td{background:var(--tint)!important}
+.dvfbar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}.dvfbar .dvq{flex:1 1 240px;min-width:200px}
+.dvfl{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden;font-size:13px}
+.dvfl>span{padding:0 4px 0 12px;color:var(--muted);white-space:nowrap}.dvfl select{border:0;background:transparent;padding:8px 26px 8px 4px;min-width:84px;max-width:170px;font-weight:600}
+.dvfl.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--card))}.dvfl.on>span{color:var(--accent)}
+.dvchip{display:inline-flex;align-items:center;gap:4px}.dvchip .lnk{font-size:14px;line-height:1;padding:0 2px}
 .dvst{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}.dvst-0{background:var(--sunk);color:var(--muted)}.dvst-1{background:var(--wait-bg);color:var(--wait-fg)}.dvst-2{background:var(--fin-bg);color:var(--fin-fg)}.dvst-3{background:var(--can-bg);color:var(--can-fg);text-decoration:line-through}
 .hovtip{position:relative;border-bottom:1px dotted var(--muted);cursor:help}
 .hovtip::after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 6px);white-space:pre-line;width:max-content;max-width:260px;background:#262626;color:#fff;padding:7px 10px;border-radius:8px;font-size:12.5px;line-height:1.5;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;visibility:hidden;transition:opacity .12s;pointer-events:none}
@@ -2291,7 +2296,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.114';
+const LIB_VER='11.115';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6813,9 +6818,19 @@ function devPanel(){ const u=S.ui, L=devRecs(), f=u.devF||{}, IT=kitItems();
   return `<div class="panel stack" id="devlist"><div class="row between" style="flex-wrap:wrap;gap:8px"><div><h3>프로그램 목록</h3><div class="muted small" style="margin-top:2px">${bizName()} 프로그램 ${live.length}개${cnt('삭제')?` (삭제 ${cnt('삭제')}개 제외)`:''} · 자료 업로드: ${docCnt}</div></div>
     <div class="row" style="gap:6px;flex-wrap:wrap">${devMine()?'':'<label class="btn pri sm" for="devfile">프로그램 현황 엑셀 업로드</label><input id="devfile" type="file" accept=".xlsx,.xls" hidden>'}<button class="btn sm" data-act="devexport" ${L.length?'':'disabled'}>현황 다운로드</button>${qt(['「프로그램 개발 및 운영 현황」 엑셀을 그대로 올리면 됨','통합 목록(개발 상태·삭제 여부) + 검토(자문) 목록(검토 점수·등급) + 개발 목록(계획서·지도안·PPT·활동지·완료본)을 프로그램 이름으로 합침','띄어쓰기·「고도화」 표기가 달라도 같은 프로그램으로 봄','다시 올려도 화면에서 직접 고친 단계·자료 표시·메모는 그대로 둠'],'r')}</div></div>
    ${u.devPend?devPendHtml():''}
-   ${L.length?`<div class="row orgf"><span class="tb-l small">단계</span><div class="fchips"><button class="fchip ${!f.stage?'on':''}" data-act="devf" data-k="stage" data-v="">전체 <em>${L.length}</em></button>${DEV_STAGES.map(s=>`<button class="fchip ${f.stage===s?'on':''}" data-act="devf" data-k="stage" data-v="${s}" ${!cnt(s)&&f.stage!==s?'disabled':''}>${s} <em>${cnt(s)}</em></button>`).join('')}</div></div>
-   <div class="row orgf"><span class="tb-l small">확인</span><div class="fchips">${flags.map(([k,l,fn])=>{ const n=L.filter(fn).length; return `<button class="fchip ${f.flag===k?'on':''}" data-act="devf" data-k="flag" data-v="${f.flag===k?'':k}" ${!n&&f.flag!==k?'disabled':''}>${l} <em>${n}</em></button>`; }).join('')}</div></div>
-   <div class="filters"><input id="devq" placeholder="프로그램·개발자·메모 검색" value="${esc(f.q||'')}" style="flex:1 1 220px" aria-label="프로그램 검색">${sel('devf-univ',f.univ||'',univs,'전체 대학')}${sel('devf-field',f.field||'',fields,'전체 분야')}${sel('devf-year',f.year||'',[...new Set(L.map(r=>String(r.year||'')).filter(Boolean))].sort().reverse(),'전체 개발연도')}${Object.values(f).some(Boolean)?'<button class="btn sm" data-act="devfreset">조건 초기화</button>':''}<span class="small muted" style="margin-left:auto">${V.length}개 표시</span></div>
+   ${L.length?(()=>{ const years=[...new Set(L.map(r=>String(r.year||'')).filter(Boolean))].sort().reverse(), nOf=fn=>L.filter(fn).length;
+     const dsel=(id,k,cur,opts,all)=>`<label class="dvfl ${cur?'on':''}"><span>${all}</span><select id="${id}" aria-label="${all}"><option value="">전체</option>${opts.map(([v,l,n])=>`<option value="${esc(v)}" ${cur===v?'selected':''} ${!n&&cur!==v?'disabled':''}>${esc(l)} (${n})</option>`).join('')}</select></label>`;
+     const lab={stage:'단계',flag:'확인',univ:'대학',field:'분야',year:'개발연도'}, val=(k,v)=>k==='flag'?((flags.find(x=>x[0]===v)||[])[1]||v):v;
+     const act=Object.keys(lab).filter(k=>f[k]);
+     return `<div class="dvfbar">
+      <input id="devq" class="dvq" placeholder="프로그램·개발자·메모 검색" value="${esc(f.q||'')}" aria-label="프로그램 검색">
+      ${dsel('devf-stage','stage',f.stage||'',DEV_STAGES.map(x=>[x,x,cnt(x)]),'단계')}
+      ${dsel('devf-flag','flag',f.flag||'',flags.map(([k,l,fn])=>[k,l,nOf(fn)]),'확인')}
+      ${dsel('devf-univ','univ',f.univ||'',univs.map(x=>[x,x,nOf(r=>r.univ===x)]),'대학')}
+      ${dsel('devf-field','field',f.field||'',fields.map(x=>[x,x,nOf(r=>r.field===x)]),'분야')}
+      ${dsel('devf-year','year',f.year||'',years.map(x=>[x,x,nOf(r=>String(r.year||'')===x)]),'개발연도')}
+     </div>
+     <div class="row small" style="gap:6px;flex-wrap:wrap;align-items:center;min-height:26px"><span class="muted">${V.length===L.length?`전체 ${L.length}개`:`<b>${V.length}</b> / ${L.length}개`}</span>${act.map(k=>`<span class="chip sm dvchip">${lab[k]}: ${esc(val(k,f[k]))} <button class="lnk" data-act="devfclr" data-k="${k}" aria-label="${lab[k]} 조건 지우기">×</button></span>`).join('')}${act.length||f.q?'<button class="lnk small" data-act="devfreset">모두 지우기</button>':''}</div>`; })()+`
    <div class="tw"><table class="noenh dvt"><thead><tr>${[['univ','대학'],['field','분야'],['name','프로그램']].map(([k,l])=>devTh(k,l)).join('')}${devTh('year','개발연도')}${devTh('dev','개발자')}${devTh('stage','단계')}<th>자료 업로드 ${qt(['초록 = 있음','바꾸려면 줄 끝 「수정」 → 고른 뒤 「저장」'])}</th>${devTh('rv','검토(자문)')}<th>메모</th><th></th></tr></thead><tbody>
    ${V.map(r=>{ if(ED===r.key) return devEditForm(r,L); const rv=r.review||{}, p=devProg(r), plan=p&&p.plan, ed=false, dd=r.docs||{};
      const devC=r.liaison?`<span class="hovtip" tabindex="0" data-tip="${esc('소통 담당자: '+r.liaison)}">${esc(r.dev||'(개발자 미입력)')}</span>`:(r.dev?esc(r.dev):'<span class="muted">-</span>');
@@ -7013,6 +7028,7 @@ function kitClick(a,el){ const u=S.ui;
   switch(a){
     case 'kittab': u.kitTab=el.dataset.v; return true;
     case 'kitreload': S.kitDB=null; kitLoad(); return true;
+    case 'devfclr': u.devF={...(u.devF||{}),[el.dataset.k]:''}; return true;
     case 'devf': u.devF={...(u.devF||{}),[el.dataset.k]:u.devF&&u.devF[el.dataset.k]===el.dataset.v&&el.dataset.k==='stage'?'':el.dataset.v}; return true;
     case 'devfreset': u.devF={}; return true;
     case 'devsort': { const k=el.dataset.k, o=u.devSort||{}; u.devSort=o.k===k?(o.d<0?{}:{k,d:-1}):{k,d:1}; return true; }
@@ -7094,7 +7110,7 @@ function kitChange(t){ const u=S.ui;
   if(t.dataset.dsx&&u.dsDraft){ u.dsDraft.extra[t.dataset.dsx]=t.checked; render(); return true; }
   if(t.id==='devfile'){ const f=t.files[0]; t.value=''; if(f) f.arrayBuffer().then(b=>{ try{ u.devPend=devParse(b,f.name); }catch(err){ toast(err.message); } render(); }); return true; }
   if(t.id==='kitfile'){ const f=t.files[0]; t.value=''; if(f){ toast(`${f.name} 읽는 중…`); f.arrayBuffer().then(b=>{ try{ u.kitPend=kitParseBook(b,f.name); }catch(err){ toast(err.message); } render(); }); } return true; }
-  if(t.id==='devf-univ'||t.id==='devf-field'||t.id==='devf-year'){ u.devF={...(u.devF||{}),[{'devf-univ':'univ','devf-field':'field','devf-year':'year'}[t.id]]:t.value}; render(); return true; }
+  if(/^devf-(univ|field|year|stage|flag)$/.test(t.id)){ u.devF={...(u.devF||{}),[t.id.slice(5)]:t.value}; render(); return true; }
   if(t.id==='kitf-p'){ u.kitF={...(u.kitF||{}),p:t.value}; u.kitDelAll=''; render(); return true; }
   if(t.id==='kq-b'){ u.kqB=t.value; render(); return true; }
   if(t.id==='kq-rate'){ u.kqRate=Math.max(0,Math.min(50,+t.value||0)); render(); return true; }
