@@ -1290,7 +1290,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.24-17';
+var APP_VERSION = '2026.11.25-1';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1628,21 +1628,44 @@ var BK_KEYS=['settings','ops','contacts','mailCfg','sent','smsCfg','smsLog','gas
 function u8ToB64(u){ var s='', CH=0x8000; for(var i=0;i<u.length;i+=CH) s+=String.fromCharCode.apply(null, u.subarray(i,i+CH)); return btoa(s); }
 function b64ToU8(b){ var s=atob(b), u=new Uint8Array(s.length); for(var i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; }
 function bkStamp(){ var d=new Date(), z=function(n){ return ('0'+n).slice(-2); }; return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()); }
-async function bkMake(){
-  var data={ app:'anchor-lecturer-docs', version:APP_VERSION, created:new Date().toISOString(), people: await dbAll(), kv:{} };
-  for(const k of BK_KEYS){ data.kv[k]=await kvGet(k); }
-  var json=JSON.stringify(data, function(k,v){ return v instanceof Uint8Array ? {__u8:u8ToB64(v)} : v; });
-  var zip=new JSZip(); zip.file('backup.json', json);
-  var blob=await zip.generateAsync({type:'blob', compression:'DEFLATE', compressionOptions:{level:6}});
-  return { blob:blob, name:'앵커늘봄강사서류_백업_'+bkStamp()+'.zip', people:data.people.length };
+/* 백업 2판: 강사마다 JSON 한 개 + 스캔본·사진은 따로 파일(base64로 한 문자열에 몰아 넣으면 강사가 많을 때 「Invalid string length」로 멈춤) */
+async function bkMake(prog){
+  var ppl=await dbAll(), kv={}, zip=new JSZip(), nb=0;
+  for(const k of BK_KEYS){ kv[k]=await kvGet(k); }
+  var bin=function(dir){ return function(k,v){ if(v instanceof Uint8Array){ var f='bin/'+dir+'/'+(nb++)+'.bin'; zip.file(f, v, {binary:true}); return {__f:f}; } return v; }; };
+  ppl.forEach(function(p, i){ var id=String(p.id||('x'+i)).replace(/[^\w-]/g,'_'); zip.file('people/'+id+'.json', JSON.stringify(p, bin(id))); });
+  zip.file('kv.json', JSON.stringify(kv, bin('kv')));
+  zip.file('backup.json', JSON.stringify({ app:'anchor-lecturer-docs', format:2, version:APP_VERSION, created:new Date().toISOString(), people:ppl.length }));
+  var blob=await zip.generateAsync({type:'blob', compression:'DEFLATE', compressionOptions:{level:6}}, function(m){ if(prog) prog(Math.round(m.percent)); });
+  return { blob:blob, name:'앵커늘봄강사서류_백업_'+bkStamp()+'.zip', people:ppl.length };
+}
+async function bkRead(u){
+  var z=await JSZip.loadAsync(u), f=z.file('backup.json'); if(!f) throw new Error('백업 파일이 아닙니다');
+  var head=JSON.parse(await f.async('string'), function(k,v){ return v && typeof v==='object' && typeof v.__u8==='string' ? b64ToU8(v.__u8) : v; });
+  if(head.format!==2) return head;
+  var bins={}; for(const n of Object.keys(z.files)){ if(/^bin\//.test(n) && !z.files[n].dir) bins[n]=await z.files[n].async('uint8array'); }
+  var rv=function(k,v){ return v && typeof v==='object' && typeof v.__f==='string' && Object.keys(v).length===1 ? (bins[v.__f]||null) : v; };
+  var ppl=[]; for(const n of Object.keys(z.files).filter(function(n){ return /^people\/.+\.json$/.test(n); }).sort()){ ppl.push(JSON.parse(await z.files[n].async('string'), rv)); }
+  var kf=z.file('kv.json');
+  return { app:head.app, created:head.created, version:head.version, people:ppl, kv: kf ? JSON.parse(await kf.async('string'), rv) : {} };
 }
 function bkSaveCfg(){ kvPut('backupCfg', bkCfg); }
 function bkDone(){ bkCfg.last=Date.now(); bkCfg.lastDay=bkStamp(); bkSaveCfg(); bkStateText(); }
 async function bkDownload(auto){
   if(bkBusy) return; bkBusy=true;
-  try{ var r=await bkMake(); await saveBlob(r.blob, r.name); bkDone(); if($('bkNowInfo')) $('bkNowInfo').textContent='강사 '+r.people+'명 · '+Math.round(r.blob.size/1024/1024*10)/10+'MB'; }
+  var btn=$('bkNow'), lb=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='백업 파일 만드는 중…'; }
+  try{ var r=await bkMake(function(pc){ if(btn) btn.textContent='백업 파일 만드는 중… '+pc+'%'; }); await bkSaveFile(r.blob, r.name); bkDone(); if($('bkNowInfo')) $('bkNowInfo').textContent='강사 '+r.people+'명 · '+Math.round(r.blob.size/1024/1024*10)/10+'MB'; }
   catch(e){ console.error(e); toast('백업하지 못했습니다: '+(e.message||e)); }
-  finally{ bkBusy=false; }
+  finally{ bkBusy=false; if(btn){ btn.disabled=false; btn.textContent=lb; } }
+}
+/* 백업 파일 내려받기: 앱 안 저장 기능이 없으면 a[download]. 큰 파일은 클릭 직후 주소를 지우면 받기가 끊기므로 1분 뒤 정리 */
+async function bkSaveFile(blob, name){
+  var dl=await getDownloads();
+  if(dl){ try{ await dl.save({filename:name, data:blob}); toast('저장했습니다: '+name); return; } catch(e){ if(e&&e.code==='declined'){ toast('저장을 취소했습니다'); throw new Error('저장 취소'); } } }
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.rel='noopener'; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+  toast('내려받기를 시작했습니다: '+name+' (브라우저 아래쪽·다운로드 목록을 확인해 주세요)');
 }
 async function bkWriteFolder(){
   if(!bkDir || bkBusy) return false;
@@ -1680,9 +1703,9 @@ async function bkRestore(file){
   try{
     info.textContent='읽는 중…';
     var u=new Uint8Array(await file.arrayBuffer()), json;
-    if(u[0]===0x50 && u[1]===0x4b){ var z=await JSZip.loadAsync(u), f=z.file('backup.json'); if(!f) throw new Error('백업 파일이 아닙니다'); json=await f.async('string'); }
-    else json=new TextDecoder().decode(u);
-    var data=JSON.parse(json, function(k,v){ return v && typeof v==='object' && typeof v.__u8==='string' ? b64ToU8(v.__u8) : v; });
+    var data;
+    if(u[0]===0x50 && u[1]===0x4b) data=await bkRead(u);
+    else { json=new TextDecoder().decode(u); data=JSON.parse(json, function(k,v){ return v && typeof v==='object' && typeof v.__u8==='string' ? b64ToU8(v.__u8) : v; }); }
     if(data.app!=='anchor-lecturer-docs' || !Array.isArray(data.people)) throw new Error('이 프로그램의 백업 파일이 아닙니다');
     var how=(document.querySelector('[name=bkHow]:checked')||{}).value||'merge';
     var msg=(data.created||'').slice(0,10)+' 백업 · 강사 '+data.people.length+'명을 '+(how==='replace'?'덮어씁니다(지금 강사 '+people.length+'명은 지워짐)':'합칩니다');
@@ -1968,10 +1991,16 @@ function termDiff(p){
   return (d.add.length || d.drop.length || d.prog || d.st) ? d : { o:o, start:st, none:true };
 }
 function lsubWait(p){ return !!(p && p.lsub && p.lsub.at && !p.lsub.ok); }
+/* 강사가 제출 링크에서 남긴 제출 지연 사유 {docs, why, detail, due, memo, at} */
+function lateOf(p){ return p && p.late && p.late.due ? p.late : null; }
+function lateTip(l){ return (l.docs||[]).join(', ')+' · '+l.why+(l.detail?' · '+l.detail:'')+(l.memo?' · 전달: '+l.memo:'')+' · '+new Date(l.at).toLocaleString('ko-KR')+' 제출'; }
+function lateTag(p){ var l=lateOf(p); if(!l) return ''; var over=l.due<today(); return '<span class="mtag '+(over?'fx':'ls')+'" title="'+esc(lateTip(l))+'">지연 사유 · '+esc(l.why)+' · 예정 '+dotDate(l.due)+(over?' 지남':'')+'</span>'; }
+function lateLine(p){ var l=lateOf(p); if(!l) return ''; return '<div style="flex-basis:100%;font-size:13px;padding-top:6px;border-top:1px dashed rgba(0,0,0,.12)"><b>제출 지연 사유</b> '+esc((l.docs||[]).join(', '))+' · '+esc(l.why)+(l.detail?' ('+esc(l.detail)+')':'')+' · 제출 예정일 <b>'+dotDate(l.due)+'</b>'+(l.due<today()?' <span style="color:#B42318;font-weight:700">예정일 지남</span>':'')+(l.memo?'<br>전달사항: '+esc(l.memo):'')+'<span style="opacity:.7"> · '+new Date(l.at).toLocaleString('ko-KR')+(l.n>1?' · '+l.n+'번째':'')+'</span></div>'; }
 function termTags(x){
   var h='', t=x.term;
   if(lsubWait(x.p)) h+='<span class="mtag ls" title="강사가 제출 링크로 직접 입력·업로드했습니다: '+esc((x.p.lsub.items||[]).join(', '))+'">강사 '+(x.p.lsub.done?'제출':'입력 중')+' · 검토 대기</span>';
   if(t && !t.none) h+=(t.add.length?'<span class="mtag tm" title="운영현황에는 있는데 이 강사의 배치 학교에 없습니다">새 배치 학교 '+esc(t.add.join(', '))+'</span>':'')+(t.drop.length?'<span class="mtag tm" title="지금 고른 학기의 운영현황에는 없는 지난 학기 학교입니다. 「운영현황 반영」을 하면 배치 학교에서 뺍니다">지난 학기 학교 '+esc(t.drop.join(', '))+'</span>':'')+(t.prog?'<span class="mtag tm" title="운영현황의 프로그램명과 다릅니다">프로그램 변경</span>':'')+(t.st?'<span class="mtag tm" title="첫 출강일 '+esc(x.p.startDate||'없음')+' → '+esc(t.st)+'">출강일 '+dotDate(t.st)+'</span>':'');
+  h+=lateTag(x.p);
   if(x.exp) h+='<span class="mtag fx" title="검진일 '+esc(x.p.examDate)+' · 1년 기한 '+esc(x.exp.end)+'">'+esc(x.exp.tag)+'</span>';
   return h ? '<div class="mtags" style="margin-top:3px">'+h+'</div>' : '';
 }
@@ -2106,7 +2135,8 @@ function rosterDelete(){
 var SMS_BODY_V1 = '[호서대 앵커늘봄] {성명} 강사님, 계약 서류 중 아래 서류가 아직 제출되지 않았습니다.\n- {부족서류}\n{제출기한}까지 {이메일} 로 보내 주시기 바랍니다. 문의 {연락처}';
 var SMS_NEW_DOCS = ['이력 사항(주민등록번호·주소·학력·경력·자격증)','서명 이미지','증명사진','신분증 사본','통장 사본','채용신체검사서','잠복결핵 검사 확인서','최종학력 졸업증명서','자격증 사본·경력증명서(해당자)'];
 var SMS_LINK_LINE = '아래 링크에서 직접 입력·제출하실 수 있습니다(본인만 열람).\n{제출링크}';
-var DEFAULT_SMS = { ver:3, bodyNew:'[호서대 앵커늘봄] {성명} 강사님, {배치학교} 늘봄 프로그램 출강을 위한 계약 서류 제출을 부탁드립니다.\n[제출 서류]\n{요청서류}\n'+SMS_LINK_LINE+'\n{제출기한}까지 제출해 주시기 바랍니다(링크 대신 {이메일} 로 보내셔도 됩니다). 문의 {연락처}', body:'[호서대 앵커늘봄] {성명} 강사님, 계약 서류 중 아래 서류의 제출·보완이 필요합니다.\n{요청서류}\n'+SMS_LINK_LINE+'\n{제출기한}까지 제출해 주시기 바랍니다(링크 대신 {이메일} 로 보내셔도 됩니다). 문의 {연락처}', due:'', who:'', tel:'041-423-2427', email:'jihun@hoseo.edu' };
+var SMS_LATE_LINE = '기한 안에 내기 어려운 서류는 링크의 「제출 지연 사유」에 사유와 제출 예정일을 꼭 남겨 주세요(미응답 시 배치·계약에 제한이 있을 수 있습니다).';
+var DEFAULT_SMS = { ver:4, bodyNew:'[호서대 앵커늘봄] {성명} 강사님, {배치학교} 늘봄 프로그램 출강을 위한 계약 서류 제출을 부탁드립니다.\n[제출 서류]\n{요청서류}\n'+SMS_LINK_LINE+'\n{제출기한}까지 제출해 주시기 바랍니다(링크 대신 {이메일} 로 보내셔도 됩니다).\n'+SMS_LATE_LINE+'\n문의 {연락처}', body:'[호서대 앵커늘봄] {성명} 강사님, 계약 서류 중 아래 서류의 제출·보완이 필요합니다.\n{요청서류}\n'+SMS_LINK_LINE+'\n{제출기한}까지 제출해 주시기 바랍니다(링크 대신 {이메일} 로 보내셔도 됩니다).\n'+SMS_LATE_LINE+'\n문의 {연락처}', due:'', who:'', tel:'041-423-2427', email:'jihun@hoseo.edu' };
 var SMS_PH = [['성명','강사 성명'],['요청서류','미제출·보완 서류를 나눠 정리'],['부족서류','미제출 서류(한 줄에 하나씩)'],['보완서류','보완 필요 서류와 사유'],['배치학교','배치 학교'],['제출기한','제출기한'],['담당자','담당자'],['연락처','담당자 연락처'],['이메일','제출 이메일'],['제출링크','강사 본인 제출 링크(「제출 링크 생성」로 만든 강사만)']];
 var smsCfg = JSON.parse(JSON.stringify(DEFAULT_SMS)), smsLog = {}, smsPick = {}, smsLastTa = 'body';
 function smsLogSet(id, x){
@@ -2249,7 +2279,7 @@ function renderSms(){
   $('smCount').textContent=list.length+'명 표시';
   $('smList').innerHTML = list.length ? list.map(function(x){
     var p=x.p, ph=phoneOf(p), lg=smsLog[p.id];
-    return '<li data-smli="'+esc(p.id)+'" class="'+(smsPick[p.id]?'on':'')+(ph.length<10?' nophone':'')+'"><input type="checkbox" data-sm="'+esc(p.id)+'"'+(smsPick[p.id]?' checked':'')+'><div><div class="who"><b>'+esc(x.name)+'</b><small>'+p.role+(x.schools.length?' · '+esc(x.schools.join(', ')):'')+'</small><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+'</div>'+missTags(x)+(x.exp?'<div class="mtags" style="margin-top:3px"><span class="mtag fx">'+esc(x.exp.tag)+'</span></div>':'')+'</div></li>';
+    return '<li data-smli="'+esc(p.id)+'" class="'+(smsPick[p.id]?'on':'')+(ph.length<10?' nophone':'')+'"><input type="checkbox" data-sm="'+esc(p.id)+'"'+(smsPick[p.id]?' checked':'')+'><div><div class="who"><b>'+esc(x.name)+'</b><small>'+p.role+(x.schools.length?' · '+esc(x.schools.join(', ')):'')+'</small><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+'</div>'+missTags(x)+(x.exp||lateOf(p)?'<div class="mtags" style="margin-top:3px">'+(x.exp?'<span class="mtag fx">'+esc(x.exp.tag)+'</span>':'')+lateTag(p)+'</div>':'')+'</div></li>';
   }).join('') : '<li class="empty">'+(all.length?'해당하는 강사가 없습니다':'미제출·보완 서류가 있는 강사가 없습니다')+'</li>';
   each('[data-smli]', function(li){ li.onclick=function(e){ var id=li.dataset.smli, cb=li.querySelector('input'); if(e.target!==cb) cb.checked=!cb.checked; if(cb.checked) smsPick[id]=1; else delete smsPick[id]; li.classList.toggle('on', cb.checked); renderSmsPreview(); }; }, $('smList'));
   // 양식
@@ -2782,12 +2812,12 @@ function renderLsub(){
   el.hidden=!(p && p.lsub && p.lsub.at); if(el.hidden) return;
   el.classList.toggle('okd', !!p.lsub.ok);
   if(p.lsub.ok){
-    el.innerHTML='<b>강사 제출 검토 완료</b><span>'+new Date(p.lsub.ok).toLocaleString('ko-KR')+(p.lsub.okBy?' · '+esc(p.lsub.okBy):'')+' · 강사 제출 '+new Date(p.lsub.done||p.lsub.at).toLocaleString('ko-KR')+'</span><span style="flex:1"></span><button type="button" class="ghost sm" id="lsubFix">보완 요청</button><button type="button" class="ghost sm" id="lsubUndo">검토 취소</button>';
+    el.innerHTML='<b>강사 제출 검토 완료</b><span>'+new Date(p.lsub.ok).toLocaleString('ko-KR')+(p.lsub.okBy?' · '+esc(p.lsub.okBy):'')+' · 강사 제출 '+new Date(p.lsub.done||p.lsub.at).toLocaleString('ko-KR')+'</span><span style="flex:1"></span><button type="button" class="ghost sm" id="lsubFix">보완 요청</button><button type="button" class="ghost sm" id="lsubUndo">검토 취소</button>'+lateLine(p);
     $('lsubFix').onclick=lsubFixGo;
     $('lsubUndo').onclick=function(){ delete cur.lsub.ok; delete cur.lsub.okBy; save(); renderAll(); toast('검토 완료를 취소했습니다 (다시 검토 대기)'); };
     return;
   }
-  el.innerHTML='<b>강사 본인이 제출 링크로 '+(p.lsub.done?'제출했습니다':'입력하고 있습니다')+'</b><span>'+new Date(p.lsub.done||p.lsub.at).toLocaleString('ko-KR')+' · '+esc((p.lsub.items||[]).join(', '))+'</span><span style="flex:1"></span><button type="button" class="ghost sm" id="lsubFix">보완 요청</button><button type="button" class="sm" id="lsubOk">검토 완료</button>';
+  el.innerHTML='<b>강사 본인이 제출 링크로 '+(p.lsub.done?'제출했습니다':'입력하고 있습니다')+'</b><span>'+new Date(p.lsub.done||p.lsub.at).toLocaleString('ko-KR')+' · '+esc((p.lsub.items||[]).join(', '))+'</span><span style="flex:1"></span><button type="button" class="ghost sm" id="lsubFix">보완 요청</button><button type="button" class="sm" id="lsubOk">검토 완료</button>'+lateLine(p);
   $('lsubFix').onclick=lsubFixGo;
   $('lsubOk').onclick=function(){ cur.lsub.ok=Date.now(); cur.lsub.okBy=sy.me||''; save(); renderAll(); if(typeof syKick==='function' && syReady()){ sy.dirty[cur.id]=1; sySave(); syKick(); } toast('검토 완료로 표시했습니다'); };
 }
@@ -3093,9 +3123,12 @@ function statusPairs(){
   }
   opsSchools().forEach(function(s){ s.rows.forEach(function(r){ r.people.forEach(function(p){ push(p.name, s.school, p.role, s.rows.filter(function(x){ return x.people.some(function(q){ return q.name===p.name; }); })); }); }); });
   people.forEach(function(p){ var n=p.name.trim().replace(/\s/g,''); if(!n) return; listSchools(p).forEach(function(sc){ push(n, sc, p.role, []); }); });
+  /* 구비 완료·미발송은 그 학교·기관의 주강사·보조강사가 모두 구비했을 때만. 본인은 구비했지만 같은 곳의 다른 강사가 미구비·미등록이면 「구비·대기」 */
+  var bad={}; out.forEach(function(x){ if(!x.sent && x.st!=='ready') bad[x.school]=(bad[x.school]||[]).concat(x.name+(x.role==='보조강사'?'(보조)':'')); });
+  out.forEach(function(x){ if(x.st==='ready' && bad[x.school]){ x.st='hold'; x.holdBy=bad[x.school]; } });
   return out;
 }
-var ST_FILTERS = [['all','전체'],['ready','구비 완료·미발송'],['notready','미구비'],['none','미등록'],['sent','발송 완료'],['|'],['unsent','미발송 전체']];
+var ST_FILTERS = [['all','전체'],['ready','구비 완료·미발송'],['hold','구비·같은 곳 강사 대기'],['notready','미구비'],['none','미등록'],['sent','발송 완료'],['|'],['unsent','미발송 전체']];
 function stMatch(x, f){ return f==='all' || (f==='unsent' ? x.st!=='sent' : x.st===f); }
 function renderStatus(){
   var all=statusPairs(), q=($('stQ').value||'').replace(/\s/g,'');
@@ -3122,24 +3155,24 @@ function renderStatus(){
   $('stCopySent').textContent='발송 완료 학교 명단 복사 ('+sentSch.length+'곳)'; $('stCopySent').disabled=!sentSch.length;
   $('stCopySent').onclick=function(){ copyText(sentSch.join('\n'), '발송 완료 학교 '+sentSch.length+'곳 이름을 복사했습니다'); };
   $('stEmpty').hidden = opsLoaded();
-  var cnt={ all:pairs.length, sent:0, ready:0, notready:0, none:0, unsent:0 };
+  var cnt={ all:pairs.length, sent:0, ready:0, hold:0, notready:0, none:0, unsent:0 };
   pairs.forEach(function(x){ cnt[x.st]++; if(x.st!=='sent') cnt.unsent++; });
   var ppl={}; pairs.forEach(function(x){ ppl[x.name]=1; });
   var sch={}; pairs.forEach(function(x){ sch[x.school]=1; });
   $('stBasis').textContent = bizDef(docBiz).name+' · '+(opsLoaded() ? (ops.per ? ops.per.join('·')+' · ' : '')+(ops.on||[]).join('·')+' 시트 기준 · ' : '')+'강사 '+Object.keys(ppl).length+'명 · 학교·기관 '+Object.keys(sch).length+'곳';
   var nP={}, nS={}; pairs.forEach(function(x){ nP[x.name]=1; nS[x.school]=1; });
-  var stCards=[['all','전체 배치 (강사 '+Object.keys(nP).length+'명 · '+Object.keys(nS).length+'곳)', cnt.all, ''], ['sent','발송 완료', cnt.sent, 'ok'], ['ready','구비 완료·미발송', cnt.ready, 'warn'], ['notready','미구비', cnt.notready, 'err'], ['none','미등록', cnt.none, ''], ['unsent','미발송 전체', cnt.unsent, '']];
+  var stCards=[['all','전체 배치 (강사 '+Object.keys(nP).length+'명 · '+Object.keys(nS).length+'곳)', cnt.all, ''], ['sent','발송 완료', cnt.sent, 'ok'], ['ready','구비 완료·미발송', cnt.ready, 'warn'], ['hold','구비·같은 곳 강사 대기', cnt.hold, ''], ['notready','미구비', cnt.notready, 'err'], ['none','미등록', cnt.none, ''], ['unsent','미발송 전체', cnt.unsent, '']];
   var plc = stView==='person' && stPSub==='unplaced';
   $('stStats').innerHTML=stCards.map(function(x){
     return '<button type="button" class="st2 '+x[3]+(stFilter===x[0]&&!plc?' on':'')+'" data-sf="'+x[0]+'"'+(plc?' disabled':'')+'><b>'+x[2]+'</b><span>'+x[1]+(cnt.all&&x[0]!=='all'?' · '+Math.round(x[2]/cnt.all*100)+'%':'')+'</span><span class="pk">표에 보는 중</span></button>'; }).join('');
   each('[data-sf]', function(b){ b.onclick=function(){ stFilter=b.dataset.sf; renderStatus(); }; }, $('stStats'));
   var t=cnt.all||1;
-  $('stBar').innerHTML='<i class="b1" style="width:'+(cnt.sent/t*100)+'%"></i><i class="b2" style="width:'+(cnt.ready/t*100)+'%"></i><i class="b3" style="width:'+(cnt.notready/t*100)+'%"></i><i class="b4" style="width:'+(cnt.none/t*100)+'%"></i>';
+  $('stBar').innerHTML='<i class="b1" style="width:'+(cnt.sent/t*100)+'%"></i><i class="b2" style="width:'+((cnt.ready+cnt.hold)/t*100)+'%"></i><i class="b3" style="width:'+(cnt.notready/t*100)+'%"></i><i class="b4" style="width:'+(cnt.none/t*100)+'%"></i>';
 
   each('label', function(l){ l.classList.toggle('on', l.dataset.v===stView); }, $('stView'));
 
   var list=pairs.filter(function(x){ return stMatch(x, stFilter) && (!q || x.name.indexOf(q)>=0 || x.school.indexOf(q)>=0 || x.classes.some(function(c){ return c.program.replace(/\s/g,'').indexOf(q)>=0; })); });
-  var rdBadge=function(x){ return x.st==='none' ? '<span class="badge no">미등록</span>' : x.rd.lv==='ok' ? '<span class="badge ok">구비 완료</span>' : '<span class="badge err">미구비</span>'; };
+  var rdBadge=function(x){ return x.st==='none' ? '<span class="badge no">미등록</span>' : x.rd.lv==='ok' ? '<span class="badge ok">구비 완료</span>'+(x.st==='hold'?'<div class="miss w">같은 곳 대기: '+esc(x.holdBy.join(', '))+'</div>':'') : '<span class="badge err">미구비</span>'; };
   var sendCell=function(x){ return '<div class="sendcell">'+(x.sent ? '<span class="badge sent">'+fmtSent(x.sent)+' 발송</span><button type="button" class="ghost" data-unsend="'+esc(sentKey(x.school,x.name))+'">취소</button>' : '<span class="badge wait">미발송</span>'+(x.person?'<button type="button" class="ghost" data-send="'+esc(sentKey(x.school,x.name))+'">발송 완료 처리</button>':''))+'</div>'; };
   if(stView==='person' && stPSub==='unplaced'){
     $('stTable').className='stt';
@@ -3149,7 +3182,7 @@ function renderStatus(){
     each('[data-stopen]', function(b){ b.onclick=function(){ select(b.dataset.stopen); go('out'); }; }, $('stTable'));
   } else if(stView==='person'){
     $('stTable').className='stt';
-    list.sort(function(a,b){ var o={notready:0,none:1,ready:2,sent:3}; return (o[a.st]-o[b.st]) || a.name.localeCompare(b.name,'ko') || a.school.localeCompare(b.school,'ko'); });
+    list.sort(function(a,b){ var o={notready:0,none:1,hold:2,ready:3,sent:4}; return (o[a.st]-o[b.st]) || a.name.localeCompare(b.name,'ko') || a.school.localeCompare(b.school,'ko'); });
     $('stTable').innerHTML='<tr><th style="width:120px">강사</th><th style="width:170px">학교·기관</th><th>프로그램</th><th style="width:220px">서류 구비</th><th style="width:110px">발송</th><th style="width:70px"></th></tr>'+(list.length ? list.map(function(x){
       var prog=x.classes.map(function(c){ return (c.field?'['+c.field+'] ':'')+c.program; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).join(', ');
       return '<tr><td class="nm"><b>'+esc(x.name)+'</b><small>'+x.role+'</small></td><td>'+esc(x.school)+'</td><td><small style="color:var(--ink)">'+esc(prog||'-')+'</small></td>'+
@@ -4379,6 +4412,7 @@ openDb().then(async function(){
   var sn=await kvGet('sent'); if(sn) sent=sn;
   var sc=await kvGet('smsCfg'); if(sc){ if((sc.ver||1)<DEFAULT_SMS.ver){ if(!sc.body || sc.body===SMS_BODY_V1) sc.body=DEFAULT_SMS.body;
     if((sc.ver||1)<3){ ['body','bodyNew'].forEach(function(k){ var b=sc[k]; if(!b || b.indexOf('{제출링크}')>=0) return; var L=b.split('\n'), i=L.length-1; for(var j=0;j<L.length;j++) if(L[j].indexOf('{제출기한}')>=0){ i=j; break; } L.splice(i, 0, SMS_LINK_LINE); sc[k]=L.join('\n'); }); }
+    if((sc.ver||1)<4){ ['body','bodyNew'].forEach(function(k){ var b=sc[k]; if(!b || b.indexOf('{제출링크}')<0 || b.indexOf('지연 사유')>=0) return; sc[k]=b.indexOf(' 문의 {연락처}')>=0 ? b.replace(' 문의 {연락처}', '\n'+SMS_LATE_LINE+'\n문의 {연락처}') : b+'\n'+SMS_LATE_LINE; }); }
     sc.ver=DEFAULT_SMS.ver; } smsCfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_SMS)), sc); }
   var sl=await kvGet('smsLog'); if(sl) smsLog=sl;
   var mc=await kvGet('mailCfg'); if(mc){ delete mc.html; delete mc.notice; delete mc.oldBody; if(!mc.ver || mc.ver<DEFAULT_MAIL.ver){ if(mc.body && mc.body.indexOf('{계약안내}')<0 && mc.body.indexOf('■ 협조사항\n  - 범죄경력 조회를 진행해 주시고, **직접 조회가 필요하실 경우 강사님과 연락하여 진행**해 주시기 바랍니다.\n  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.\n  - 개인정보가 들어 있는 자료이니 확인 후 안전하게 보관·파기해 주시기 바랍니다.')>=0) mc.body=mc.body.replace('■ 협조사항\n  - 범죄경력 조회를 진행해 주시고, **직접 조회가 필요하실 경우 강사님과 연락하여 진행**해 주시기 바랍니다.\n  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.\n  - 개인정보가 들어 있는 자료이니 확인 후 안전하게 보관·파기해 주시기 바랍니다.', '■ 협조사항\n{계약안내}\n  - 범죄경력 조회를 진행해 주시고, **직접 조회가 필요하실 경우 강사님과 연락하여 진행**해 주시기 바랍니다.\n{출근부안내}\n  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.\n  - 개인정보가 들어 있는 자료이니 확인 후 안전하게 보관·파기해 주시기 바랍니다.'); if(!mc.body || mc.body===DEFAULT_MAIL.notice || mc.body===MAIL_V6.body) mc.body=DEFAULT_MAIL.body; if(!mc.subject || mc.subject===MAIL_V6.subject) mc.subject=DEFAULT_MAIL.subject; if(mc.ver<9 && mc.body && mc.body.indexOf('범죄경력조회 동의서만 보내 드리는 이유')>=0){ mc.bodyOut=mc.body.replace('■ 부탁드리는 사항','■ 협조사항'); mc.subjectOut=mc.subject; mc.body=DEFAULT_MAIL.body; mc.subject=DEFAULT_MAIL.subject; } else if(mc.ver<7){ delete mc.bodyOut; delete mc.subjectOut; } if(mc.ver<10){ ['  - 그 밖의 서류(이력서, 신분증·통장 사본, 개인정보 동의서, 서약서 등)는 기관마다 쓰는 양식과 필요한 서류가 달라 센터에서 일괄로 작성해 드리지 않습니다.','  - 개인정보는 필요한 범위에서만 주고받는 것이 원칙이므로(개인정보 보호법), 기관에 필요한 서류는 강사님께 직접 받아 주시기 바랍니다.'].forEach(function(l){ if(mc.bodyOut) mc.bodyOut=mc.bodyOut.replace('\n'+l,''); }); if(mc.body) mc.body=mc.body.replace('  - 검토하시고 보완이 필요한 서류가 있으면 회신 부탁드립니다.','  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.'); } mc.ver=DEFAULT_MAIL.ver; } mailCfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_MAIL)), mc); }
