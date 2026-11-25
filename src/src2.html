@@ -2246,7 +2246,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.76';
+const LIB_VER='11.77';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5365,24 +5365,36 @@ function smsBrDlg(){ if(!S.ui.smsBrDlg) return '';
   </div></div></div>`; }
 /* 강사 안내 문자 문구: 관리자가 고칠 수 있음(S.ops.smsTpl). {이름표}는 강사·수업마다 채워짐 */
 const SMS_TPL_DEF={
-  body:'[충남 1권역 앵커늘봄] {강사명} 강사님, 안녕하세요.\n{시즌} 늘봄 프로그램 강사 배치가 확정되어 안내드립니다.\n\n{수업목록}\n전체 수업일과 학교 연락처는 강사 신청 페이지의 [내 신청 - 일정]에서 확인해 주세요.\n{접속주소}\n문의: 수업 관련은 각 수업의 운영 대학 담당자, 시스템 관련은 호서대 {담당자} {담당자전화}',
+  body:'[충남 1권역 앵커늘봄] {강사명} 강사님, 안녕하세요.\n{시즌} 늘봄 프로그램 강사 배치가 확정되어 안내드립니다.\n\n{수업목록}\n전체 수업일과 학교 연락처는 강사 신청 페이지의 [내 신청 - 일정]에서 확인해 주세요.\n{접속주소}\n{서류안내}\n문의: 수업 관련은 각 수업의 운영 대학 담당자, 시스템 관련은 호서대 {담당자} {담당자전화}',
   item:'{번호}. {학교}{역할}\n- 프로그램: [{분야}] {프로그램}\n- 기간: {시작일} ~ {종료일}\n- 일시: 매주 {요일} {시간} (총 {횟수}회)\n'};
-const SMS_KEYS_BODY=['강사명','시즌','수업목록','수업수','접속주소','담당자','담당자전화'];
+const SMS_KEYS_BODY=['강사명','시즌','수업목록','수업수','접속주소','서류안내','담당자','담당자전화'];
+/* 서류가 하나도 없는 강사(강사서류에 미등록 또는 올린 서류 0개): 배치 안내 문자에 {서류안내} 문구를 넣음. 문구에 {서류안내}가 없으면 끝에 붙임 */
+const DOC_GUIDE_DEF={main:'https:/'+'/nb.hoseo.ac.kr/VM7HkHtEDOPo',asst:'https:/'+'/nb.hoseo.ac.kr/VM1F9beTesH8',text:'[계약 서류 제출 안내]\n처음 배치되신 강사님은 계약 서류 제출이 필요합니다. 아래 안내 페이지를 확인하시고 서류를 준비해 제출해 주세요.\n{안내링크}'};
+const docGuide=()=>({...DOC_GUIDE_DEF,...(((S.ops||{}).docGuide)||{})});
+const DOC_RO={map:null,at:'',err:'',busy:null};
+function docRosterLoad(force){ if(S.adminOrg||!window.DOCS_API) return Promise.resolve(); if(DOC_RO.map&&!force) return Promise.resolve(); if(DOC_RO.busy) return DOC_RO.busy;
+  DOC_RO.busy=docsCall('roster').then(j=>{ const m={}; (j.people||[]).forEach(x=>{ (m[x.name]=m[x.name]||[]).push(x); }); DOC_RO.map=m; DOC_RO.at=now(); DOC_RO.err=''; })
+    .catch(e=>{ DOC_RO.err=e&&e.message||String(e); }).finally(()=>{ DOC_RO.busy=null; }); return DOC_RO.busy; }
+/* true = 서류 없음 · false = 있음 · null = 확인 못 함 */
+function noDocs(t){ if(!DOC_RO.map||!t) return null; const L=DOC_RO.map[String(t.name||'').replace(/\s/g,'')]||[]; if(!L.length) return true; const tel=digits(t.phone).slice(-4), hit=L.find(x=>x.tel&&x.tel===tel)||L[0]; return !(hit.docs>0); }
+function docGuideText(kind){ const g=docGuide(); return String(g.text||'').replace(/\{안내링크\}/g,(kind==='asst'?g.asst:g.main)||''); }
 const SMS_KEYS_ITEM=['번호','학교','역할','분야','프로그램','시작일','종료일','요일','시간','횟수','운영대학','참여일','참여횟수'];
 const SMS_TPL_DEF_A={
-  body:'[충남 1권역 앵커늘봄] {강사명} 강사님, 안녕하세요.\n{시즌} 늘봄 프로그램 보조강사 배치가 확정되어 안내드립니다.\n\n{수업목록}\n전체 일정과 학교 연락처는 강사 신청 페이지의 [내 신청 - 일정]에서 확인해 주세요.\n{접속주소}\n문의: 수업 관련은 각 수업의 운영 대학 담당자, 시스템 관련은 호서대 {담당자} {담당자전화}',
+  body:'[충남 1권역 앵커늘봄] {강사명} 강사님, 안녕하세요.\n{시즌} 늘봄 프로그램 보조강사 배치가 확정되어 안내드립니다.\n\n{수업목록}\n전체 일정과 학교 연락처는 강사 신청 페이지의 [내 신청 - 일정]에서 확인해 주세요.\n{접속주소}\n{서류안내}\n문의: 수업 관련은 각 수업의 운영 대학 담당자, 시스템 관련은 호서대 {담당자} {담당자전화}',
   item:'{번호}. {학교} (보조강사)\n- 프로그램: [{분야}] {프로그램}\n- 시간: {시간}\n- 참여일: {참여일} (총 {참여횟수}회)\n'};
 const smsTpl=k=>k==='asst'?{...SMS_TPL_DEF_A,...(((S.ops||{}).smsTplA)||{})}:({...SMS_TPL_DEF,...(((S.ops||{}).smsTpl)||{})});
 const smsFill=(tpl,v)=>String(tpl).replace(/\{([^{}\s]+)\}/g,(m,k)=>Object.prototype.hasOwnProperty.call(v,k)?String(v[k]):m);
 function instSmsText(x,tp,kind){
   const T=tp||smsTpl(kind), ss=season(), dd=d=>`${md(d)}(${DOWS[dowOf(d)]})`;
   const items=x.items.map(({r,role},i)=>{ const p=prog(r.prog); return smsFill(T.item,{번호:i+1,학교:r.school,역할:role?` (${role})`:'',분야:p.field||'-',프로그램:p.name,시작일:dd(r.start),종료일:dd(r.end),요일:daysTxt(r.days).replace(/, /g,'/'),시간:`${hm(r.ts)}~${hm(r.te)}`,횟수:classDays(r).length,운영대학:orgShort(orgOfRow(r)),참여일:(role?aDaysOf(r):classDays(r)).map(dd).join(', '),참여횟수:(role?aDaysOf(r):classDays(r)).length}).replace(/\s+$/,''); }).join('\n\n')+'\n';
-  const out=smsFill(S.webAppUrl?T.body:String(T.body).replace(/^[ \t]*\{접속주소\}[ \t]*\n?/m,''),{강사명:x.t.name,시즌:ss.name,수업목록:items,수업수:x.items.length,접속주소:S.webAppUrl?S.webAppUrl+(kind==='asst'?'?r=asst':'?r=teacher')+(curBiz()!=='anchor'?'&b='+curBiz():''):'',담당자:S.ops.name||'',담당자전화:S.ops.phone||''});
+  const gd=noDocs(x.t)===true?docGuideText(kind):'', body0=S.webAppUrl?T.body:String(T.body).replace(/^[ \t]*\{접속주소\}[ \t]*\n?/m,''), body1=gd&&!/\{서류안내\}/.test(body0)?body0+'\n\n{서류안내}':body0.replace(/^[ \t]*\{서류안내\}[ \t]*\n?/m,gd?'{서류안내}\n':'');
+  const out=smsFill(body1,{서류안내:gd,강사명:x.t.name,시즌:ss.name,수업목록:items,수업수:x.items.length,접속주소:S.webAppUrl?S.webAppUrl+(kind==='asst'?'?r=asst':'?r=teacher')+(curBiz()!=='anchor'?'&b='+curBiz():''):'',담당자:S.ops.name||'',담당자전화:S.ops.phone||''});
   return bizWords(smsSafe(out.split('\n').map(l=>l.replace(/\s+$/,'')).join('\n').replace(/\n{3,}/g,'\n\n')).trim());
 }
 const smsK = () => S.ui.smsTpl==='asst'?'asst':'main';
 function smsPvUpdate(){ const k=smsK(), pv=document.getElementById('smspv'), x=instSmsList(k)[0]; if(pv&&x) pv.textContent=instSmsText(x,S.ui.smsDraft,k); }
 function smsTplPanel(){
+  if(!DOC_RO.map&&!DOC_RO.busy&&!DOC_RO.err) docRosterLoad().then(()=>{ if(S.ui.smsTpl) render(); });
   const k=smsK(), d=S.ui.smsDraft||(S.ui.smsDraft={...smsTpl(k)}), list=instSmsList(k), x=list[0];
   const pv=x?instSmsText(x,d,k):'', n=pv?smsBytes(pv):0;
   const keys=(ks,f)=>ks.map(k=>`<button class="chip" data-act="smskey" data-f="${f}" data-k="${k}" title="커서 위치에 삽입">{${k}}</button>`).join(' ');
@@ -5400,9 +5412,17 @@ function smsTplPanel(){
     <div class="stack" style="gap:6px"><div class="small"><b>미리보기</b> ${x?`<span class="muted">${esc(x.t.name)} 강사 · ${n}바이트 · ${smsKind(n)}</span>`:`<span class="muted">${k==='asst'?'보조강사 확정':'배치 확정'}된 강사가 생기면 실제 내용으로 보입니다</span>`}</div>
      <pre id="smspv" style="white-space:pre-wrap;background:var(--sunk);border-radius:8px;padding:10px;margin:0;font-family:inherit;font-size:13px;min-height:200px">${esc(pv)}</pre></div>
    </div>
+   ${docGuideBox(k,list)}
    <div class="row"><button class="btn pri" data-act="smssave">저장</button><button class="btn" data-act="smsdef">기본 문구로 되돌리기</button>${(S.ops||{})[k==='asst'?'smsTplAAt':'smsTplAt']?`<span class="small muted">마지막 수정 ${esc(S.ops[k==='asst'?'smsTplAAt':'smsTplAt'])}</span>`:''}</div></div>`;
 }
+function docGuideBox(k,list){ const g=docGuide(), nd=list.filter(x=>noDocs(x.t)===true);
+  const st=DOC_RO.busy?'강사서류 서버에서 서류 보유 여부를 확인하는 중…':DOC_RO.err?`서류 보유 여부를 확인하지 못했습니다(${esc(DOC_RO.err)}). 이대로 보내면 서류 안내가 들어가지 않습니다`:DOC_RO.map?(nd.length?`서류가 하나도 없는 강사 <b>${nd.length}명</b>에게 서류 안내가 함께 나갑니다: ${nd.map(x=>esc(x.t.name)).join(', ')}`:'모든 강사에게 강사서류 자료가 있어 서류 안내는 들어가지 않습니다'):'';
+  return `<div class="conds"><div class="conds-h"><span>처음 배치된 강사 서류 안내 <span class="muted small">— 강사서류에 서류가 하나도 없는 강사에게만 {서류안내} 자리에 들어감</span></span><button class="btn sm" data-act="docro">다시 확인</button></div><div style="padding:10px 12px" class="stack">
+    <div class="small">${st}</div>
+    <div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label class="f small">주강사 서류 안내 링크<input id="dg-main" value="${esc(g.main)}"></label><label class="f small">보조강사 서류 안내 링크<input id="dg-asst" value="${esc(g.asst)}"></label></div>
+    <label class="f small">서류 안내 문구 <span class="muted">({안내링크} = 위 링크)</span><textarea id="dg-text" rows="3" style="font-family:inherit">${esc(g.text)}</textarea></label></div></div>`; }
 async function instSmsXlsx(kind){
+  await docRosterLoad();
   const A=kind==='asst', msg=document.getElementById('instsmsmsg')||{set textContent(v){ toast(v); }};
   const list=instSmsList(kind); if(!list.length){ msg.textContent=A?'확정된 보조강사가 아직 없습니다.':'배치 확정된 학급이 아직 없습니다.'; return; }
   const ph=t=>digits(t.phone), ok=list.filter(x=>/^01\d{8,9}$/.test(ph(x.t))), no=list.filter(x=>!/^01\d{8,9}$/.test(ph(x.t)));
@@ -6650,7 +6670,8 @@ document.addEventListener('click',async e=>{
     case 'instsms': instSmsXlsx(); return;
     case 'smsjoin': { const q=joinCur(joinReqs().find(x=>x.id===el.dataset.id)); if(q) smsBrSend([joinSmsJob(q)],'접속 승인'); return; }
     case 'smsjoinsel': smsBrSend(joinLatest(true).filter(q=>smsTo(q)).map(joinSmsJob),'접속 승인'); return;
-    case 'smsinst': { const k=el.dataset.k==='asst'?'asst':''; smsBrSend(instSmsJobs(k),k?'보조강사 배치':'강사 배치'); return; }
+    case 'smsinst': { const k=el.dataset.k==='asst'?'asst':''; docRosterLoad().then(()=>smsBrSend(instSmsJobs(k),k?'보조강사 배치':'강사 배치')); return; }
+    case 'docro': docRosterLoad(true).then(()=>render()); render(); return;
     case 'smsbrx': S.ui.smsBrDlg=false; break;
     case 'alst': S.ui.alSt=el.dataset.v; break;
     case 'aledit': S.ui.alEdit=!S.ui.alEdit; break;
@@ -6818,7 +6839,7 @@ document.addEventListener('click',async e=>{
     case 'afask': S.ui.afAsk=!S.ui.afAsk; S.ui.afSel={}; break;
     case 'assignfinal': { const rs=afReady().filter(afOn); S.ui.afAsk=false; S.ui.afSel={}; rs.forEach(r=>{ r.status='final'; r.schPend=true; r.finalAt=now(); }); toast(`${rs.length}학급 배치를 확정했습니다. 강사 화면에 공개되었고, 학교에는 「5. 학교 공개」 후 보입니다`); break; }
     case 'smstpl': { const k=el.dataset.k==='asst'?'asst':'main'; S.ui.smsTpl=S.ui.smsTpl&&smsK()===k?false:k; S.ui.smsDraft=null; break; }
-    case 'smssave': { const k=smsK(), d=S.ui.smsDraft||smsTpl(k); if(!/\{수업목록\}/.test(d.body)){ toast('전체 문구에 {수업목록}이 있어야 수업 내용이 들어갑니다'); return; } S.ops=k==='asst'?{...S.ops,smsTplA:{body:d.body,item:d.item},smsTplAAt:now()}:{...S.ops,smsTpl:{body:d.body,item:d.item},smsTplAt:now()}; S.ui.smsTpl=false; S.ui.smsDraft=null; toast(`${k==='asst'?'보조강사':'강사'} 안내 문자 문구를 저장했습니다`); break; }
+    case 'smssave': { const k=smsK(), d=S.ui.smsDraft||smsTpl(k); if(!/\{수업목록\}/.test(d.body)){ toast('전체 문구에 {수업목록}이 있어야 수업 내용이 들어갑니다'); return; } S.ops=k==='asst'?{...S.ops,smsTplA:{body:d.body,item:d.item},smsTplAAt:now()}:{...S.ops,smsTpl:{body:d.body,item:d.item},smsTplAt:now()}; { const v=id=>String((document.getElementById(id)||{}).value||'').trim(), dg={main:v('dg-main'),asst:v('dg-asst'),text:String((document.getElementById('dg-text')||{}).value||'').trim()}; if(dg.text) S.ops={...S.ops,docGuide:dg}; } S.ui.smsTpl=false; S.ui.smsDraft=null; toast(`${k==='asst'?'보조강사':'강사'} 안내 문자 문구를 저장했습니다`); break; }
     case 'smsdef': S.ui.smsDraft={...(smsK()==='asst'?SMS_TPL_DEF_A:SMS_TPL_DEF)}; toast('기본 문구를 불러왔습니다. 「저장」을 눌러야 반영됩니다'); break;
     case 'smskey': { const ta=document.getElementById(el.dataset.f); if(!ta) return; const k=`{${el.dataset.k}}`, a=ta.selectionStart??ta.value.length, b=ta.selectionEnd??a; ta.value=ta.value.slice(0,a)+k+ta.value.slice(b); const d=S.ui.smsDraft||(S.ui.smsDraft={...smsTpl(smsK())}); d[el.dataset.f==='smsbody'?'body':'item']=ta.value; smsPvUpdate(); ta.focus(); ta.selectionStart=ta.selectionEnd=a+k.length; return; }
     case 'spask': S.ui.spAsk=!S.ui.spAsk; S.ui.spSel={}; break;
