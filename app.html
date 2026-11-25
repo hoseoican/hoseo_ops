@@ -958,7 +958,7 @@ tr:first-child>td{border-top:0}
 .settabs{border-bottom-color:var(--line2);padding:8px 0 10px}
 .settabs button{padding:6px 14px;transition:border-color .12s,background-color .12s}
 .settabs button:hover:not(.on){background:var(--tint)}
-/* 검토·매칭 단계 대시보드 */
+/* 검토 · 매칭 단계 대시보드 */
 .mdash{display:flex;flex-direction:column;gap:8px}
 .msteps{display:flex;flex-wrap:wrap;align-items:center;gap:6px 20px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 14px}
 .mdg{display:flex;align-items:center;gap:8px}
@@ -1523,7 +1523,7 @@ function formCfgPanel(){ const u=S.ui, kind=u.fcKind==='out'?'out':'school', D=u
   const cuRows=C.custom.map((c,i)=>`<tr><td><input data-fc="cu.${i}.l" value="${esc(c.l)}" ${dis} style="width:200px" aria-label="질문"></td><td><select data-fc="cu.${i}.type" ${dis}>${[['text','짧은 글'],['yn','예/아니오'],['num','숫자']].map(([v,l])=>`<option value="${v}" ${c.type===v?'selected':''}>${l}</option>`).join('')}</select></td>
     <td class="nowrap"><label class="row small" style="gap:4px"><input type="checkbox" data-fc="cu.${i}.req" ${c.req?'checked':''} ${dis}> 필수</label></td><td><input data-fc="cu.${i}.help" value="${esc(c.help||'')}" placeholder="도움말" ${dis} style="width:100%"></td><td>${ed?`<button class="btn sm" data-act="fccudel" data-i="${i}">제외</button>`:''}</td></tr>`).join('');
   const T=C.texts;
-  return `<div class="panel stack"><div class="row between" style="align-items:center;flex-wrap:wrap;gap:8px"><div><h3>담당자 화면 항목</h3><div class="muted small" style="margin-top:2px">${qt(['시작일·종료일·시간·요일·수업일 달력·운영 조건은 매칭에 쓰여 숨길 수 없음','「저장」해야 담당자 화면에 반영','학교와 학교밖을 따로 설정'])}</div></div>
+  return `<div class="panel stack"><div class="row between" style="align-items:center;flex-wrap:wrap;gap:8px"><div><h3>학교·기관 입력 항목</h3><div class="muted small" style="margin-top:2px">${qt(['시작일·종료일·시간·요일·수업일 달력·운영 조건은 매칭에 쓰여 숨길 수 없음','「저장」해야 학교·기관 화면에 반영','학교와 학교밖을 따로 설정'])}</div></div>
     <div class="row" style="gap:6px"><div class="seg" role="tablist">${[['school','학교'],['out','학교밖']].map(([k,l])=>`<button class="${kind===k?'on':''}" data-act="fckind" data-v="${k}" ${ed?'disabled':''}>${l}</button>`).join('')}</div>
     ${ed?`<button class="btn sm pri" data-act="fcsave">저장</button><button class="btn sm" data-act="fccancel">취소</button><button class="btn sm" data-act="fcdef">처음 값으로</button>`:`<button class="btn sm pri" data-act="fcedit">수정</button>`}</div></div>
    <div><b class="small">학급 입력 칸</b><div class="tw" style="margin-top:6px"><table class="noenh"><thead><tr><th>항목</th><th>화면에 보일 이름</th><th>보이기</th><th>필수</th><th>도움말</th></tr></thead><tbody>${fieldRows}</tbody></table></div></div>
@@ -1547,7 +1547,7 @@ function fcSet(D,path,val){ const [a,b,c]=path.split('.'), C=D.cfg;
   else if(a==='kakao'){ C.kakao=val; } }
 function outWords(h){ const P={'가':'이','는':'은','를':'을','와':'과','로':'으로'}; return String(h).replace(/(?<![가-힣])학교(?!밖)(가|는|를|와|로)?/g,(m,x)=>'기관'+(x?P[x]:'')); }
 function scopeBar(inl){ const nS=S.rows.filter(r=>mine(r)&&!isOut(r)).length, nO=S.rows.filter(r=>mine(r)&&isOut(r)).length, o=scopeOut();
-  return `<${inl?'span':'div'} class="scopebar${inl?' in':''}" role="tablist" aria-label="관리 대상">${inl?'<span class="sb-gap"></span><span class="sb-l">대상</span>':''}<button class="scp ${o?'':'on'}" role="tab" aria-selected="${!o}" data-act="scope" data-v="sch">학교 <em>${nS}</em></button><button class="scp ${o?'on':''}" role="tab" aria-selected="${o}" data-act="scope" data-v="out">학교밖 (돌봄센터 등) <em>${nO}</em></button>${qt(['학교 운영 건과 학교밖 운영 건을 나눠 관리','운영 현황 · 접속 승인 · 검토·매칭 · 내보내기가 고른 쪽만 다룸','강사 일정 겹침은 양쪽을 함께 확인','강사 신청 기간은 양쪽 공통'],'r')}</${inl?'span':'div'}>`; }
+  return `<${inl?'span':'div'} class="scopebar${inl?' in':''}" role="tablist" aria-label="관리 대상">${inl?'<span class="sb-gap"></span><span class="sb-l">대상</span>':''}<button class="scp ${o?'':'on'}" role="tab" aria-selected="${!o}" data-act="scope" data-v="sch">학교 <em>${nS}</em></button><button class="scp ${o?'on':''}" role="tab" aria-selected="${o}" data-act="scope" data-v="out">학교밖 (돌봄센터 등) <em>${nO}</em></button>${qt(['학교 운영 건과 학교밖 운영 건을 나눠 관리','운영현황 · 접속 승인 · 검토 · 매칭 · 내보내기가 고른 쪽만 다룸','강사 일정 겹침은 양쪽을 함께 확인','강사 신청 기간은 양쪽 공통'],'r')}</${inl?'span':'div'}>`; }
 const myRows = () => S.rows.filter(r=>mine(r)&&inScope(r));
 /* 운영 대학: 타대학 업로드 → 목록 파일 「운영기관」(r.org) → 프로그램 담당(개발) 대학. 프로그램 카드의 담당 대학은 개발 대학일 뿐 */
 const orgOfRow = r => r.extOrg||r.org||(prog(r.origProg)||{}).org||'미지정';
@@ -1556,7 +1556,7 @@ const liveRows = () => S.rows.filter(r=>activeOrgs().includes(orgOfRow(r)));
 const orgShort = o => String(o||'미지정').replace(/학교$/,'');
 /* 순번: 처음 올린 목록(도교육청·학교밖)의 「순」 값, 같으면 파일에 적힌 순서 */
 /* 원본 목록 순서. 「학급 나누기」로 만든 학급은 원래 학급 바로 뒤(+0.5) — 예전에 나눈 학급(srcIdx 없음)도 같은 규칙 */
-/* 운영 목록 표(목록 업로드 · 검토·매칭)의 보조강사 줄: 배치(가배치/확정) 또는 모집 중 · 신청 수 */
+/* 운영 목록 표(목록 업로드 · 검토 · 매칭)의 보조강사 줄: 배치(가배치/확정) 또는 모집 중 · 신청 수 */
 /* 특수학생 여부·인원 (학교 입력, 사업 공통) */
 /* 학년: 학교·기관이 고른 값(sc.gk = '1'~'6' 또는 'mix', 혼합이면 ga~gb) → 「3학년」「1~3학년」 */
 const GR_NUM=v=>{ const n=parseInt(String(v??'').replace(/\D/g,''),10); return n>=1&&n<=6?n:0; };
@@ -2214,7 +2214,7 @@ function autoAssign(silent){
 const stPill = s => { const [t,c]=ST[s]; return `<span class="pill st-${c}">${t}</span>`; };
 const issList = (list,max=9) => list.slice(0,max).map(i=>`<span class="iss lv-${i.lv}"><i>${i.lv==='crit'?'!':i.lv==='warn'?'△':'i'}</i>${esc(i.t)}</span>`).join('<br>');
 const thread = r => r.thread.length?`<div class="thread">${r.thread.map(m=>`<div class="msg"><b>${esc(m.who)}</b>${esc(m.text)} <span class="muted small">${esc(m.at)}</span></div>`).join('')}</div>`:'';
-const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>운영 현황'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영현황 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류'],['cons','<span class="tno">10</span>운영 점검']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
+const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>운영현황'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영현황 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류'],['cons','<span class="tno">10</span>운영 점검']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
 /* 보조강사 신청 페이지(?r=asst): 주강사 신청 페이지와 완전히 분리. 강사 DB에 없는 사람도 가입해 보조강사 신청 */
 const tRoleA = () => ((document.body&&document.body.dataset.trole)||new URLSearchParams(location.search).get('r')||'')==='asst';
 /* 타대학 관리자에게 보일 탭: 기본값 + 대학별 따로(S.orgTabs = {def:{탭:bool}, orgs:{대학:{탭:bool}}}). 서버도 같은 기준으로 자료를 보내지 않음 */
@@ -2310,9 +2310,9 @@ function foldMain(tb,key){
   apply();
 }
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
-/* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
+/* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.116';
+const LIB_VER='11.117';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2450,7 +2450,7 @@ function outRulesPanel(){ const R=outRules(), ed=S.ui.orEdit, rows=myRows().filt
    opts: [[값, 표시, 개수]] (개수 null이면 표시 안 함). 값 ''는 전체 */
 function fSel(id,label,cur,opts,allLab){ cur=cur==null?'':String(cur); return `<label class="fsel ${cur?'on':''}"><span>${esc(label)}</span><select id="${id}" aria-label="${esc(label)}"><option value="">${esc(allLab||'전체')}</option>${opts.map(([v,l,n])=>`<option value="${esc(v)}" ${cur===String(v)?'selected':''} ${n===0&&cur!==String(v)?'disabled':''}>${esc(l)}${n!=null?` (${n})`:''}</option>`).join('')}</select></label>`; }
 /* 적용 조건 줄: items = [[이름, 값 표시, 지우기 data-act, data-k]] */
-function fActive(total,shown,items,resetAct,unit){ unit=unit||'개'; return `<div class="factive">${shown===total?`<span class="muted">전체 ${total.toLocaleString()}${unit}</span>`:`<span><b>${shown.toLocaleString()}</b> / ${total.toLocaleString()}${unit}</span>`}${items.map(([l,v,a,k])=>`<span class="chip sm fchipx">${esc(l)}: ${esc(v)} <button class="lnk" data-act="${a}" data-k="${esc(k||'')}" aria-label="${esc(l)} 조건 지우기">×</button></span>`).join('')}${items.length&&resetAct?`<button class="lnk small" data-act="${resetAct}">모두 지우기</button>`:''}</div>`; }
+function fActive(total,shown,items,resetAct,unit){ unit=unit||'개'; return `<div class="factive">${shown===total?`<span class="muted">전체 ${total.toLocaleString()}${unit}</span>`:`<span><b>${shown.toLocaleString()}</b> / ${total.toLocaleString()}${unit}</span>`}${items.map(([l,v,a,k])=>`<span class="chip sm fchipx">${esc(l)}: ${esc(v)} <button class="lnk" data-act="${a}" data-k="${esc(k||'')}" aria-label="${esc(l)} 조건 지우기">×</button></span>`).join('')}${items.length&&resetAct?`<button class="lnk small" data-act="${resetAct}">조건 초기화</button>`:''}</div>`; }
 function viewBoard(){
   const SR=S.rows.filter(inScope), rows=myRows(), others=SR.length-rows.length, u=S.ui, O=scopeOut();
   const cnt=Object.fromEntries(ST_ORDER.map(s=>[s,rows.filter(r=>r.status===s).length]));
@@ -2484,11 +2484,11 @@ function viewBoard(){
      <label class="row small" style="margin-top:6px"><input type="checkbox" id="up-fixed"> 이미 확정된 운영현황입니다 · 학교 확인 단계 없이 바로 「운영 확정」으로 </label>
      <label class="row small" style="margin-top:6px"><input type="checkbox" id="up-reset" checked> 학교 담당자 정보(연락처·동의·카톡방 입장)도 비우기 (새 차수라면 권장)</label>
      <div class="row" style="margin-top:8px"><button class="btn pri sm" data-act="up-ok">학급 생성</button><button class="btn sm" data-act="up-no">취소</button></div></div>`:u.pending?`<div class="notice"><b>${esc(u.pending.file)}</b>에서 ${u.pending.rows.length}건(${u.pending.out?'기관':'학교'} ${new Set(u.pending.rows.map(r=>r[2])).size}곳)을 읽었습니다. ${u.pending.out?'지금 학교밖 운영 건을 이 목록으로 바꿀까요? <b>&#54617;교 운영 건은 그대로</b> 둡니다.':'지금 학교 운영 건의 진행 상황을 지우고 이 목록으로 새로 시작할까요? <b>학교밖 운영 건은 그대로</b> 둡니다.'}
-     <label class="row small" style="margin-top:6px"><input type="checkbox" id="up-fixed" ${curBiz()!=='anchor'?'checked':''}> <b>이미 확정된 운영현황</b>입니다 · 학교 확인 단계 없이 바로 「운영 확정」(강사 배치 단계)으로 ${qt(['학교 확인·제출·검토를 건너뜀','검토·매칭에서 바로 강사 화면에 공개할 수 있음','학교 링크·접속 승인은 나중에도 쓸 수 있음'])}</label>
+     <label class="row small" style="margin-top:6px"><input type="checkbox" id="up-fixed" ${curBiz()!=='anchor'?'checked':''}> <b>이미 확정된 운영현황</b>입니다 · 학교 확인 단계 없이 바로 「운영 확정」(강사 배치 단계)으로 ${qt(['학교 확인·제출·검토를 건너뜀','검토 · 매칭에서 바로 강사 화면에 공개할 수 있음','학교 링크·접속 승인은 나중에도 쓸 수 있음'])}</label>
      <label class="row small" style="margin-top:6px"><input type="checkbox" id="up-reset" ${u.pending.resetContacts!==false?'checked':''}> ${u.pending.out?'기관':'학교'} 담당자 정보(연락처·동의·카톡방 입장)도 비우기 (새 차수라면 권장)</label>
      <div class="row" style="margin-top:8px"><button class="btn pri sm" data-act="up-ok">${u.pending.out?'학교밖 목록 바꾸기':'새로 시작'}</button><button class="btn sm" data-act="up-no">취소</button></div></div>`:''}
   <div class="row between">
-    <div><h2>${esc(season().name)} 진행 현황</h2><div class="small" style="margin:2px 0 4px">${O?'학교밖 운영현황':curBiz()==='anchor'?'교육청 목록':'운영현황'} 업로드 → 접속 승인·링크 전달 → 학교 확인·제출 → 검토·매칭 ${qt(['목록을 올리면 학교마다 확인 링크가 생김','링크 전달: 「3 접속 승인」 또는 「확인 요청 보내기」','학교가 제출하면 「4 검토 · 매칭」에서 검토'])}</div><div class="muted small">호서대 운영 ${rows.length}학급 · 학교 ${schools.length}곳 · 다른 대학 배분 ${others}건${(O?S.fileOut:S.file)?` · 원본: ${esc(O?S.fileOut:S.file)}`:''}</div></div>
+    <div><h2>${esc(season().name)} 진행 현황</h2><div class="small" style="margin:2px 0 4px">${O?'학교밖 운영현황':curBiz()==='anchor'?'교육청 목록':'운영현황'} 업로드 → 접속 승인·링크 전달 → 학교 확인·제출 → 검토 · 매칭 ${qt(['목록을 올리면 학교마다 확인 링크가 생김','링크 전달: 「3 접속 승인」 또는 「확인 요청 보내기」','학교가 제출하면 「4 검토 · 매칭」에서 검토'])}</div><div class="muted small">호서대 운영 ${rows.length}학급 · 학교 ${schools.length}곳 · 타대학 배분 ${others}건${(O?S.fileOut:S.file)?` · 원본: ${esc(O?S.fileOut:S.file)}`:''}</div></div>
     <div class="row" ${S.adminOrg&&!O?'hidden':''}><label class="btn" for="up">${O?'학교밖 운영현황 업로드':curBiz()==='anchor'?'교육청 목록 업로드':'운영현황 업로드'}</label><input id="up" type="file" accept=".xlsx,.xls" hidden><button class="btn" data-act="man-open" data-out="${O?1:0}">학급 직접 추가</button>
       <button class="btn" data-act="remind">확인 요청 보내기 (${pend.length}곳)</button></div>
   </div>
@@ -2721,14 +2721,14 @@ function viewUniv(){
      <td class="nowrap">${st}</td></tr>${open?detail(r):''}`; };
   const bad=rs.filter(r=>r.status!=='final'&&r.wish&&r.wish.tid).map(r=>({r,a:(r.apps||[]).find(a=>a.tid===r.wish.tid)})).filter(x=>x.a&&x.a.clash&&(x.a.clash.fin.length||x.a.clash.tent.length||x.a.clash.wish.length));
   return `<div class="stack" style="max-width:1200px">${head}
-   <div class="hintbar">ⓘ 강사 이름을 누르면 <b>희망 강사로 바로 저장</b>되고, 다시 누르면 해제됩니다. 같은 시간에 함께 운영되는 다른 반이 있으면 이름 옆 <b>「→반 이름」</b>을 눌러 그 반으로 배치할 수 있습니다. <b>학급 정보(교실·프로그램·기간)를 누르면</b> 신청 강사의 유형·경력·지역·메모가 펼쳐집니다. <b>겹침</b> 표시는 같은 시간 다른 수업(다른 대학 포함)에 가배치·희망된 강사, <b>확정 겹침</b>은 이미 배치 확정되어 고를 수 없는 강사입니다. 호서대학교(주관대학)가 검토한 뒤 배치를 확정합니다.</div>
+   <div class="hintbar">ⓘ 강사 이름을 누르면 <b>희망 강사로 바로 저장</b>되고, 다시 누르면 해제됩니다. 같은 시간에 함께 운영되는 다른 반이 있으면 이름 옆 <b>「→반 이름」</b>을 눌러 그 반으로 배치할 수 있습니다. <b>학급 정보(교실·프로그램·기간)를 누르면</b> 신청 강사의 유형·경력·지역·메모가 펼쳐집니다. <b>겹침</b> 표시는 같은 시간 다른 수업(타대학 포함)에 가배치·희망된 강사, <b>확정 겹침</b>은 이미 배치 확정되어 고를 수 없는 강사입니다. 호서대학교(주관대학)가 검토한 뒤 배치를 확정합니다.</div>
    ${bad.length?`<div class="notice bad small stack" style="gap:4px"><b>희망 강사 중 다른 수업과 일정이 겹치는 경우 ${bad.length}건</b>${bad.map(x=>`<div>· <b>${esc(x.a.name)}</b> — ${esc(x.r.school)} ${esc(x.r.room||'')} ${daysTxt(x.r.days)} ${hm(x.r.ts)} ↔ ${[...x.a.clash.fin.map(v=>'확정: '+v),...x.a.clash.tent.map(v=>'가배치: '+v),...x.a.clash.wish.map(v=>'희망: '+v)].map(esc).join(', ')}</div>`).join('')}</div>`:''}
    <div class="panel stack" style="gap:8px">
     <div class="row" style="gap:8px;flex-wrap:wrap"><div class="fchips">${F.map(([k,l,f])=>`<button class="fchip ${uf===k?'on':''}" data-act="uf" data-v="${k}">${l} <em>${rs.filter(f).length}</em></button>`).join('')}</div><input id="uq" placeholder="학교·교실·프로그램·강사 검색" value="${esc(u.uq||'')}" style="flex:1 1 200px;margin-left:auto" aria-label="검색"></div>
     <div class="tw"><table class="mt ut"><thead><tr><th>학급</th><th>프로그램</th><th>기간 · 요일 · 시간</th><th>신청 강사 <span class="muted small" style="font-weight:400">(눌러서 희망 선택)</span></th><th>상태</th></tr></thead><tbody>
     </tbody>${[...groups].map(([sch,l],i)=>`<tbody class="ut-g">${i?'<tr class="ut-gap"><td colspan="5"></td></tr>':''}<tr class="ut-sch"><td colspan="5"><span class="ut-sch-n">${esc(sch)}</span><span class="ut-sch-m">수업 ${l.length}개 · 희망 ${l.filter(r=>r.wish&&r.status!=='final').length} · 확정 ${l.filter(r=>r.status==='final').length}</span></td></tr>${l.map(row).join('')}</tbody>`).join('')||'<tbody><tr><td colspan="5" class="muted">조건에 맞는 수업이 없습니다.</td></tr></tbody>'}
     </table></div></div>
-   <div class="row"><button class="btn" data-act="ures">배치 결과 엑셀 받기</button></div>
+   <div class="row"><button class="btn" data-act="ures">배치 결과 엑셀 다운로드</button></div>
    <div class="small muted">문의: 호서대학교 ${esc((U.ops||{}).name||'')} ${esc((U.ops||{}).phone||'')} ${esc((U.ops||{}).email||'')}</div></div>`;
 }
 /* 프로토타입: 희망 강사 저장 (앱스 스크립트에서는 App.html이 서버 univWish로 바꿈) */
@@ -2760,7 +2760,7 @@ function extPanel(){
      <div class="small muted">반영하면 「운영 확정」으로 들어옵니다 ${qt(['「4 검토 · 매칭」에서 호서대 학급과 함께 공개·배치','이미 모집·배치 중인 학급은 일정만 갱신'])}</div>
      <div class="row"><button class="btn pri" data-act="extok">반영하기</button><button class="btn" data-act="extno">취소</button></div></div>`; })():'';
   const L=org=>(S.univLinks||[]).find(x=>x.org===org)||null;
-  return `<div class="panel stack"><div><h3><span class="stepno">2+</span>타대학 수업 (강사 배치 공동 운영)</h3><div class="muted small" style="margin-top:2px">각 대학 「운영현황」 엑셀을 그대로 업로드 ${qt(['대학별 시트 또는 「운영기관」 열로 대학 구분, 호서대 시트는 건너뜀','타대학 연구원은 「희망 강사 선택 링크」에서 희망 강사만 고름','확정은 호서대가 함'])}</div></div>
+  return `<div class="panel stack"><div><h3><span class="stepno">2+</span>타대학 공동 운영 수업</h3><div class="muted small" style="margin-top:2px">각 대학 「운영현황」 엑셀을 그대로 업로드 ${qt(['대학별 시트 또는 「운영기관」 열로 대학 구분, 호서대 시트는 건너뜀','타대학 연구원은 「희망 강사 선택 링크」에서 희망 강사만 고름','확정은 호서대가 함'])}</div></div>
    <div class="row"><label class="btn" for="extup">타대학 운영현황 업로드</label><input id="extup" type="file" accept=".xlsx,.xls" hidden></div>
    ${pv}
    ${orgs.length?`<div class="tw"><table><thead><tr><th>대학</th><th>학급</th><th>공개 전</th><th>모집 중</th><th>희망 선택</th><th>배치 확정</th><th>희망 강사 선택 링크</th><th></th></tr></thead><tbody>${orgs.map(o=>{ const rs=extRows().filter(r=>orgOfRow(r)===o), c=s=>rs.filter(r=>r.status===s).length, l=L(o);
@@ -2911,7 +2911,7 @@ function matchLayerHtml(){ const r=S.rows.find(x=>x.id===S.ui.mDrawer); if(!r) r
   return `<div class="ov" data-act="close"><div class="drawer mdrawer" role="dialog" aria-label="수업 정보 · 신청 강사"><div class="stack">
    <div class="row between"><span class="small muted">검토 · 매칭 · ${tOrgTag(r)}</span><button class="btn" data-act="close">닫기</button></div>
    ${matchDetail(r)}</div></div></div>`; }
-/* 검토·매칭 단계 대시보드: 단계별 상태(할 일 있음·완료·대기)와 실행 버튼을 한눈에 */
+/* 검토 · 매칭 단계 대시보드: 단계별 상태(할 일 있음·완료·대기)와 실행 버튼을 한눈에 */
 function matchDash(){
   const M=matchRows(), nRev=M.filter(toReview).length, nRevOk=M.filter(r=>toReview(r)&&reviewOk(r)).length, nOpen=M.filter(toOpen).length, rec=M.filter(r=>r.status==='recruit'), nApps=rec.reduce((a,r)=>a+r.apps.length,0);
   const unassigned=M.filter(r=>['fixed','recruit'].includes(r.status)&&canAssign(r)&&!r.inst).length, ready=M.filter(r=>['fixed','recruit'].includes(r.status)&&r.inst&&canAssign(r)).length;
@@ -3128,7 +3128,7 @@ function progressPanel(sch,rs){
    <div class="tw"><table><tbody>${rs.map(r=>{const [i,t]=stepOf(r);return `<tr><td>${esc(clsName(r))}<div class="muted small">${esc(prog(r.prog).name)}</div></td><td class="small">${i>=0?`${i+1}단계 · `:''}${esc(t)}</td><td class="pinst">${r.inst&&schFin(r)?`${schInstLine(r.inst,'강사')}${r.asst?schInstLine(r.asst,'보조'):''}`:'<span class="muted small">배치 전</span>'}</td></tr>`}).join('')}</tbody></table></div>
    ${(()=>{ const fin=rs.filter(schFin), all=fin.length&&fin.length===rs.length;
      if(!fin.length) return `<div class="row"><button class="btn sm" data-act="sexport">제출 내용 엑셀로 저장</button></div>`;
-     return `<div class="sops"><div><b>운영현황 엑셀</b><div class="small muted">${all?'모든 학급의':`강사 배치가 끝난 ${fin.length}학급의`} 최종 운영 내용(일정·수업일·배치 강사 연락처)이 운영현황 양식으로 담깁니다.${all?'':` 나머지 ${rs.length-fin.length}학급은 배치가 끝나면 추가됩니다.`}</div><span class="small muted" id="smsg"></span></div><div class="row" style="gap:6px"><button class="btn pri sm" data-act="sopsx">운영현황 엑셀 받기 (${fin.length}학급)</button>${all?'':'<button class="btn sm" data-act="sexport" title="제출한 일정·운영 조건 답변·요청사항">제출 내용 엑셀</button>'}</div></div>`; })()}
+     return `<div class="sops"><div><b>운영현황 엑셀</b><div class="small muted">${all?'모든 학급의':`강사 배치가 끝난 ${fin.length}학급의`} 최종 운영 내용(일정·수업일·배치 강사 연락처)이 운영현황 양식으로 담깁니다.${all?'':` 나머지 ${rs.length-fin.length}학급은 배치가 끝나면 추가됩니다.`}</div><span class="small muted" id="smsg"></span></div><div class="row" style="gap:6px"><button class="btn pri sm" data-act="sopsx">운영현황 엑셀 다운로드 (${fin.length}학급)</button>${all?'':'<button class="btn sm" data-act="sexport" title="제출한 일정·운영 조건 답변·요청사항">제출 내용 엑셀</button>'}</div></div>`; })()}
    ${kitLink()?`<div class="sops"><div><b>교구재 목록</b></div><a class="btn sm" href="${esc(kitLink())}" target="_blank" rel="noopener">교구재 목록 보기 ↗</a></div>`:''}
    ${!open?'':''}
   </div>`;
@@ -3609,7 +3609,7 @@ function pcApply(){ const P=S.ui.pcPend; let add=0, up=0, del=0;
 function pcRowsOut(list){ return list.map(p=>{ const c=progCard(p)||{}; return [p.name,p.field||'',p.org||'',p.cap??'',p.grade||'',(c.acts||[]).join('\n'),c.kit||'',c.place||'',c.isNew?'O':'',(p.conds||[]).filter(x=>x.required!==false).map(x=>x.text).join('\n'),(p.conds||[]).filter(x=>x.required===false).map(x=>x.text).join('\n')]; }); }
 /* 기준정보: 평가 기준 · 연수 요건 · 연수 엑셀 */
 function tsPanel(){ const Z=tsSet(), u=S.ui, T=S.instructors, n=T.filter(t=>!trainOk(t)).length, num=(id,v,w)=>`<input id="${id}" data-ts="${id}" type="number" min="0" value="${esc(v)}" style="width:${w||70}px">`;
-  return `<div class="panel stack"><div><h3>강사 평가 기준 · 연수 요건 <span class="muted small" style="font-weight:400">사업 공통</span></h3><div class="muted small" style="margin-top:2px">배치 때 강사를 비교하는 점수·등급 기준 ${qt(['100점 = 경력 + 연수 + 운영 평가 + 배치 실적 + 분야 − 이슈 감점','강사 명단 「평가·이력」에서 연수·이슈·운영 평가 입력','검토·매칭 후보 강사·신청 강사 칩에 등급·점수 표시'])}</div></div>
+  return `<div class="panel stack"><div><h3>강사 평가 · 연수 <span class="chip sm">사업 공통</span></h3><div class="muted small" style="margin-top:2px">배치 때 강사를 비교하는 점수·등급 기준 ${qt(['100점 = 경력 + 연수 + 운영 평가 + 배치 실적 + 분야 − 이슈 감점','강사 명단 「평가·이력」에서 연수·이슈·운영 평가 입력','검토 · 매칭 후보 강사·신청 강사 칩에 등급·점수 표시'])}</div></div>
    <div class="conds"><div class="conds-h"><span>연수 요건</span>${trainOn()?`<span class="${n?'lv-warn':'lv-ok'}">미충족 ${n}명 / ${T.length}명</span>`:''}</div><div style="padding:10px 12px" class="stack">
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small">인정 기간</span><input type="date" id="ts-from" data-ts="ts-from" value="${esc(Z.train.from)}"> ~ <input type="date" id="ts-to" data-ts="ts-to" value="${esc(Z.train.to)}"><span class="small">과정</span><input id="ts-course" data-ts="ts-course" value="${esc(Z.train.course)}" style="width:90px" placeholder="공통"><span class="small">필요</span>${num('ts-need',Z.train.need)}<span class="small">차시 이상</span></div>
     <div class="row" style="gap:8px;align-items:center"><span class="small">미충족 강사</span><span class="st-seg"><button class="${Z.train.mode!=='block'?'on':''}" data-act="tsmode" data-v="warn">경고만 (신청 가능)</button><button class="${Z.train.mode==='block'?'on':''}" data-act="tsmode" data-v="block">주강사 신청 막기</button></span>${qt(['예: 2026년 실적(2026-01-01~2026-12-31)으로 2027년 배치 참여 판단','과정 칸 글자가 연수 이력의 과정에 들어 있으면 인정 (예: 공통)','「주강사 신청 막기」면 미충족 강사는 주강사 신청 불가(서버도 거절)'])}</div>
@@ -3964,7 +3964,7 @@ function orgsPanel(){
   const on=activeOrgs(), cnt=o=>S.rows.filter(r=>orgOfRow(r)===o).length, sch=o=>new Set(S.rows.filter(r=>orgOfRow(r)===o).map(r=>r.school)).size;
   return `<div class="panel stack"><div><h3><span class="stepno">2</span>참여 대학</h3><div class="muted small" style="margin-top:2px">이 시스템을 쓰는 대학 ${qt(['학교 확인 화면·접속 신청 목록·강사 수업 신청에는 체크한 대학 학급만 나옴','체크하지 않은 대학 학급은 학교에 보이지 않음'])}</div></div>
    <div class="row" style="gap:8px;flex-wrap:wrap">${ORGS.filter(o=>o!=='미지정').map(o=>`<label class="row small orgchk ${on.includes(o)?'on':''}" style="gap:6px;border:1px solid var(--line);border-radius:8px;padding:6px 10px"><input type="checkbox" id="org-${esc(orgShort(o))}" data-org="${esc(o)}" ${on.includes(o)?'checked':''} ${o===MY_ORG?'disabled':''}>${uTag(o)} <span class="muted">${cnt(o)}학급 · ${sch(o)}개교</span>${o===MY_ORG?' <span class="muted">(운영기관 · 항상 포함)</span>':''}</label>`).join('')}</div>
-   ${on.length>1?`<div class="notice">다른 대학 참여 중 ${qt(['학교 화면에는 그 대학 학급도 나옴','운영 화면의 검토·매칭·내보내기는 호서대 학급만'])}</div>`:''}
+   ${on.length>1?`<div class="notice">타대학 참여 중 ${qt(['학교 화면에는 그 대학 학급도 나옴','운영 화면의 검토 · 매칭·내보내기는 호서대 학급만'])}</div>`:''}
   </div>`;
 }
 /* 기준정보 강사 명단: 운영기관이 강사 정보 수정 · 삭제 (비밀번호는 그대로 유지) */
@@ -4009,7 +4009,7 @@ function setupLinksPanel(){ return `<div class="panel stack"><div><h3><span clas
    <div class="row"><label class="f" style="flex:1 1 360px">웹앱 주소 (강사 화면)<input id="webAppUrl" value="${esc(S.webAppUrl||'')}" placeholder="배포 후 자동으로 들어갑니다" inputmode="url"></label>${S.webAppUrl?`<button class="btn sm" data-act="copytext" data-t="${esc(S.webAppUrl)}">주소 복사</button>`:''}</div>
    <details><summary class="small">학교 확인 링크 ${(S.schoolLinks||[]).length}곳</summary><div class="tw" style="margin-top:8px"><table><thead><tr><th>학교</th><th>확인 링크</th><th></th></tr></thead><tbody>${(S.schoolLinks||[]).filter(x=>myRows().some(r=>r.school===x.school)).sort((a,b)=>a.school.localeCompare(b.school,'ko')).map(x=>`<tr><td class="nowrap">${esc(x.school)}</td><td class="mono small" style="word-break:break-all">${esc(x.link||'(웹앱 주소가 정해지면 생성)')}</td><td class="nowrap">${x.link?`<button class="btn sm" data-act="copytext" data-t="${esc(x.link)}">복사</button> `:''}<button class="btn sm" data-act="regen" data-s="${esc(x.school)}">새 링크</button></td></tr>`).join('')}</tbody></table></div></details></div>`; }
 /* 기준정보 가로 메뉴: 칸이 많아 한 번에 한 칸씩 (「전체 보기」로 예전처럼) */
-const SET_TABS=[['cycle','차수 · 카톡방'],['univ','대학별 관리'],['prog','프로그램 · 조건'],['hol','공휴일'],['inst','강사 명단'],['eval','강사 평가 · 연수'],['ops','운영 담당자'],['form','담당자 화면 항목'],['acc','관리자 계정'],['ext','타대학 수업 올리기'],['links','웹앱 주소 · 링크'],['all','전체 보기']];
+const SET_TABS=[['cycle','차수 · 카톡방'],['univ','대학별 관리'],['prog','프로그램 · 운영 조건'],['hol','공휴일 · 미운영일'],['inst','강사 명단'],['eval','강사 평가 · 연수'],['ops','운영 담당자'],['form','학교·기관 입력 항목'],['acc','관리자 계정'],['ext','타대학 공동 운영 수업'],['links','웹앱 주소 · 링크'],['all','전체 보기']];
 const SET_GROUPS=[['운영 설정',['cycle','hol']],['참여 대학',['univ','ext']],['프로그램',['prog']],['강사',['inst','eval']],['담당자 · 계정',['ops','form','acc','links']]];
 const LM_IC={univ:'<path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/>',orgtabs:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',cycle:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',hol:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',orgs:'<path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/>',ext:'<path d="M4 7h16M4 12h16M4 17h10"/>',prog:'<path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h6"/>',inst:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',eval:'<path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/>',ops:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',form:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',acc:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',links:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',all:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'};
 const lmIcon = k => LM_IC[k]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LM_IC[k]}</svg>`:'';
@@ -4072,7 +4072,7 @@ function setupTabs(html){ const parts=html.split(/<!--§(\w+)-->/), head=parts[0
   const grp=(SET_GROUPS.find(g=>g[1].includes(cur))||['기준정보'])[0];
   const body=cur==='all'?SET_TABS.map(([k])=>k).filter(k=>sec[k]).concat(order.filter(k=>!SET_TABS.some(([x])=>x===k))).map(k=>sec[k]).join(''):sec[cur];
   return `${head}<div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">기준정보 › ${esc(cur==='all'?'전체 보기':grp+' › '+(lab[cur]||cur))}</div>${body}</div></div>${tail}`; }
-/* 총괄 관리자: 사업별 관리자 계정 */
+/* 총괄관리자: 사업별 관리자 계정 */
 /* 관리자별 접속 링크: 운영자 링크 + 센터(b) + 이름(n) → 로그인 화면에서 미리 골라짐 (비밀번호는 따로 알려 줌) */
 const accLink = a => S.adminLinkUrl?`${S.adminLinkUrl}&b=${encodeURIComponent(a.biz)}&n=${encodeURIComponent(a.name)}`:'';
 const accLinkBtn = a => { const L=accLink(a); return L?`<button class="btn sm pri" data-act="copytext" data-t="${esc(L)}" title="${esc(L)}">접속 링크 복사</button>`:'<button class="btn sm" disabled title="웹앱에서만 만들 수 있습니다">접속 링크 복사</button>'; };
@@ -4090,8 +4090,8 @@ function accountsPanel(fo){ const L=(S.admins||[]).filter(a=>fo?a.org===fo:!a.or
      <label class="f small"><span>내선번호</span><input id="acc-phone" placeholder="예: 041-623-0000" inputmode="tel" autocomplete="off" value="${esc((UNIV_CONTACT[fo]||{}).phone||'')}"></label>
      <label class="f small" style="grid-column:span 2"><span>오픈채팅 링크 <span class="muted">강사·학교 문의용</span></span><input id="acc-chat" placeholder="open.kakao.com/o/…" inputmode="url" autocomplete="off" value="${esc((UNIV_CONTACT[fo]||{}).chat||'')}"></label></div>
     <div class="row"><input type="checkbox" id="acc-ops" hidden><button class="btn sm pri" data-act="accadd">계정 생성</button><span class="small muted">만든 뒤 「접속 링크 복사」로 링크를 보내고, 비밀번호는 따로 알려 주세요.</span></div></div></div>`;
-  return `<div class="panel stack"><div class="row" style="gap:6px;align-items:center"><h3>관리자 계정</h3>${nOrg?`<span class="small muted">대학 관리자 ${nOrg}명은 「참여 대학 › 대학별 관리」에서 관리</span>`:''}${qt(['사업(센터)별 관리자는 자기 사업만 관리','로그인: 운영자 링크 → 접속 구분에서 센터 선택 → 이름 → 비밀번호','총괄 관리자(지금 계정)는 모든 사업을 바꿔 가며 관리','비밀번호는 서버에만 보관, 화면에 보이지 않음','「운영 담당자 연락처로도」: 그 사업 강사·학교 화면의 문의처(이름·내선번호·오픈채팅)로 넣음'])}</div>
-   ${S.adminLinkUrl?`<div class="row small" style="gap:8px;flex-wrap:wrap"><span class="muted">총괄 관리자 접속 링크</span><button class="btn sm" data-act="copytext" data-t="${esc(S.adminLinkUrl)}">복사</button><span class="muted">· 관리자별 「접속 링크 복사」는 그 센터·이름이 미리 골라진 링크입니다. 비밀번호는 따로 알려 주세요.</span></div>`:''}
+  return `<div class="panel stack"><div class="row" style="gap:6px;align-items:center"><h3>관리자 계정</h3>${nOrg?`<span class="small muted">대학 관리자 ${nOrg}명은 「참여 대학 › 대학별 관리」에서 관리</span>`:''}${qt(['사업(센터)별 관리자는 자기 사업만 관리','로그인: 운영자 링크 → 접속 구분에서 센터 선택 → 이름 → 비밀번호','총괄관리자(지금 계정)는 모든 사업을 바꿔 가며 관리','비밀번호는 서버에만 보관, 화면에 보이지 않음','「운영 담당자 연락처로도」: 그 사업 강사·학교 화면의 문의처(이름·내선번호·오픈채팅)로 넣음'])}</div>
+   ${S.adminLinkUrl?`<div class="row small" style="gap:8px;flex-wrap:wrap"><span class="muted">총괄관리자 접속 링크</span><button class="btn sm" data-act="copytext" data-t="${esc(S.adminLinkUrl)}">복사</button><span class="muted">· 관리자별 「접속 링크 복사」는 그 센터·이름이 미리 골라진 링크입니다. 비밀번호는 따로 알려 주세요.</span></div>`:''}
    <div class="tw"><table><thead><tr><th>사업 · 센터</th><th>관리자 이름</th><th>직위</th><th>내선번호</th><th>오픈채팅</th><th>만든 날</th><th></th></tr></thead><tbody>
     ${L.length?L.map(row).join(''):'<tr><td colspan="7" class="muted small">아직 계정이 없습니다.</td></tr>'}
    </tbody></table></div>
@@ -4104,9 +4104,9 @@ function accOpsLocal(d){ if(d.biz!==curBiz()) return; if(!d.asOps){ if(S.ops.nam
 function viewSetup(){ return setupTabs(viewSetupAll()); }
 function viewSetupAll(){
   const ed=S.programs.find(p=>p.key===S.ui.condEdit);
-  return `<div class="stack"><div><h2>기준정보</h2><div class="muted small">차수 시작 때 1번부터 차례로 확인 ${qt(['「프로그램 · 조건」 설정대로 교육청 목록이 대학별로 나뉨','그래서 목록을 업로드 전에 맞춰 두기','다 마치면 「2 운영 현황」에서 목록 업로드'])}</div></div>
+  return `<div class="stack"><div><h2>기준정보</h2><div class="muted small">차수 시작 때 1번부터 차례로 확인 ${qt(['「프로그램 · 조건」 설정대로 교육청 목록이 대학별로 나뉨','그래서 목록을 업로드 전에 맞춰 두기','다 마치면 「2 운영현황」에서 목록 업로드'])}</div></div>
   <!--§cycle-->
-  <div class="panel stack"><div><h3><span class="stepno">1</span>차수 · 단체 카톡방</h3><div class="muted small" style="margin-top:2px">차수별 학교 · 학교밖(기관) 담당자 단체 카톡방 ${qt(['학교 화면과 확인 요청 문구에 입장 안내로 나감','학교밖 기관 화면에는 학교밖 카톡방이 나감(비어 있으면 안내 없음)','공지 전용: 카톡방 설정에서 방장만 메시지 보내기'])}</div></div>
+  <div class="panel stack"><div><h3><span class="stepno">1</span>차수 · 카톡방</h3><div class="muted small" style="margin-top:2px">차수별 학교 · 학교밖(기관) 담당자 단체 카톡방 ${qt(['학교 화면과 확인 요청 문구에 입장 안내로 나감','학교밖 기관 화면에는 학교밖 카톡방이 나감(비어 있으면 안내 없음)','공지 전용: 카톡방 설정에서 방장만 메시지 보내기'])}</div></div>
    <div class="row" style="align-items:flex-end"><label class="f"><span class="flab">학교·강사 공개 시기 ${qt(['학교 접속 신청 화면과 강사 신청 화면에 보이는 시기','운영 화면 위 「시기」에서 다른 시기도 관리 가능'])}</span><select id="curSeason" style="min-width:180px">${S.seasons.map(x=>`<option value="${x.k}" ${S.season===x.k?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
     <label class="f" style="flex:1 1 260px">담당자 개인정보 보유기간 (동의 문구에 표시)<input id="retention" value="${esc(S.retention)}"></label></div>
    <div class="tw noenh"><table class="va-m"><thead><tr><th>차수</th><th>학교 단체 카톡방</th><th>학교밖(기관) 단체 카톡방</th></tr></thead><tbody>${S.seasons.map((x,i)=>[x,i]).reverse().map(([x,i])=>`<tr><td class="nowrap">${esc(x.name)}${S.season===x.k?' <span class="chip">현재</span>':''}</td><td><input id="season-${i}" data-season="${i}" value="${esc(x.link||'')}" placeholder="예: invite.kakao.com/tc/…" style="width:100%" aria-label="${esc(x.name)} 학교 카톡방 링크"></td><td><input id="season-o-${i}" data-season-out="${i}" value="${esc(x.linkOut||'')}" placeholder="예: invite.kakao.com/tc/…" style="width:100%" aria-label="${esc(x.name)} 학교밖 카톡방 링크"></td></tr>`).join('')}</tbody></table></div>
@@ -4146,11 +4146,11 @@ function viewSetupAll(){
      <div class="small muted" style="margin-top:8px">조건을 바꾸면 체크 결과를 다시 계산 ${qt('새 조건이 생기면 이미 확인한 학급도 「학교 체크 전」으로 표시')}</div></div>`:''}
   </div>
   <!--§hol-->
-  <div class="panel"><h3><span class="stepno">4</span>공휴일 · 일괄 미운영일</h3>
+  <div class="panel"><h3><span class="stepno">4</span>공휴일 · 미운영일</h3>
    <div class="row">${S.holidays.slice().sort().map(d=>`<span class="chip mono">${ymd(d)} <button class="btn sm" style="padding:0 5px;border:0" data-act="delhol" data-d="${d}" aria-label="${d} 삭제">×</button></span>`).join('')}
     <input type="date" id="newhol" aria-label="추가할 날짜"><button class="btn sm" data-act="addhol">추가</button></div></div>
   <!--§inst-->
-  <div class="panel stack"><div><h3><span class="stepno">5</span>강사 명단 (데이터베이스) ${S.instructors.some(t=>t.example)?'<span class="ex">예시 포함</span>':''}</h3><div class="muted small" style="margin-top:2px">선발된 강사 명단 ${qt(['강사 로그인 때 이름·연락처를 이 명단과 맞춰 봄','명단에 없으면 신청 불가, 강사 모집 신청 링크 안내'])}</div></div>
+  <div class="panel stack"><div><h3><span class="stepno">5</span>강사 명단 ${S.instructors.some(t=>t.example)?'<span class="ex">예시 포함</span>':''}</h3><div class="muted small" style="margin-top:2px">선발된 강사 명단 ${qt(['강사 로그인 때 이름·연락처를 이 명단과 맞춰 봄','명단에 없으면 신청 불가, 강사 모집 신청 링크 안내'])}</div></div>
    <div class="row"><label class="btn" for="idb">강사 DB 업로드 (.xlsx, .csv)</label><input id="idb" type="file" accept=".xlsx,.xls,.csv" hidden><button class="btn" data-act="idbtpl">DB 양식 다운로드</button><label class="btn pri" for="trfile2">연수 이력 엑셀 업로드</label><input id="trfile2" type="file" accept=".xlsx,.xls,.csv" hidden><button class="btn" data-act="trtpl">연수 양식</button><span class="small muted" id="idbmsg">양식 열: 이름, 연락처, 이메일, 지역, 분야, 비고(특이사항) · 이름과 연락처는 필수, 분야가 여러 개면 쉼표로 구분 · 비고는 운영기관만 봅니다</span></div>
    <div class="small"><span class="muted">분야 → 배치 가능 프로그램:</span> ${[...myFieldMap()].map(([f,ps])=>`<span class="chip">${esc(f)}</span> ${ps.map(p=>esc(p.name)).join(', ')}`).join(' &nbsp;')}</div>
    <label class="f">명단에 없는 강사에게 안내할 강사 모집 신청 링크<input id="recruitLink" value="${esc(S.recruitLink)}" inputmode="url"></label>
@@ -4568,7 +4568,7 @@ function stDataPanel(){
    <div class="row">
     <label class="row small" style="gap:6px;align-items:center"><input type="checkbox" id="stlive" ${(S.kpi||{}).live?'checked':''}> 현재 시스템 학급 포함 (${esc(season().name)} · ${stLiveRows().length}학급)</label>${qt(['이 시스템의 지금 학급을 통계에 더함','취소 학급 제외','같은 시즌 엑셀을 올렸다면 끄기(중복 방지)'])}</div>
    ${P&&P.length?`<div class="tw"><table class="st-t"><thead><tr><th>파일 · 시트 ${qt(['「학교명」 머리글이 있는 시트만 보임','대학 이름 시트(호서대·상명대…)만 기본 선택','피봇·검토·모니터링 같은 시트는 빼 두기','눌러서 추가/제외'])}</th><th>연도</th><th>시기 ${qt(['파일 이름에서 자동으로 읽음(1학기·하계·2학기·동계·학교밖)','틀리면 직접 선택','같은 연도·시기에 이미 자료가 있으면 바꿀지 고름'])}</th><th>운영기관</th><th class="num">학급</th><th class="num">제외 ${qt(['통화메모에 운영 취소·폐강·수업 취소','연번 칸 「취소」 또는 취소선(가로줄) 그은 줄','같은 파일의 다른 시트에 같은 학급(복사된 시트)','숫자를 누르면 학급별 사유'],'r')}</th></tr></thead><tbody>
-    ${P.map((p,i)=>`<tr><td class="small">${esc(p.file)}${p.cand&&p.cand.length>1?`<div class="st-shs">${p.cand.map(c=>`<button class="st-sh ${p.pick[c.name]?'on':''}" data-act="st-sh" data-i="${i}" data-s="${esc(c.name)}" title="${p.pick[c.name]?'눌러서 제외':'눌러서 추가'}">${esc(c.name)} <span>${c.n}</span></button>`).join('')}</div>`:`<div class="muted">${esc(p.sheets.join(', '))}</div>`}${(p.gk||[]).length?`<div class="small lv-warn" title="${esc(p.gk.join('\n'))}">다른 대학 시트에만 있는 수업 ${p.gk.length}학급 — 운영기관 열 기준으로 셈</div>`:''}${(p.of||[]).length?`<div class="small lv-warn" title="${esc(p.of.join('\n'))}">운영기관 칸이 시트와 다른 ${p.of.length}학급 — 시트 대학으로 셈 ${qt(['예: 「연암대」 시트인데 운영기관 칸이 「호서대학교」','그 대학 시트에 같은 수업이 없고 프로그램도 그 대학 것이 아니면 칸을 잘못 적은 것으로 봄','마우스를 올리면 행 목록'],'r')}</div>`:''}</td><td><input type="number" class="st-yin" data-i="${i}" value="${p.year}" min="2000" max="2100" style="width:84px"></td><td><select class="st-pin2 ${p.period?'':'st-need'}" data-i="${i}"><option value="">선택</option>${ST_PER.map(x=>`<option ${p.period===x?'selected':''}>${x}</option>`).join('')}</select>${stDsList().some(d=>d.year===+p.year&&stDsPer(d)===p.period)?'<div class="small lv-warn">이미 있음</div>':''}</td><td class="small">${esc(Object.entries(p.rows.reduce((m,r)=>(m[r.org||'(기관 없음)']=(m[r.org||'(기관 없음)']||0)+1,m),{})).map(([o,n])=>`${orgShort(o)||o} ${n}`).join(', '))}</td><td class="num">${p.rows.length}</td><td class="num">${p.cx.length?`<button class="lnk" data-act="st-cx" data-i="${i}">${p.cx.length} ${S.ui.stCx===i?'▴':'▾'}</button>`:'0'}</td></tr>${S.ui.stCx===i&&p.cx.length?`<tr>${stCxList(p.cx,'st-pin','p'+i)}</tr>`:''}`).join('')}
+    ${P.map((p,i)=>`<tr><td class="small">${esc(p.file)}${p.cand&&p.cand.length>1?`<div class="st-shs">${p.cand.map(c=>`<button class="st-sh ${p.pick[c.name]?'on':''}" data-act="st-sh" data-i="${i}" data-s="${esc(c.name)}" title="${p.pick[c.name]?'눌러서 제외':'눌러서 추가'}">${esc(c.name)} <span>${c.n}</span></button>`).join('')}</div>`:`<div class="muted">${esc(p.sheets.join(', '))}</div>`}${(p.gk||[]).length?`<div class="small lv-warn" title="${esc(p.gk.join('\n'))}">타대학 시트에만 있는 수업 ${p.gk.length}학급 — 운영기관 열 기준으로 셈</div>`:''}${(p.of||[]).length?`<div class="small lv-warn" title="${esc(p.of.join('\n'))}">운영기관 칸이 시트와 다른 ${p.of.length}학급 — 시트 대학으로 셈 ${qt(['예: 「연암대」 시트인데 운영기관 칸이 「호서대학교」','그 대학 시트에 같은 수업이 없고 프로그램도 그 대학 것이 아니면 칸을 잘못 적은 것으로 봄','마우스를 올리면 행 목록'],'r')}</div>`:''}</td><td><input type="number" class="st-yin" data-i="${i}" value="${p.year}" min="2000" max="2100" style="width:84px"></td><td><select class="st-pin2 ${p.period?'':'st-need'}" data-i="${i}"><option value="">선택</option>${ST_PER.map(x=>`<option ${p.period===x?'selected':''}>${x}</option>`).join('')}</select>${stDsList().some(d=>d.year===+p.year&&stDsPer(d)===p.period)?'<div class="small lv-warn">이미 있음</div>':''}</td><td class="small">${esc(Object.entries(p.rows.reduce((m,r)=>(m[r.org||'(기관 없음)']=(m[r.org||'(기관 없음)']||0)+1,m),{})).map(([o,n])=>`${orgShort(o)||o} ${n}`).join(', '))}</td><td class="num">${p.rows.length}</td><td class="num">${p.cx.length?`<button class="lnk" data-act="st-cx" data-i="${i}">${p.cx.length} ${S.ui.stCx===i?'▴':'▾'}</button>`:'0'}</td></tr>${S.ui.stCx===i&&p.cx.length?`<tr>${stCxList(p.cx,'st-pin','p'+i)}</tr>`:''}`).join('')}
     </tbody></table></div><div class="row small" style="gap:6px;align-items:center"><span class="muted">연도 한꺼번에 바꾸기</span><input type="number" id="st-pyear" min="2000" max="2100" value="${P[0].year}" style="width:84px"><button class="btn sm" data-act="st-pyear">모든 파일에 적용</button></div>${P.some(p=>stDsList().some(d=>d.year===+p.year&&stDsPer(d)===p.period))?`<label class="row small" style="gap:6px;align-items:center"><input type="checkbox" id="st-prep" ${S.ui.stPrep!==false?'checked':''}> 같은 연도·시기의 기존 자료를 이번 파일로 바꾸기 ${qt(['체크: 기존 자료 삭제 후 이번 파일만 반영(수정본)','해제: 기존 자료에 더함'])}</label>`:''}<div class="row"><button class="btn pri sm" data-act="st-add">통계 자료로 저장 (${P.reduce((a,p)=>a+p.rows.length,0)}학급${P.some(p=>p.cx.length)?` · 제외 ${P.reduce((a,p)=>a+p.cx.length,0)}`:''})</button><button class="btn sm" data-act="st-pclear">취소</button></div>`:''}
    ${stSlotGrid()}
    ${ds.length?`<div class="tw"><table class="st-t"><thead><tr><th style="width:30px"><input type="checkbox" class="st-selall" data-g="ds" ${ds.every(d=>(S.ui.stSel||{})[d.id])?'checked':''} aria-label="모두 선택"></th><th>저장된 자료</th><th>연도</th><th>시기</th><th>운영기관</th><th class="num">학급</th><th class="num">제외 ${qt(['제외된 학급 수','숫자를 누르면 사유와 「포함」 버튼','포함하면 바로 통계에 반영'],'r')}</th><th>올린 날</th><th></th></tr></thead><tbody>
@@ -4678,12 +4678,12 @@ function stKpiPanel(years,orgs){
 function stRepPanel(sel,Y,O){
   const T=S.ui.stTpl;
   return `<div class="panel stack st-pn"><div class="row between"><div class="row" style="gap:6px;align-items:center"><h3>보고용 파일 · ${stYL(Y)}${O?` · ${esc(orgShort(O)||O)}`:' · 전체 기관'} (${sel.length}학급)</h3>${qt(['위에서 고른 연도·기관 자료로 만듦','기본 양식: 요약 + KPI + 통합 목록','다른 양식: 그 파일의 머리글 이름으로 열을 찾아 채움','맞추지 못한 열은 직접 선택, 고른 내용은 기억'])}</div><button class="btn sm" data-act="st-panel" data-v="">닫기</button></div>
-   <div class="row"><button class="btn pri sm" data-act="st-xbase" ${sel.length?'':'disabled'}>기본 통합 양식 받기</button>
+   <div class="row"><button class="btn pri sm" data-act="st-xbase" ${sel.length?'':'disabled'}>기본 통합 양식 다운로드</button>
     <label class="btn sm" style="cursor:pointer">다른 양식 파일로 채우기…<input type="file" id="sttpl" accept=".xlsx" hidden></label><span class="small muted" id="stmsg"></span></div>
    ${T?`<div class="stack" style="gap:8px"><div class="small"><b>${esc(T.file)}</b> · 「${esc(T.sheet)}」 시트 ${T.hr}행 머리글 · ${T.start}행부터 채움</div>
     <div class="tw" style="max-height:340px;overflow:auto"><table class="st-t"><thead><tr><th>양식 열</th><th>채울 항목</th></tr></thead><tbody>
     ${T.cols.map((c,i)=>`<tr><td>${esc(c.h)}</td><td><select class="st-map" data-i="${i}"><option value="">(비워 둠)</option>${ST_F.map(([k,l])=>`<option value="${k}" ${c.f===k?'selected':''}>${l}</option>`).join('')}</select></td></tr>`).join('')}
-    </tbody></table></div><div class="row"><button class="btn pri sm" data-act="st-xtpl" ${sel.length?'':'disabled'}>이 양식으로 받기 (${sel.length}학급)</button><button class="btn sm" data-act="st-tclear">양식 초기화</button></div></div>`:''}
+    </tbody></table></div><div class="row"><button class="btn pri sm" data-act="st-xtpl" ${sel.length?'':'disabled'}>이 양식으로 다운로드 (${sel.length}학급)</button><button class="btn sm" data-act="st-tclear">양식 초기화</button></div></div>`:''}
   </div>`;
 }
 
@@ -5699,7 +5699,7 @@ const XAB_FIX = ['fixed','recruit','final'];
 const allBizOk = () => S.ui.role==='admin'&&!S.adminOrg&&(S.isMaster||typeof persist!=='function');
 function allBizBar(){
   if(!allBizOk()) return ''; const X=S.ui.xab=S.ui.xab||{open:false,biz:{},seas:{},orgs:[],mode:'all'}, M=S.ui.xabMeta;
-  const head=`<div class="row between" style="gap:8px;flex-wrap:wrap;align-items:center"><div><b>전체 운영현황</b> <span class="small muted">총괄관리자 · 사업·시기·대학을 골라 한 파일로</span>${qt(['총괄관리자만 보임','시트: 전체 + 사업·시기별','늘봄센터 칸: 앵커늘봄 = 충남앵커센터, 방학집중형 = 한국과학창의재단','운영 취소 학급은 늘 제외'])}</div><button class="btn sm ${X.open?'':'pri'}" data-act="xab-open">${X.open?'닫기':'조건 골라 받기'}</button></div>`;
+  const head=`<div class="row between" style="gap:8px;flex-wrap:wrap;align-items:center"><div><b>전체 운영현황</b> <span class="small muted">총괄관리자 · 사업·시기·대학을 골라 한 파일로</span>${qt(['총괄관리자만 보임','시트: 전체 + 사업·시기별','늘봄센터 칸: 앵커늘봄 = 충남앵커센터, 방학집중형 = 한국과학창의재단','운영 취소 학급은 늘 제외'])}</div><button class="btn sm ${X.open?'':'pri'}" data-act="xab-open">${X.open?'닫기':'조건 선택 · 다운로드'}</button></div>`;
   if(!X.open) return `<div class="panel">${head}</div>`;
   if(!M) return `<div class="panel stack">${head}<div class="small muted">사업·시기 목록을 불러오는 중…</div></div>`;
   if(M.err) return `<div class="panel stack">${head}<div class="small lv-crit">${esc(M.err)}</div></div>`;
@@ -5711,7 +5711,7 @@ function allBizBar(){
      ${X.biz[b.biz]?b.seasons.slice().reverse().map(x=>chip((X.seas[b.biz]||[]).includes(x.k),'xab-sea',`data-b="${esc(b.biz)}" data-k="${esc(x.k)}"`,esc(x.name)+(x.k===b.pub?' · 현재':''))).join('')+`<button class="lnk small" data-act="xab-seaall" data-b="${esc(b.biz)}">${(X.seas[b.biz]||[]).length===b.seasons.length?'현재 시기만':'모든 시기'}</button>`:'<span class="small muted">받지 않음</span>'}</div>`).join('')}</div>
    <div class="stack" style="gap:6px"><div class="small"><b>② 운영 대학</b></div><div class="row" style="gap:6px;flex-wrap:wrap">${chip(!X.orgs.length,'xab-org','data-v=""','전체')}${orgsAll.map(o=>chip(X.orgs.includes(o),'xab-org',`data-v="${esc(o)}"`,uDot(o)+esc(orgShort(o)||o))).join('')}</div></div>
    <div class="stack" style="gap:6px"><div class="small"><b>③ 학급 범위</b></div><div class="yn">${[['all','시스템에 등록된 모든 학급 (운영 취소 제외)'],['fixed','운영 확정 학급만 (운영 확정 · 강사 모집 중 · 강사 배치 완료)']].map(([k,t])=>`<label><input type="radio" name="xab-mode" data-xab-mode="${k}" ${X.mode===k?'checked':''}>${t}</label>`).join('')}</div></div>
-   <div class="row" style="gap:8px;align-items:center"><button class="btn pri sm" data-act="export-allbiz" ${selN?'':'disabled'}>전체 운영현황 받기 (${selN}개 사업·시기)</button><span class="small muted" id="xamsg"></span></div></div>`;
+   <div class="row" style="gap:8px;align-items:center"><button class="btn pri sm" data-act="export-allbiz" ${selN?'':'disabled'}>전체 운영현황 다운로드 (${selN}개 사업·시기)</button><span class="small muted" id="xamsg"></span></div></div>`;
 }
 function xabMetaLoad(){ if(S.ui.xabMeta||S.ui.xabBusy) return; S.ui.xabBusy=1;
   allBizCall({list:true}).then(L=>{ S.ui.xabMeta={list:L||[]}; const X=S.ui.xab; (L||[]).forEach(b=>{ if(X.biz[b.biz]==null){ X.biz[b.biz]=true; X.seas[b.biz]=b.pub?[b.pub]:[]; } }); })
@@ -6169,10 +6169,10 @@ const CS_UNIVS = () => ORGS.filter(o=>o!=='미지정');
    배열 순서 = 화면·양식 순서, 연번은 이 순서로 매김. 저장 번호(첫 칸)는 입력값 키라 바꾸지 않음(2026-11-25 개편: 27~33 추가, 1번은 2번에 합침 → alias)
    시기 「매칭·운영 개시」: 대학이 O/X를 안 골랐으면 운영 목록에 그 시기 학급이 있고 첫 수업일이 지났을 때 자동 O */
 const CS_MILES = [
- [2,1,'1학기 매칭·운영 개시','운영 확정·강사 배치 학급 등록, 첫 수업 시작(운영 목록)','ox','1학기',{alias:1}],[27,1,'1학기 사전 검사 실시','사전 검사 결과(참여 학생)','ox','',{ex:2026}],[3,1,'강사 연수 1차 실시(프로그램)','이수자 명단 등록','ox'],[4,1,'현장 모니터링 1회 이상','모니터링 보고서','n'],[28,1,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖',{ex:2026}],[5,1,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
- [6,2,'신규 프로그램 지도안·교구 확정','지도안 파일 등록','ox'],[29,2,'1학기 사후 검사 실시','사후 검사 결과(참여 학생)','ox','',{ex:2026}],[7,2,'1학기 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[8,2,'여름방학 매칭·운영 개시','운영 확정·강사 배치 학급 등록, 첫 수업 시작(운영 목록)','ox','여름방학'],[30,2,'여름방학 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox','',{ex:2026}],[9,2,'현장 모니터링 1회 이상','모니터링 보고서','n'],[11,2,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[10,2,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
- [12,3,'2학기 매칭·운영 개시','운영 확정·강사 배치 학급 등록, 첫 수업 시작(운영 목록)','ox','2학기'],[31,3,'2학기 사전 검사 실시','사전 검사 결과(참여 학생)','ox','',{ex:2026}],[13,3,'강사 연수 2차 실시(프로그램)','이수자 명단 등록','ox'],[14,3,'대학별 협의체 협회의 운영','결과보고서','ox'],[15,3,'외부기관 컨설팅 운영','결과보고서','n'],[16,3,'현장 모니터링 1회 이상','모니터링 보고서','n'],[18,3,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[19,3,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],[17,3,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
- [32,4,'2학기 사후 검사 실시','사후 검사 결과(참여 학생)','ox'],[20,4,'2학기 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[21,4,'겨울방학 매칭·운영 개시','운영 확정·강사 배치 학급 등록, 첫 수업 시작(운영 목록)','ox','겨울방학'],[33,4,'겨울방학 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[22,4,'프로그램 고도화 최종본 제출','최종 지도안·개선이력','ox'],[23,4,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],[24,4,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[25,4,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[26,4,'결과보고 및 정산 완료','결과보고서·정산서','ox']];
+ [2,1,'1학기 매칭·운영 개시','운영 확정·강사 배치 학급 등록, 첫 수업 시작(운영현황)','ox','1학기',{alias:1}],[27,1,'1학기 사전 검사 실시','사전 검사 결과(참여 학생)','ox','',{ex:2026}],[3,1,'강사 연수 1차 실시(프로그램)','이수자 명단 등록','ox'],[4,1,'현장 모니터링 1회 이상','모니터링 보고서','n'],[28,1,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖',{ex:2026}],[5,1,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
+ [6,2,'신규 프로그램 지도안·교구 확정','지도안 파일 등록','ox'],[29,2,'1학기 사후 검사 실시','사후 검사 결과(참여 학생)','ox','',{ex:2026}],[7,2,'1학기 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[8,2,'여름방학 매칭·운영 개시','운영 확정·강사 배치 학급 등록, 첫 수업 시작(운영현황)','ox','여름방학'],[30,2,'여름방학 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox','',{ex:2026}],[9,2,'현장 모니터링 1회 이상','모니터링 보고서','n'],[11,2,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[10,2,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
+ [12,3,'2학기 매칭·운영 개시','운영 확정·강사 배치 학급 등록, 첫 수업 시작(운영현황)','ox','2학기'],[31,3,'2학기 사전 검사 실시','사전 검사 결과(참여 학생)','ox','',{ex:2026}],[13,3,'강사 연수 2차 실시(프로그램)','이수자 명단 등록','ox'],[14,3,'대학별 협의체 협회의 운영','결과보고서','ox'],[15,3,'외부기관 컨설팅 운영','결과보고서','n'],[16,3,'현장 모니터링 1회 이상','모니터링 보고서','n'],[18,3,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[19,3,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],[17,3,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
+ [32,4,'2학기 사후 검사 실시','사후 검사 결과(참여 학생)','ox'],[20,4,'2학기 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[21,4,'겨울방학 매칭·운영 개시','운영 확정·강사 배치 학급 등록, 첫 수업 시작(운영현황)','ox','겨울방학'],[33,4,'겨울방학 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[22,4,'프로그램 고도화 최종본 제출','최종 지도안·개선이력','ox'],[23,4,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],[24,4,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[25,4,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[26,4,'결과보고 및 정산 완료','결과보고서·정산서','ox']];
 const CS_MNO = Object.fromEntries(CS_MILES.map((d,i)=>[d[0],i+1]));   /* 저장 번호 → 연번 */
 const csMCnt = d => !(d[6]&&d[6].ex===csYear());   /* 그해 점수(진행률)에 넣는 항목인가 */
 const csMQ = iso => { const m=+String(iso||'').slice(5,7); return !m?0:m>=3&&m<=5?1:m<=8&&m>=6?2:m>=9&&m<=11?3:4; };
@@ -6304,10 +6304,10 @@ function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, OQ=csMileQ(),
     const inp=d[4]==='ox'?`<span class="cs-ox">${['O','X'].map(v=>`<button type="button" ${dis} class="${ev===v?'on':''}" data-act="csox" data-o="${esc(o)}" data-n="${d[0]}" data-v="${v}">${v}</button>`).join('')}</span>${autoOx?'<div class="small muted">자동</div>':''}`
       :`<input type="number" min="0" ${dis} style="width:64px" data-cp="${cp}.v" data-cat="${cp}" value="${esc(it.v??'')}" ${d[4]==='cls'&&auto?`placeholder="${auto.length}"`:''} aria-label="${d[4]==='c'?'건수':d[4]==='cls'?'학급 수':'횟수'}"> <span class="small muted">${csMUnit(d)}</span>`;
     const stc=it.st==='ok'?'<span class="chip ok">확인 완료</span>':it.st==='fix'?`<span class="chip warn" title="${esc(it.fixWhy||'')}">보완 요청</span>`:done?'<span class="chip">확인 전</span>':'<span class="chip">입력 전</span>';
-    return `<tr class="${ex?'muted':''}"><td class="mono muted">${CS_MNO[d[0]]}</td><td>${esc(d[2])}${ex?` <span class="chip sm" title="${d[6].ex}년에 새로 넣은 항목 · 진행률·감점에 넣지 않음">${d[6].ex}년 점수 미반영</span>`:''}${auto&&(auto.length||d[4]==='cls')?`<div class="small ${auto.length?'lv-ok':'muted'}">운영 목록: ${d[5]==='학교밖'?`학교밖 ${CS_QN[d[1]].replace(/^\d분기 /,'')} 운영`:esc(d[5])} ${auto.length}학급${d[4]==='cls'&&(it.v==null||it.v==='')?' · 실적에 자동 반영':''}${d[4]==='ox'&&auto.length?(autoOx?' · 첫 수업 시작 → 자동 O':(it.v==null||it.v==='')?' · 첫 수업 전':''):''}</div>`:''}</td><td class="small muted">예: ${esc(d[3])}${d[4]==='c'?'<div>0건이면 해당 없음</div>':''}</td><td class="nowrap">${inp}</td>
+    return `<tr class="${ex?'muted':''}"><td class="mono muted">${CS_MNO[d[0]]}</td><td>${esc(d[2])}${ex?` <span class="chip sm" title="${d[6].ex}년에 새로 넣은 항목 · 진행률·감점에 넣지 않음">${d[6].ex}년 점수 미반영</span>`:''}${auto&&(auto.length||d[4]==='cls')?`<div class="small ${auto.length?'lv-ok':'muted'}">운영현황: ${d[5]==='학교밖'?`학교밖 ${CS_QN[d[1]].replace(/^\d분기 /,'')} 운영`:esc(d[5])} ${auto.length}학급${d[4]==='cls'&&(it.v==null||it.v==='')?' · 실적에 자동 반영':''}${d[4]==='ox'&&auto.length?(autoOx?' · 첫 수업 시작 → 자동 O':(it.v==null||it.v==='')?' · 첫 수업 전':''):''}</div>`:''}</td><td class="small muted">예: ${esc(d[3])}${d[4]==='c'?'<div>0건이면 해당 없음</div>':''}</td><td class="nowrap">${inp}</td>
      <td class="nowrap">${stc}${adm?`<div class="row" style="gap:2px;margin-top:3px;flex-wrap:nowrap"><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="ok">확인</button><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="fix">보완</button></div>`:''}${it.st==='fix'&&it.fixWhy?`<div class="small lv-warn">${esc(it.fixWhy)}</div>`:''}</td>
      <td><input ${dis} data-cp="${cp}.note" data-cat="${cp}" value="${esc(it.note||'')}" placeholder="비고" style="width:100%"></td></tr>`; };
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}<span class="small muted">점검 기준월</span><select id="cs-ym">${months.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${m.slice(0,4)}년 ${+m.slice(5)}월</option>`).join('')}</select><button class="btn sm" data-act="csxls-mile" data-q="${q}" data-o="${esc(o)}" title="마일스톤 점검표 양식(엑셀)으로 받기">양식으로 받기</button>
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}<span class="small muted">점검 기준월</span><select id="cs-ym">${months.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${m.slice(0,4)}년 ${+m.slice(5)}월</option>`).join('')}</select><button class="btn sm" data-act="csxls-mile" data-q="${q}" data-o="${esc(o)}" title="마일스톤 점검표 양식(엑셀)으로 다운로드">양식 다운로드</button>
     ${sub?`<span class="chip ${okd?'ok':'info'}">${+ym.slice(5)}월 ${reSub?'보완 후 재제출':'제출'} ${esc(String(sub).slice(5,16).replace('-','.'))}${okd?' · 확인 완료':' · 확인 대기'}</span>`:fixOpen?`<span class="chip warn">${+ym.slice(5)}월 보완 요청 · 다시 제출 전</span>`:`<span class="chip ${csToday()>due?'x':'warn'}">${+ym.slice(5)}월 제출 전 · 마감 ${csFmtD(due)}</span>`}
     <span style="flex:1"></span>${adm?(sub?(okd?`<span class="small muted">${esc(String(okd.at||'').slice(5,16).replace('-','.'))} 확인 완료</span> <button class="btn sm" data-act="csmok" data-o="${esc(o)}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csmok" data-o="${esc(o)}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csmfix" data-o="${esc(o)}">보완 요청</button>`:''):sub?`<span class="small muted">제출 후에는 고칠 수 없습니다 · 수정이 필요하면 호서대에 요청</span>`:lockM?`<span class="small muted">${+csYm().slice(5)}월 점검표 제출 완료 · 보완 요청 항목만 고칠 수 있습니다</span>`:`<button class="btn sm pri" data-act="csask" data-k="mile" data-o="${esc(o)}">${fixOpen?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
    ${fixOpen?`<div class="notice bad stack" style="gap:4px"><b>호서대에서 ${+ym.slice(5)}월 점검표 보완을 요청했습니다</b><div class="small">${esc(fx.why||'')}</div><div class="small">${adm?'대학이 고친 뒤 다시 제출하면 「보완 후 재제출」로 표시됩니다.':'내용을 고쳐 입력한 뒤 「보완 후 다시 제출하기」를 눌러 주세요.'} <span class="muted">(${esc(String(fx.at||'').slice(5,16).replace('-','.'))} 요청)</span></div></div>`:''}
@@ -6317,7 +6317,7 @@ function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, OQ=csMileQ(),
    <div class="tw"><table class="cs-mt"><thead><tr><th style="width:36px">연번</th><th>마일스톤</th><th>근거 예시 (증빙 자료)</th><th style="width:130px">실적</th><th style="width:150px">확인</th><th style="width:16%">비고</th></tr></thead><tbody>
    ${[1,2,3,4].map(qq=>qq>OQ&&!adm?`<tr class="cs-qh"><td colspan="6">▸ ${CS_QN[qq]} <span class="muted" style="font-weight:400">· 아직 열리지 않았습니다 (호서대가 입력을 열면 작성)</span></td></tr>`:`<tr class="cs-qh" data-act="csmq" data-v="${qq}"><td colspan="6">${open[qq]?'▾':'▸'} ${CS_QN[qq]}${qq===q?' · 이번 분기':''}${qq>OQ?' · <span class="lv-warn">대학 입력 닫힘</span>':''} <span class="muted" style="font-weight:400">· 완료 ${CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)&&csMileDone(M[d[0]],d,o)).length}/${CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)).length}</span></td></tr>${open[qq]?CS_MILES.filter(d=>d[1]===qq).map(row).join(''):''}`).join('')}
    </tbody></table></div>
-   <div class="small muted">완료 기준: O 표시, 또는 횟수·학급 수 1 이상. 민원은 0건(해당 없음)도 완료. 학교밖 학급 수는 운영 목록(그 분기에 시작한 학교밖 학급)으로 자동 채움, 「매칭·운영 개시」는 운영 목록에 그 시기 학급이 있고 첫 수업일이 지나면 자동 O. 다르면 직접 고쳐 입력. 해당하지 않는 마일스톤은 사업관리위원회 승인 후 비고에 대체 과업을 적어 주세요. 매월 마감(기본 ${csCfg().mileDay}일)까지 「점검표 제출」을 눌러야 성실도 감점이 없습니다.</div>`; }
+   <div class="small muted">완료 기준: O 표시, 또는 횟수·학급 수 1 이상. 민원은 0건(해당 없음)도 완료. 학교밖 학급 수는 운영현황(그 분기에 시작한 학교밖 학급)으로 자동 채움, 「매칭·운영 개시」는 운영현황에 그 시기 학급이 있고 첫 수업일이 지나면 자동 O. 다르면 직접 고쳐 입력. 해당하지 않는 마일스톤은 사업관리위원회 승인 후 비고에 대체 과업을 적어 주세요. 매월 마감(기본 ${csCfg().mileDay}일)까지 「점검표 제출」을 눌러야 성실도 감점이 없습니다.</div>`; }
 /* ---------- 제출 자료 통합: 대학별 제출 상태 + 운영 보고 통합 표 + 양식 내려받기 ---------- */
 function csSum(){ const q=S.ui.csSq||csQNow(), U=CS_UNIVS(), ym=csYm(), pc=(a,b)=>b?Math.round(a/b*1000)/10+'%':'-';
   const stR=o=>{ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt?(R.ok?'<span class="chip ok">확인 완료</span>':'<span class="chip info">제출 · 확인 대기</span>'):R.fix?'<span class="chip warn">보완 요청</span>':'<span class="chip">미제출</span>'; };
@@ -6326,7 +6326,7 @@ function csSum(){ const q=S.ui.csSq||csQNow(), U=CS_UNIVS(), ym=csYm(), pc=(a,b)
   const V={}; U.forEach(o=>{ V[o]=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)); });
   const rowT=i=>U.reduce((t,o)=>({cls:t.cls+V[o][i].cls,ses:t.ses+V[o][i].ses,stu:t.stu+V[o][i].stu}),{cls:0,ses:0,stu:0}), G=CS_OPROWS.map((_,i)=>rowT(i)).reduce((t,x)=>({cls:t.cls+x.cls,ses:t.ses+x.ses,stu:t.stu+x.stu}),{cls:0,ses:0,stu:0});
   const sumO=(o,k)=>V[o].reduce((a,x)=>a+x[k],0);
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('sum',q)}<span style="flex:1"></span><button class="btn sm pri" data-act="csxls-rep" data-q="${q}">운영 보고 받기 (한글 · 통합 + 대학별)</button><button class="btn sm pri" data-act="csxls-mile" data-q="${q}">마일스톤 점검표 받기 (한글 · 대학별 + 통합 엑셀)</button><button class="btn sm" data-act="csxls-rep" data-q="${q}" data-f="x">운영 보고 엑셀</button>${qt(['한글 양식(hwpx)에 값을 채워 ZIP 하나로 받음: 통합 1개 + 대학별 5개','마일스톤 점검표는 통합 양식이 없어 통합은 엑셀, 대학별은 한글','숫자는 입력값 기준이며, 한글에서 열어 확인 후 저장'])}</div>
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('sum',q)}<span style="flex:1"></span><button class="btn sm pri" data-act="csxls-rep" data-q="${q}">운영 보고 다운로드 (한글 · 통합 + 대학별)</button><button class="btn sm pri" data-act="csxls-mile" data-q="${q}">마일스톤 점검표 다운로드 (한글 · 대학별 + 통합 엑셀)</button><button class="btn sm" data-act="csxls-rep" data-q="${q}" data-f="x">운영 보고 엑셀</button>${qt(['한글 양식(hwpx)에 값을 채워 ZIP 하나로 받음: 통합 1개 + 대학별 5개','마일스톤 점검표는 통합 양식이 없어 통합은 엑셀, 대학별은 한글','숫자는 입력값 기준이며, 한글에서 열어 확인 후 저장'])}</div>
    <div class="panel stack" style="gap:8px"><div class="row" style="gap:8px;align-items:center"><b>제출 현황</b><span class="chip ${done===U.length?'ok':''}">모두 제출 ${done}/${U.length}</span><span class="small muted">마일스톤은 ${+ym.slice(5)}월 점검표, 운영 보고는 ${CS_QN[q]}</span></div>
     <div class="tw"><table><thead><tr><th>대학</th><th>마일스톤 진행률</th><th>${+ym.slice(5)}월 점검표</th><th>운영 보고</th><th>판정</th><th>대학별 양식</th></tr></thead><tbody>${U.map(o=>{ const pr=csProg(o,q); return `<tr><td><b>${esc(o)}</b></td><td>${pr.done}/${pr.need} · <b class="${csRateC(pr.p)}">${pr.p==null?'-':pr.p+'%'}</b></td><td>${stM(o)}</td><td>${stR(o)}</td><td>${CS_JL[csFinal(o,q)]||'-'}</td><td class="nowrap"><button class="btn sm" data-act="csxls-rep" data-q="${q}" data-o="${esc(o)}">운영 보고</button> <button class="btn sm" data-act="csxls-mile" data-q="${q}" data-o="${esc(o)}">마일스톤</button></td></tr>`; }).join('')}</tbody></table></div></div>
    <div class="panel stack" style="gap:8px"><b>1. 프로그램 운영 현황 (통합)</b>
@@ -6414,15 +6414,15 @@ async function hxMileOne(q,o){ const T=await hxTpl('mile'); let x=T.files.find(f
   const c2={}; [1,2,3,4].forEach(qq=>{ if(qq>q) return; const p=csProg(o,qq); c2[qq+',3']=String(p.done); c2[qq+',4']=(p.p==null?'-':p.p)+'%'; c2[qq+',5']=CS_JL[csFinal(o,qq)]||''; }); x=hxCells(x,2,c2);
   return hxPack(T,x); }
 async function csHwpRep(q,orgs){ const all=orgs.length>1, Y=csYear(), qn=CS_QN[q].replace(/ .*/,'');
-  if(!all){ const b=await hxRepOne(q,orgs[0]); return saveBinaryBuf(await b.arrayBuffer(),`${Y} ${qn} 운영 보고 ${csUS(orgs[0])}.hwpx`,'운영 보고(한글)를 내려받았습니다'); }
+  if(!all){ const b=await hxRepOne(q,orgs[0]); return saveBinaryBuf(await b.arrayBuffer(),`${Y} ${qn} 운영 보고 ${csUS(orgs[0])}.hwpx`,'운영 보고(한글)를 다운로드했습니다'); }
   const L=[{name:`${Y} ${qn} 운영 보고 통합.hwpx`,data:new Uint8Array(await (await hxRepAll(q,orgs)).arrayBuffer())}];
   for(const o of orgs) L.push({name:`${Y} ${qn} 운영 보고 ${csUS(o)}.hwpx`,data:new Uint8Array(await (await hxRepOne(q,o)).arrayBuffer())});
-  return saveBinaryBuf(await hxZip(L).arrayBuffer(),`${Y} ${qn} 운영 보고 (통합·대학별).zip`,'운영 보고(한글) 통합·대학별 파일을 내려받았습니다'); }
+  return saveBinaryBuf(await hxZip(L).arrayBuffer(),`${Y} ${qn} 운영 보고 (통합·대학별).zip`,'운영 보고(한글) 통합·대학별 파일을 다운로드했습니다'); }
 async function csHwpMile(q,orgs){ const all=orgs.length>1, Y=csYear(), m=+csYm().slice(5);
-  if(!all){ const b=await hxMileOne(q,orgs[0]); return saveBinaryBuf(await b.arrayBuffer(),`${Y} 마일스톤 점검표 ${csUS(orgs[0])} (${m}월).hwpx`,'마일스톤 점검표(한글)를 내려받았습니다'); }
+  if(!all){ const b=await hxMileOne(q,orgs[0]); return saveBinaryBuf(await b.arrayBuffer(),`${Y} 마일스톤 점검표 ${csUS(orgs[0])} (${m}월).hwpx`,'마일스톤 점검표(한글)를 다운로드했습니다'); }
   const L=[]; const xb=await csXlsMile(q,orgs,true); if(xb) L.push({name:`${Y} 마일스톤 점검표 통합 (${m}월).xlsx`,data:new Uint8Array(xb)});
   for(const o of orgs) L.push({name:`${Y} 마일스톤 점검표 ${csUS(o)} (${m}월).hwpx`,data:new Uint8Array(await (await hxMileOne(q,o)).arrayBuffer())});
-  return saveBinaryBuf(await hxZip(L).arrayBuffer(),`${Y} 마일스톤 점검표 (통합·대학별, ${m}월).zip`,'마일스톤 점검표 통합·대학별 파일을 내려받았습니다'); }
+  return saveBinaryBuf(await hxZip(L).arrayBuffer(),`${Y} 마일스톤 점검표 (통합·대학별, ${m}월).zip`,'마일스톤 점검표 통합·대학별 파일을 다운로드했습니다'); }
 /* ---------- 양식 내려받기 (엑셀: 첨부 한글 양식과 같은 표 구성) ---------- */
 function csXlsKit(){ const thin={style:'thin',color:{argb:'FF999999'}}, B={top:thin,left:thin,bottom:thin,right:thin};
   const put=(ws,r,c,v,o)=>{ const cell=ws.getCell(r,c); cell.value=v==null?'':v; cell.border=B; cell.alignment={vertical:'middle',horizontal:(o&&o.al)||'center',wrapText:true}; if(o&&o.h){ cell.font={bold:true}; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2EDEC'}}; } if(o&&o.b) cell.font={bold:true}; if(o&&o.fmt) cell.numFmt=o.fmt; return cell; };
@@ -6476,7 +6476,7 @@ async function csXlsRep(q,orgs){ if(typeof ExcelJS==='undefined') throw new Erro
     [['나. 우수사례','best'],['다. 건의사항','ask']].forEach(([l,f])=>{ ws.getCell(r,1).value=l; r++; K.box(ws,r,1,r+3,8,R[f]||'',{al:'left'}); ws.getCell(r,1).alignment={vertical:'top',horizontal:'left',wrapText:true}; r+=5; });
   });
   wb.worksheets.forEach(w=>{ w.pageSetup={paperSize:9,orientation:w.name==='통합'?'landscape':'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}}; });
-  const out=await wb.xlsx.writeBuffer(); await saveBinaryBuf(out,`${csYear()} ${CS_QN[q].replace(/ .*/,'')} 운영 보고 ${all?'통합':csUS(U[0])}.xlsx`,'운영 보고 양식을 내려받았습니다'); }
+  const out=await wb.xlsx.writeBuffer(); await saveBinaryBuf(out,`${csYear()} ${CS_QN[q].replace(/ .*/,'')} 운영 보고 ${all?'통합':csUS(U[0])}.xlsx`,'운영 보고 양식을 다운로드했습니다'); }
 async function csXlsMile(q,orgs,ret){ if(typeof ExcelJS==='undefined') throw new Error('엑셀 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
   const K=csXlsKit(), wb=new ExcelJS.Workbook(), P='0.0%', all=orgs.length>1, U=orgs, ym=csYm();
   const val=(o,d)=>{ const it=(csOrgR(o).mile||{})[d[0]]||{}, v=csMV(it,d,o); if(v==null||v==='') return ''; return d[4]==='ox'?v:`${v}${csMUnit(d)}`; };
@@ -6498,17 +6498,17 @@ async function csXlsMile(q,orgs,ret){ if(typeof ExcelJS==='undefined') throw new
     [1,2,3,4].forEach(qq=>{ const p=csProg(o,qq), on=qq<=q; K.put(ws,r,1,`${qq}분기`); K.put(ws,r,2,CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)).length); K.put(ws,r,3,qcum(qq)); K.put(ws,r,4,on?p.done:''); K.put(ws,r,5,on&&p.need?p.done/p.need:'',{fmt:P}); K.put(ws,r,6,on?CS_JL[csFinal(o,qq)]||'-':''); r++; });
   });
   wb.worksheets.forEach(w=>{ w.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}}; });
-  const out=await wb.xlsx.writeBuffer(); if(ret) return out; await saveBinaryBuf(out,`${csYear()} 마일스톤 점검표 ${all?'통합':csUS(U[0])} (${+ym.slice(5)}월).xlsx`,'마일스톤 점검표를 내려받았습니다'); }
+  const out=await wb.xlsx.writeBuffer(); if(ret) return out; await saveBinaryBuf(out,`${csYear()} 마일스톤 점검표 ${all?'통합':csUS(U[0])} (${+ym.slice(5)}월).xlsx`,'마일스톤 점검표를 다운로드했습니다'); }
 /* ---------- 운영 보고 ---------- */
 function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep||{})[q])||{}, cp=`consOrg.${o}.rep.${q}`, sec=S.ui.csRs||'op', adm=!csMine(), lk=!adm&&!!R.subAt, D_=lk?'disabled':'', rFix=R.fix&&!R.subAt;
   const inp=(path,v,w,ph,num)=>`<input ${D_} ${num===false?'':'type="number"'} data-cp="${cp}.${path}" data-cat="${cp}" value="${esc(v??'')}" style="width:${w||'80px'}" placeholder="${esc(ph||'')}">`;
   const segs=[['op','1. 프로그램 운영'],['train','2. 강사연수'],['dev','3. 프로그램 개발'],['bud','4. 예산 집행'],['etc','5. 기타']];
   let body='';
   if(sec==='op'){ const g=csGoal(o,q), V=CS_OPROWS.map(([gg,per])=>({gg,per,...csOpVal(o,q,gg,per),a:csOpAuto(o,gg,per)})), T=V.reduce((t,x)=>({cls:t.cls+x.cls,ses:t.ses+x.ses,stu:t.stu+x.stu}),{cls:0,ses:0,stu:0}), pc=(a,b)=>b?Math.round(a/b*1000)/10+'%':'-';
-    body=`<div class="tw"><table><thead><tr><th colspan="2">운영 시기</th><th>학급수(개)</th><th>차시(차시)</th><th>인원(명)</th><th>비중(학급)</th><th>비중(차시)</th><th>출처</th></tr></thead><tbody>${V.map((x,i)=>`<tr>${i%4===0?`<td rowspan="4"><b>${x.gg}</b></td>`:''}<td>${esc(x.per)}</td>${['cls','ses','stu'].map(k=>`<td>${inp(`op2.${x.gg}|${x.per}.${k}`,(((R.op2||{})[x.gg+'|'+x.per])||{})[k],'90px',x.a?String(x.a[k]):'')}</td>`).join('')}<td class="small">${pc(x.cls,T.cls)}</td><td class="small">${pc(x.ses,T.ses)}</td><td class="small muted">${x.own?'대학 입력':x.a&&(x.a.cls||x.a.ses)?'운영 목록 자동':'-'}</td></tr>`).join('')}
+    body=`<div class="tw"><table><thead><tr><th colspan="2">운영 시기</th><th>학급수(개)</th><th>차시(차시)</th><th>인원(명)</th><th>비중(학급)</th><th>비중(차시)</th><th>출처</th></tr></thead><tbody>${V.map((x,i)=>`<tr>${i%4===0?`<td rowspan="4"><b>${x.gg}</b></td>`:''}<td>${esc(x.per)}</td>${['cls','ses','stu'].map(k=>`<td>${inp(`op2.${x.gg}|${x.per}.${k}`,(((R.op2||{})[x.gg+'|'+x.per])||{})[k],'90px',x.a?String(x.a[k]):'')}</td>`).join('')}<td class="small">${pc(x.cls,T.cls)}</td><td class="small">${pc(x.ses,T.ses)}</td><td class="small muted">${x.own?'대학 입력':x.a&&(x.a.cls||x.a.ses)?'운영현황 자동':'-'}</td></tr>`).join('')}
       <tr class="cs-qh"><td colspan="2">합계</td><td>${T.cls}</td><td>${T.ses.toLocaleString()}</td><td>${T.stu.toLocaleString()}</td><td>100%</td><td>100%</td><td></td></tr></tbody></table></div>
      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center"><b>목표 달성률 (학급수)</b><span>연간 KPI <b>${g.kpi||'-'}</b>학급 · 운영 ${g.n??'-'}학급 → 자동 <b class="${csRateC(g.auto)}">${g.auto==null?'-':g.auto+'%'}</b></span><label class="row small" style="gap:4px">직접 입력 ${inp('goal',R.goal,'80px','%')} %</label>${qt(['자동: 운영 통계의 연간 학급수 KPI 대비 운영 학급 수','칸을 비우면 자동 값을 씀','연간 KPI는 6 운영 통계 「KPI 목표」에서 정함'])}</div>
-     <div class="small muted">칸을 비우면 운영 목록(운영 통계) 값을 씁니다(흐린 숫자). 숫자를 넣으면 그 값으로 바뀝니다. 학교밖은 수업 시작 월로 시기를 나눕니다.</div>`; }
+     <div class="small muted">칸을 비우면 운영현황(운영 통계) 값을 씁니다(흐린 숫자). 숫자를 넣으면 그 값으로 바뀝니다. 학교밖은 수업 시작 월로 시기를 나눕니다.</div>`; }
   if(sec==='train'){ const T=R.train||{};
     const tg=['in','out'].reduce((a,k)=>a+(+(T[k]||{}).goal||0),0), tt=['in','out'].reduce((a,k)=>a+(+(T[k]||{}).got||0),0), tp=csPct(tt,tg);
     body=`<div class="tw"><table><thead><tr><th>순</th><th>구분</th><th>목표 인원(명)</th><th>참여 인원(명)</th><th>비율</th></tr></thead><tbody>${[['in','내부'],['out','외부']].map(([k,l],i)=>{ const x=T[k]||{}; const p=csPct(+x.got||0,+x.goal||0); return `<tr><td>${i+1}</td><td>${l}</td><td>${inp(`train.${k}.goal`,x.goal)}</td><td>${inp(`train.${k}.got`,x.got)}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td></tr>`; }).join('')}<tr class="cs-qh"><td colspan="2">합계</td><td>${tg}</td><td>${tt}</td><td>${tp==null?'-':tp+'%'}</td></tr></tbody></table></div>`; }
@@ -6530,7 +6530,7 @@ function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep|
      <div><button class="btn sm" ${D_} data-act="cspadd" data-o="${esc(o)}" data-q="${q}">보도자료 추가</button></div>
      <label class="stack" style="gap:4px"><b>나. 우수사례</b><textarea ${D_} data-cp="${cp}.best" data-cat="${cp}" rows="3">${esc(R.best||'')}</textarea></label>
      <label class="stack" style="gap:4px"><b>다. 건의사항</b><textarea ${D_} data-cp="${cp}.ask" data-cat="${cp}" rows="3">${esc(R.ask||'')}</textarea></label>`; }
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}${csQSeg('rep',q)}<button class="btn sm" data-act="csxls-rep" data-q="${q}" data-o="${esc(o)}" title="운영 보고 양식(엑셀)으로 받기">양식으로 받기</button><span style="flex:1"></span>${R.subAt?`<span class="chip ${R.ok?'ok':'info'}">${R.fix?'보완 후 재제출':'제출'} ${esc(String(R.subAt).slice(5,16).replace('-','.'))}${R.ok?' · 확인 완료':' · 확인 대기'}</span>`:rFix?'<span class="chip warn">보완 요청 · 다시 제출 전</span>':''}${R.subAt?(adm?(R.ok?`<button class="btn sm" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csrfix" data-o="${esc(o)}" data-q="${q}">보완 요청</button>`:''):adm?'<span class="small muted">대학 제출 전</span>':`<button class="btn sm pri" data-act="csask" data-k="rep" data-o="${esc(o)}" data-q="${q}">${rFix?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}${csQSeg('rep',q)}<button class="btn sm" data-act="csxls-rep" data-q="${q}" data-o="${esc(o)}" title="운영 보고 양식(엑셀)으로 다운로드">양식 다운로드</button><span style="flex:1"></span>${R.subAt?`<span class="chip ${R.ok?'ok':'info'}">${R.fix?'보완 후 재제출':'제출'} ${esc(String(R.subAt).slice(5,16).replace('-','.'))}${R.ok?' · 확인 완료':' · 확인 대기'}</span>`:rFix?'<span class="chip warn">보완 요청 · 다시 제출 전</span>':''}${R.subAt?(adm?(R.ok?`<button class="btn sm" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csrfix" data-o="${esc(o)}" data-q="${q}">보완 요청</button>`:''):adm?'<span class="small muted">대학 제출 전</span>':`<button class="btn sm pri" data-act="csask" data-k="rep" data-o="${esc(o)}" data-q="${q}">${rFix?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
    ${rFix?`<div class="notice bad stack" style="gap:4px"><b>호서대에서 ${CS_QN[q]} 운영 보고 보완을 요청했습니다</b><div class="small">${esc(R.fix.why||'')}</div><div class="small">${adm?'대학이 고친 뒤 다시 제출하면 「보완 후 재제출」로 표시됩니다.':'내용을 고쳐 입력한 뒤 「보완 후 다시 제출하기」를 눌러 주세요.'} <span class="muted">(${esc(String(R.fix.at||'').slice(5,16).replace('-','.'))} 요청)</span></div></div>`:''}
    ${lk?`<div class="iss lv-info small">제출한 보고는 고칠 수 없습니다. 수정이 필요하면 호서대에 요청해 주세요.</div>`:''}
    <div class="seg2" role="tablist">${segs.map(([k,l])=>`<button class="${sec===k?'on':''}" data-act="csrs" data-v="${k}">${l}</button>`).join('')}</div>
@@ -6559,7 +6559,7 @@ function csGTplV(){ const sel=S.ui.csTk||'univ:meet', [tg,k]=sel.split(':'), [t,
    <div class="panel stack" style="gap:10px;flex:1;min-width:0"><div class="row between"><b>${esc((CS_GKINDS[tg].find(x=>x[0]===k)||[0,''])[1])} <span class="muted small" style="font-weight:400">· ${tg==='univ'?'타대학':'학교 · 기관'}</span></b>${cus?`<button class="btn sm" data-act="cstkreset" data-v="${sel}">처음 문안으로 되돌리기</button>`:'<span class="small muted">처음 제공된 문안</span>'}</div>
     <label class="f">제목<input data-cp="${cp}.t" value="${esc(t)}"></label>
     <label class="f">본문<textarea data-cp="${cp}.b" rows="18" style="font-family:inherit;line-height:1.6">${esc(b)}</textarea></label>
-    <div class="small muted">자리표시: {차수} {운영기간} {대상수} {보내는곳} 은 공문을 만들 때, {기한} {전화번호} {메일} {접속링크}(대학별 접속 링크 목록) 는 「본문 복사」·「기안문 파일 받기」 때 채워집니다.</div></div></div>`; }
+    <div class="small muted">자리표시: {차수} {운영기간} {대상수} {보내는곳} 은 공문을 만들 때, {기한} {전화번호} {메일} {접속링크}(대학별 접속 링크 목록) 는 「본문 복사」·「기안문 파일 다운로드」 때 채워집니다.</div></div></div>`; }
 function csGNew(kind,tgt){ const [t,b]=csGTpl(kind,tgt); let rc;
   if(tgt==='univ') rc=CS_UNIVS().filter(o=>o!=='호서대학교').map(name=>({name}));
   else { const F=matchRows().filter(r=>r.status==='final'&&r.status!=='cancel'); rc=[...new Set(F.map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko')).map(name=>({name})); }
@@ -6600,16 +6600,16 @@ function csGDetail(g){ const i=csGong().indexOf(g), cp=`gongmun.items.${i}`, K=C
      <div class="row" style="gap:8px;flex-wrap:wrap"><label class="f">문의 전화<input data-cp="${cp}.tel" data-cat="${cp}" value="${esc(g.tel||'')}" placeholder="041-423-2420" style="width:150px"></label><label class="f">제출 · 문의 메일<input data-cp="${cp}.mail" data-cat="${cp}" value="${esc(g.mail||'')}" placeholder="담당자 메일" style="width:210px"></label></div>
      <label class="f">제목<input data-cp="${cp}.title" data-cat="${cp}" value="${esc(g.title||'')}"></label>
      <label class="f">본문<textarea data-cp="${cp}.body" data-cat="${cp}" rows="14" style="font-family:inherit;line-height:1.6">${esc(g.body||'')}</textarea></label>
-     <div class="small muted">본문의 {기한} {전화번호} {메일} {접속링크}는 「본문 복사」·「기안문 파일 받기」 때 채워집니다. 비어 있으면 (  )로 들어갑니다.</div></div>
+     <div class="small muted">본문의 {기한} {전화번호} {메일} {접속링크}는 「본문 복사」·「기안문 파일 다운로드」 때 채워집니다. 비어 있으면 (  )로 들어갑니다.</div></div>
     <div class="stack" style="gap:8px"><b>수신처 ${rc.length}곳</b>
      <ul style="list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:10px;max-height:360px;overflow:auto">${rcs||'<li class="small muted" style="padding:8px 10px">수신처 없음</li>'}</ul>
      <div class="row" style="gap:6px"><input id="cs-grc" placeholder="수신처 추가 (학교·기관·대학 이름)" style="flex:1"><button class="btn sm" data-act="csgradd" data-id="${g.id}">추가</button></div></div></div>
    <div class="row" style="gap:6px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px">
-    <button class="btn sm pri" data-act="csghwx" data-id="${g.id}" title="제목 · 본문이 채워진 일반기안문(.hwx). 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열기">기안문 파일 받기</button>
+    <button class="btn sm pri" data-act="csghwx" data-id="${g.id}" title="제목 · 본문이 채워진 일반기안문(.hwx). 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열기">기안문 파일 다운로드</button>
     <button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="title">제목 복사</button><button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="body">본문 복사</button><button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="rc">수신자 복사</button>
     ${g.tgt==='school'?`<button class="btn sm" data-act="csgxlsx" data-id="${g.id}">붙임: 운영 확정 목록 엑셀</button>`:''}<button class="btn sm" data-act="csgretpl" data-id="${g.id}">양식대로 다시 채우기</button>
     <span style="flex:1"></span><button class="btn sm danger" data-act="csgdel" data-id="${g.id}">삭제</button></div>
-   <div class="small muted">「기안문 파일 받기」 → 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열면 제목 · 본문이 채워져 있습니다. 수신처는 기안기에서 지정(「수신자 복사」로 이름 확인).</div>
+   <div class="small muted">「기안문 파일 다운로드」 → 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열면 제목 · 본문이 채워져 있습니다. 수신처는 기안기에서 지정(「수신자 복사」로 이름 확인).</div>
    <div class="notice stack" style="gap:8px"><b>${g.sent?'발송 정보':'그룹웨어로 발송했으면'}</b>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="f">문서번호<input id="cs-gno" value="${esc(g.no||'')}" placeholder="그룹웨어에서 부여된 번호" style="width:200px"></label><label class="f">발송일<input type="date" id="cs-gsent" value="${esc(g.sent||t)}"></label>
      <button class="btn sm pri" data-act="csgsend" data-id="${g.id}">${g.sent?'저장하고 회신 관리로':'발송 처리'}</button>${g.sent?`<button class="btn sm" data-act="csgunsend" data-id="${g.id}" title="기안 준비 상태로 되돌림 (회신 기록은 그대로)">발송 취소</button>`:''}</div>
@@ -6842,7 +6842,7 @@ function devPanel(){ const u=S.ui, L=devRecs(), f=u.devF||{}, IT=kitItems();
       ${dsel('devf-field','field',f.field||'',fields.map(x=>[x,x,nOf(r=>r.field===x)]),'분야')}
       ${dsel('devf-year','year',f.year||'',years.map(x=>[x,x,nOf(r=>String(r.year||'')===x)]),'개발연도')}
      </div>
-     <div class="row small" style="gap:6px;flex-wrap:wrap;align-items:center;min-height:26px"><span class="muted">${V.length===L.length?`전체 ${L.length}개`:`<b>${V.length}</b> / ${L.length}개`}</span>${act.map(k=>`<span class="chip sm dvchip">${lab[k]}: ${esc(val(k,f[k]))} <button class="lnk" data-act="devfclr" data-k="${k}" aria-label="${lab[k]} 조건 지우기">×</button></span>`).join('')}${act.length||f.q?'<button class="lnk small" data-act="devfreset">모두 지우기</button>':''}</div>`; })()+`
+     <div class="row small" style="gap:6px;flex-wrap:wrap;align-items:center;min-height:26px"><span class="muted">${V.length===L.length?`전체 ${L.length}개`:`<b>${V.length}</b> / ${L.length}개`}</span>${act.map(k=>`<span class="chip sm dvchip">${lab[k]}: ${esc(val(k,f[k]))} <button class="lnk" data-act="devfclr" data-k="${k}" aria-label="${lab[k]} 조건 지우기">×</button></span>`).join('')}${act.length||f.q?'<button class="lnk small" data-act="devfreset">조건 초기화</button>':''}</div>`; })()+`
    <div class="tw"><table class="noenh dvt"><thead><tr>${[['univ','대학'],['field','분야'],['name','프로그램']].map(([k,l])=>devTh(k,l)).join('')}${devTh('year','개발연도')}${devTh('dev','개발자')}${devTh('stage','단계')}<th>자료 업로드 ${qt(['초록 = 있음','바꾸려면 줄 끝 「수정」 → 고른 뒤 「저장」'])}</th>${devTh('rv','검토(자문)')}<th>메모</th><th></th></tr></thead><tbody>
    ${V.map(r=>{ if(ED===r.key) return devEditForm(r,L); const rv=r.review||{}, p=devProg(r), plan=p&&p.plan, ed=false, dd=r.docs||{};
      const devC=r.liaison?`<span class="hovtip" tabindex="0" data-tip="${esc('소통 담당자: '+r.liaison)}">${esc(r.dev||'(개발자 미입력)')}</span>`:(r.dev?esc(r.dev):'<span class="muted">-</span>');
@@ -7078,7 +7078,7 @@ function kitClick(a,el){ const u=S.ui;
     case 'devapply': { const x=devApplyPend(); toast(`프로그램 ${x.add}개 추가 · ${x.up}개 바꿈${x.skip?` · 삭제한 프로그램 ${x.skip}개 건너뜀`:''}`); return true; }
     case 'devno': u.devPend=null; return true;
     case 'devexport': devExport(); return false;
-    case 'devadd': { const nm=((document.getElementById('dev-new')||{}).value||'').trim(), un=devMine()||((document.getElementById('dev-new-univ')||{}).value||'').trim(); if(!nm){ toast('프로그램 이름을 적어 주세요'); return false; } const key=progLK(nm); if(devByKey(key)){ const ex=devByKey(key); toast(devMine()&&ex.univ!==devMine()?`같은 이름의 프로그램이 ${ex.univ||'다른 대학'}에 있습니다. 이름을 조금 다르게 적거나 호서대에 문의해 주세요`:'이미 있는 프로그램입니다'); return false; } kitDB().dev.push({biz:curBiz(),key,name:nm,univ:un,docs:{},review:{},stage:'미착수',stageEdit:true}); kitTouch('dev',key); toast(`${nm} 추가`); return true; }
+    case 'devadd': { const nm=((document.getElementById('dev-new')||{}).value||'').trim(), un=devMine()||((document.getElementById('dev-new-univ')||{}).value||'').trim(); if(!nm){ toast('프로그램 이름을 적어 주세요'); return false; } const key=progLK(nm); if(devByKey(key)){ const ex=devByKey(key); toast(devMine()&&ex.univ!==devMine()?`같은 이름의 프로그램이 ${ex.univ||'타대학'}에 있습니다. 이름을 조금 다르게 적거나 호서대에 문의해 주세요`:'이미 있는 프로그램입니다'); return false; } kitDB().dev.push({biz:curBiz(),key,name:nm,univ:un,docs:{},review:{},stage:'미착수',stageEdit:true}); kitTouch('dev',key); toast(`${nm} 추가`); return true; }
     case 'kitgo': u.kitTab='kits'; u.kitF={p:el.dataset.k}; window.scrollTo({top:0}); return true;
     case 'kitcond': S.ui.view='setup'; u.setTab='prog'; u.condEdit=el.dataset.p; window.scrollTo({top:0}); return true;
     case 'kitflag': u.kitF={...(u.kitF||{}),flag:el.dataset.v}; return true;
@@ -8243,7 +8243,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.116';
+const APP_VER = '11.117';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
