@@ -2302,7 +2302,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.108';
+const LIB_VER='11.109';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6149,11 +6149,17 @@ function kitAutoFix(){ const b=curBiz(), F=S.ui.kitFixed||(S.ui.kitFixed={}); if
    설정(서버 settings): consCfg(평가 기준) · consOrg[대학](대학 제출 자료, 대학 관리자는 자기 대학만 저장) · gongmun(공문) · consJudge[분기][대학](위원회 판정 · 수기 조정)
    사업 연도: 3월 ~ 다음 해 2월. 1분기 3~5월, 2분기 6~8월, 3분기 9~11월, 4분기 12~2월 */
 const CS_UNIVS = () => ORGS.filter(o=>o!=='미지정');
+/* 마일스톤: [저장 번호, 분기, 이름, 근거 예시, 입력(ox=O/X, n=횟수, c=건수, cls=학급 수), 운영 목록 자동(시기 또는 '학교밖'), {ex:연도 = 그해 점수 미반영}]
+   배열 순서 = 화면·양식 순서, 연번은 이 순서로 매김. 저장 번호(첫 칸)는 입력값 키라 바꾸지 않음(2026-11-25 개편: 27~33 추가) */
 const CS_MILES = [
- [1,1,'1학기 학교 수요조사·매칭 완료','매칭 결과 늘봄ON 등록','ox'],[2,1,'1학기 늘봄교실 운영 개시','학급 개설·첫 출결 등록','ox','1학기'],[3,1,'강사 연수 1차 실시(프로그램)','이수자 명단 등록','ox'],[4,1,'현장 모니터링 1회 이상','모니터링 보고서','n'],[5,1,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
- [6,2,'신규 프로그램 지도안·교구 확정','지도안 파일 등록','ox'],[7,2,'1학기 만족도 조사 실시(집합)','조사 결과 보고','ox'],[8,2,'여름방학 프로그램 운영','학급 개설·출결 등록','ox','여름방학'],[9,2,'현장 모니터링 1회 이상','모니터링 보고서','n'],[10,2,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[11,2,'집합 프로그램 운영','운영 결과보고·출결 등록','n'],
- [12,3,'2학기 매칭 및 운영 개시','학급 개설·첫 출결 등록','ox','2학기'],[13,3,'강사 연수 2차 실시(프로그램)','이수자 명단 등록','ox'],[14,3,'대학별 협의체 협회의 운영','결과보고서','ox'],[15,3,'외부기관 컨설팅 운영','결과보고서','n'],[16,3,'현장 모니터링 1회 이상','모니터링 보고서','n'],[17,3,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[18,3,'집합 프로그램 운영','운영 결과보고·출결 등록','n'],[19,3,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],
- [20,4,'2학기 만족도 조사 실시(집합)','조사 결과 보고','ox'],[21,4,'겨울방학 프로그램 운영','학급 개설·출결 등록','ox','겨울방학'],[22,4,'프로그램 고도화 최종본 제출','최종 지도안·개선이력','ox'],[23,4,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],[24,4,'집합 프로그램 운영','운영 결과보고·출결 등록','n'],[25,4,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[26,4,'결과보고 및 정산 완료','결과보고서·정산서','ox']];
+ [1,1,'1학기 학교 수요조사·매칭 완료','매칭 결과 늘봄ON 등록','ox'],[2,1,'1학기 늘봄교실 운영 개시','학급 개설·첫 출결 등록','ox','1학기'],[27,1,'1학기 사전 검사 실시','사전 검사 결과(참여 학생)','ox','',{ex:2026}],[3,1,'강사 연수 1차 실시(프로그램)','이수자 명단 등록','ox'],[4,1,'현장 모니터링 1회 이상','모니터링 보고서','n'],[28,1,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖',{ex:2026}],[5,1,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
+ [6,2,'신규 프로그램 지도안·교구 확정','지도안 파일 등록','ox'],[29,2,'1학기 사후 검사 실시','사후 검사 결과(참여 학생)','ox','',{ex:2026}],[7,2,'1학기 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[8,2,'여름방학 프로그램 운영','학급 개설·출결 등록','ox','여름방학'],[30,2,'여름방학 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox','',{ex:2026}],[9,2,'현장 모니터링 1회 이상','모니터링 보고서','n'],[11,2,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[10,2,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
+ [12,3,'2학기 매칭 및 운영 개시','학급 개설·첫 출결 등록','ox','2학기'],[31,3,'2학기 사전 검사 실시','사전 검사 결과(참여 학생)','ox','',{ex:2026}],[13,3,'강사 연수 2차 실시(프로그램)','이수자 명단 등록','ox'],[14,3,'대학별 협의체 협회의 운영','결과보고서','ox'],[15,3,'외부기관 컨설팅 운영','결과보고서','n'],[16,3,'현장 모니터링 1회 이상','모니터링 보고서','n'],[18,3,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[19,3,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],[17,3,'민원 대응 결과보고','민원 및 대응 결과보고','c'],
+ [32,4,'2학기 사후 검사 실시','사후 검사 결과(참여 학생)','ox'],[20,4,'2학기 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[21,4,'겨울방학 프로그램 운영','학급 개설·출결 등록','ox','겨울방학'],[33,4,'겨울방학 만족도 조사 실시(학교·학교밖)','만족도 조사 결과 보고','ox'],[22,4,'프로그램 고도화 최종본 제출','최종 지도안·개선이력','ox'],[23,4,'프로그램 전문가 검토 진행','전문가 검토 의견서·반영 결과','n'],[24,4,'학교밖 프로그램 운영','학교밖 운영 학급(기관·집합교육 포함) · 운영 결과보고·출결 등록','cls','학교밖'],[25,4,'민원 대응 결과보고','민원 및 대응 결과보고','c'],[26,4,'결과보고 및 정산 완료','결과보고서·정산서','ox']];
+const CS_MNO = Object.fromEntries(CS_MILES.map((d,i)=>[d[0],i+1]));   /* 저장 번호 → 연번 */
+const csMCnt = d => !(d[6]&&d[6].ex===csYear());   /* 그해 점수(진행률)에 넣는 항목인가 */
+const csMQ = iso => { const m=+String(iso||'').slice(5,7); return !m?0:m>=3&&m<=5?1:m<=8&&m>=6?2:m>=9&&m<=11?3:4; };
+const csMUnit = d => d[4]==='c'?'건':d[4]==='cls'?'학급':'회';
 const CS_QN = ['','1분기 (3~5월)','2분기 (6~8월)','3분기 (9~11월)','4분기 (12~2월)'];
 const CS_BUD = ['인건비','장학금','교육·연구 프로그램 개발·운영비','교육·연구 환경개선비','실험·실습 장비 및 기자재 구입·운영비','성과 활용·확산 지원비','그 밖의 사업운영 경비','간접비'];
 const CS_PER = ['1학기','여름방학','2학기','겨울방학','학교밖','한마당','집합형(외부)','집합형(캠퍼스)'];
@@ -6186,9 +6192,13 @@ const csPct = (a,b) => b>0?Math.round(a/b*1000)/10:null;
 const csFmtD = d => { if(!d) return ''; const [y,m,dd]=d.split('-'); return `${+m}.${+dd}(${DOWS[dowOf(d)]})`; };
 const csGong = () => (S.gongmun&&S.gongmun.items)||[];
 /* 마일스톤 완료 판단: O, 또는 횟수 · 건수 입력(민원은 0건도 완료) */
-function csMileDone(it,def){ if(!it) return false; const v=it.v; if(def[4]==='ox') return v==='O'; if(def[4]==='c') return v!==''&&v!=null&&!isNaN(+v); return +v>=1; }
+/* 운영 목록 자동값: 시기 이름이면 그 시기 학급, '학교밖'이면 그 분기(시작 월)에 운영한 학교밖 학급 */
+function csMAuto(o,d){ if(!d[5]||!o) return null; const L=csAutoCls(o,d[5]==='학교밖'?'학교밖':d[5]); if(!L) return null; return d[5]==='학교밖'?L.filter(r=>csMQ(r.start)===d[1]):L; }
+/* 실적 값: 입력값, 없으면(학급 수 항목) 운영 목록 자동값 */
+function csMV(it,d,o){ const v=it&&it.v; if(v!=null&&v!=='') return v; if(d[4]==='cls'){ const a=csMAuto(o,d); return a?String(a.length):''; } return ''; }
+function csMileDone(it,def,o){ const v=csMV(it,def,o); if(def[4]==='ox') return v==='O'; if(def[4]==='c') return v!==''&&v!=null&&!isNaN(+v); return +v>=1; }
 function csAutoCls(o,per){ if(!S.stats||!S.stats.ds) return null; try{ return stAllRaw().filter(r=>r.year===csYear()&&r.org===o&&(!per||r.period===per)); }catch(e){ return null; } }
-function csProg(o,q){ const M=csOrgR(o).mile||{}, need=CS_MILES.filter(d=>d[1]<=q), done=need.filter(d=>csMileDone(M[d[0]],d)).length; return {done,need:need.length,p:csPct(done,need.length)}; }
+function csProg(o,q){ const M=csOrgR(o).mile||{}, need=CS_MILES.filter(d=>d[1]<=q&&csMCnt(d)), done=need.filter(d=>csMileDone(M[d[0]],d,o)).length; return {done,need:need.length,p:csPct(done,need.length)}; }
 function csGoal(o,q){ const J=((S.consJudge||{})[q]||{})[o]||{}, R=((csOrgR(o).rep||{})[q])||{};
   const t=+(stTarget1(csYear(),o).cls)||0, L=csAutoCls(o), auto=L&&t?csPct(L.length,t):null;
   const v=J.goal!=null&&J.goal!==''?+J.goal:R.goal!=null&&R.goal!==''?+R.goal:auto; return {p:v,auto,kpi:t,n:L?L.length:null,src:J.goal!=null&&J.goal!==''?'위원회 수정':R.goal!=null&&R.goal!==''?'대학 입력':auto!=null?'자동':'' }; }
@@ -6241,7 +6251,7 @@ function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csY
   const nos=U.filter(o=>!(csOrgR(o).sub||{})[ym]); if(nos.length) todo.push({d:csMileDueOf(ym),who:nos.map(o=>o.replace('대학교','대')).join(' · '),t:`${+ym.slice(5)}월 마일스톤 점검표 제출`,late:csMileDueOf(ym)<t,n:`제출 ${U.length-nos.length}/${U.length}`});
   todo.sort((a,b)=>a.d.localeCompare(b.d));
   return `<div class="row" style="gap:8px;flex-wrap:wrap">${csQSeg('dash',q)}<span class="small muted">사업 연도 ${csYear()}</span></div>
-   <div class="cs-kps">${csKp(U.length+'개교','참여대학')}${csKp(`${cnt('g')} · ${cnt('y')} · ${cnt('r')}`,'Green · Yellow · Red')}${csKp(CS_MILES.filter(d=>d[1]<=q).length+'개','누적 예정 마일스톤')}${csKp(nos.length+'개교',`${+ym.slice(5)}월 점검표 미제출`,nos.length?'lv-warn':'')}${csKp(lateG+'건','기한 지난 미회신 공문',lateG?'lv-crit':'')}</div>
+   <div class="cs-kps">${csKp(U.length+'개교','참여대학')}${csKp(`${cnt('g')} · ${cnt('y')} · ${cnt('r')}`,'Green · Yellow · Red')}${csKp(CS_MILES.filter(d=>d[1]<=q&&csMCnt(d)).length+'개','누적 예정 마일스톤')}${csKp(nos.length+'개교',`${+ym.slice(5)}월 점검표 미제출`,nos.length?'lv-warn':'')}${csKp(lateG+'건','기한 지난 미회신 공문',lateG?'lv-crit':'')}</div>
    ${S.ui.stLoaded?'':'<div class="small muted">운영 통계 자료를 불러오는 중이라 목표 달성률이 잠시 비어 있을 수 있습니다.</div>'}
    <div class="cs-cards">${st.map(x=>`<section class="cs-card" data-act="csgo" data-v="${esc(x.o)}"><div class="row" style="gap:6px"><b style="flex:1">${esc(x.o)}${x.o==='호서대학교'?' <span class="chip">주관</span>':''}</b>${csSig(x.fin)}</div>
      <div class="cs-rates">${[['목표 달성률',x.g.p],['사업 진행률',x.p.p],['예산 집행률',x.b.p]].map(([l,p])=>`<span class="small muted">${l}</span>${csBar(p)}<b class="${csRateC(p)}">${p==null?'-':p+'%'}</b>`).join('')}</div>
@@ -6253,14 +6263,14 @@ function csPickOrg(k){ if(csMine()) return csMine(); const U=CS_UNIVS(); let o=S
 const csOrgSel = o => csMine()?`<b>${esc(o)}</b>`:`<select id="cs-org" aria-label="대학">${CS_UNIVS().map(x=>`<option ${x===o?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
 function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), ym=S.ui.csYm||csYm(), sub=(D.sub||{})[ym], due=csMileDueOf(ym), adm=!csMine(), lockM=!adm&&!!(sub||(D.sub||{})[csYm()]);
   const okd=(D.subOk||{})[ym], fx=(D.subFix||{})[ym], fixOpen=fx&&!sub, reSub=fx&&sub;
-  const pr=csProg(o,q), todoN=CS_MILES.filter(d=>d[1]===q&&!csMileDone(M[d[0]],d)).length, fixN=CS_MILES.filter(d=>(M[d[0]]||{}).st==='fix').length;
+  const pr=csProg(o,q), todoN=CS_MILES.filter(d=>d[1]===q&&csMCnt(d)&&!csMileDone(M[d[0]],d,o)).length, fixN=CS_MILES.filter(d=>(M[d[0]]||{}).st==='fix').length;
   const months=[]; for(let i=0;i<12;i++){ const d=new Date(csYear(),2+i,1); months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
   const open=S.ui.csMq||{[q]:true};
-  const row=d=>{ const it=M[d[0]]||{}, cp=`consOrg.${o}.mile.${d[0]}`, done=csMileDone(it,d), auto=d[5]?csAutoCls(o,d[5]):null, dis=lockM&&it.st!=='fix'?'disabled':'';
+  const row=d=>{ const it=M[d[0]]||{}, cp=`consOrg.${o}.mile.${d[0]}`, done=csMileDone(it,d,o), auto=csMAuto(o,d), dis=lockM&&it.st!=='fix'?'disabled':'', ex=!csMCnt(d);
     const inp=d[4]==='ox'?`<span class="cs-ox">${['O','X'].map(v=>`<button type="button" ${dis} class="${it.v===v?'on':''}" data-act="csox" data-o="${esc(o)}" data-n="${d[0]}" data-v="${v}">${v}</button>`).join('')}</span>`
-      :`<input type="number" min="0" ${dis} style="width:64px" data-cp="${cp}.v" data-cat="${cp}" value="${esc(it.v??'')}" aria-label="${d[4]==='c'?'건수':'횟수'}"> <span class="small muted">${d[4]==='c'?'건':'회'}</span>`;
+      :`<input type="number" min="0" ${dis} style="width:64px" data-cp="${cp}.v" data-cat="${cp}" value="${esc(it.v??'')}" ${d[4]==='cls'&&auto?`placeholder="${auto.length}"`:''} aria-label="${d[4]==='c'?'건수':d[4]==='cls'?'학급 수':'횟수'}"> <span class="small muted">${csMUnit(d)}</span>`;
     const stc=it.st==='ok'?'<span class="chip ok">확인 완료</span>':it.st==='fix'?`<span class="chip warn" title="${esc(it.fixWhy||'')}">보완 요청</span>`:done?'<span class="chip">확인 전</span>':'<span class="chip">입력 전</span>';
-    return `<tr><td class="mono muted">${d[0]}</td><td>${esc(d[2])}${auto&&auto.length?`<div class="small lv-ok">운영 목록: ${esc(d[5])} ${auto.length}학급</div>`:''}</td><td class="small muted">예: ${esc(d[3])}${d[4]==='c'?'<div>0건이면 해당 없음</div>':''}</td><td class="nowrap">${inp}</td>
+    return `<tr class="${ex?'muted':''}"><td class="mono muted">${CS_MNO[d[0]]}</td><td>${esc(d[2])}${ex?` <span class="chip sm" title="${d[6].ex}년에 새로 넣은 항목 · 진행률·감점에 넣지 않음">${d[6].ex}년 점수 미반영</span>`:''}${auto&&auto.length?`<div class="small lv-ok">운영 목록: ${d[5]==='학교밖'?`학교밖 ${CS_QN[d[1]].replace(/^\d분기 /,'')} 운영`:esc(d[5])} ${auto.length}학급${d[4]==='cls'&&(it.v==null||it.v==='')?' · 실적에 자동 반영':''}</div>`:''}</td><td class="small muted">예: ${esc(d[3])}${d[4]==='c'?'<div>0건이면 해당 없음</div>':''}</td><td class="nowrap">${inp}</td>
      <td class="nowrap">${stc}${adm?`<div class="row" style="gap:2px;margin-top:3px;flex-wrap:nowrap"><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="ok">확인</button><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="fix">보완</button></div>`:''}${it.st==='fix'&&it.fixWhy?`<div class="small lv-warn">${esc(it.fixWhy)}</div>`:''}</td>
      <td><input ${dis} data-cp="${cp}.note" data-cat="${cp}" value="${esc(it.note||'')}" placeholder="비고" style="width:100%"></td></tr>`; };
   return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}<span class="small muted">점검 기준월</span><select id="cs-ym">${months.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${m.slice(0,4)}년 ${+m.slice(5)}월</option>`).join('')}</select><button class="btn sm" data-act="csxls-mile" data-q="${q}" data-o="${esc(o)}" title="마일스톤 점검표 양식(엑셀)으로 받기">양식으로 받기</button>
@@ -6270,9 +6280,9 @@ function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), y
    ${lockM?`<div class="iss lv-info small">제출한 점검표는 고칠 수 없습니다. 호서대가 「보완」을 요청한 항목만 고칠 수 있고, 다른 수정이 필요하면 호서대에 요청해 주세요.</div>`:''}
    <div class="cs-kps">${csKp(`${pr.done} / ${pr.need}`,'누적 완료 / 누적 예정')}${csKp(pr.p==null?'-':pr.p+'%','사업 진행률',csRateC(pr.p))}${csKp(todoN+'개','이번 분기 미완료')}${csKp(fixN+'개','보완 요청',fixN?'lv-warn':'')}</div>
    <div class="tw"><table class="cs-mt"><thead><tr><th style="width:36px">연번</th><th>마일스톤</th><th>근거 예시 (증빙 자료)</th><th style="width:130px">실적</th><th style="width:150px">확인</th><th style="width:16%">비고</th></tr></thead><tbody>
-   ${[1,2,3,4].map(qq=>`<tr class="cs-qh" data-act="csmq" data-v="${qq}"><td colspan="6">${open[qq]?'▾':'▸'} ${CS_QN[qq]}${qq===q?' · 이번 분기':''} <span class="muted" style="font-weight:400">· 완료 ${CS_MILES.filter(d=>d[1]===qq&&csMileDone(M[d[0]],d)).length}/${CS_MILES.filter(d=>d[1]===qq).length}</span></td></tr>${open[qq]?CS_MILES.filter(d=>d[1]===qq).map(row).join(''):''}`).join('')}
+   ${[1,2,3,4].map(qq=>`<tr class="cs-qh" data-act="csmq" data-v="${qq}"><td colspan="6">${open[qq]?'▾':'▸'} ${CS_QN[qq]}${qq===q?' · 이번 분기':''} <span class="muted" style="font-weight:400">· 완료 ${CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)&&csMileDone(M[d[0]],d,o)).length}/${CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)).length}</span></td></tr>${open[qq]?CS_MILES.filter(d=>d[1]===qq).map(row).join(''):''}`).join('')}
    </tbody></table></div>
-   <div class="small muted">완료 기준: O 표시, 또는 횟수 1회 이상. 민원은 0건(해당 없음)도 완료. 해당하지 않는 마일스톤은 사업관리위원회 승인 후 비고에 대체 과업을 적어 주세요. 매월 마감(기본 ${csCfg().mileDay}일)까지 「점검표 제출」을 눌러야 성실도 감점이 없습니다.</div>`; }
+   <div class="small muted">완료 기준: O 표시, 또는 횟수·학급 수 1 이상. 민원은 0건(해당 없음)도 완료. 학교밖 학급 수는 운영 목록(그 분기에 시작한 학교밖 학급)으로 자동 채움, 다르면 고쳐 입력. 해당하지 않는 마일스톤은 사업관리위원회 승인 후 비고에 대체 과업을 적어 주세요. 매월 마감(기본 ${csCfg().mileDay}일)까지 「점검표 제출」을 눌러야 성실도 감점이 없습니다.</div>`; }
 /* ---------- 제출 자료 통합: 대학별 제출 상태 + 운영 보고 통합 표 + 양식 내려받기 ---------- */
 function csSum(){ const q=S.ui.csSq||csQNow(), U=CS_UNIVS(), ym=csYm(), pc=(a,b)=>b?Math.round(a/b*1000)/10+'%':'-';
   const stR=o=>{ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt?(R.ok?'<span class="chip ok">확인 완료</span>':'<span class="chip info">제출 · 확인 대기</span>'):R.fix?'<span class="chip warn">보완 요청</span>':'<span class="chip">미제출</span>'; };
@@ -6349,9 +6359,23 @@ async function hxRepAll(q,U){ const T=await hxTpl('rep_all'); let x=T.files.find
   const joinF=f=>U.map(o=>repOf(o)[f]?'['+csUS(o)+'] '+repOf(o)[f]:'').filter(Boolean).join('\n');
   x=hxParaAfter(x,'나. 우수사례',joinF('best')); x=hxParaAfter(x,'다. 건의사항',joinF('ask'));
   return hxPack(T,x); }
+/* 마일스톤 점검표 한글 양식의 표(1번)를 지금 마일스톤 목록으로 다시 짬: 분기 첫 줄(구분 칸 세로 병합)은 그 분기 원래 줄을, 나머지는 보통 줄을 본뜸 */
+function hxMileTbl(x){ const T=hxTables(x)[1]; if(!T) return x; let tx=x.slice(T[0],T[1]); const rows=tx.match(/<hp:tr>[\s\S]*?<\/hp:tr>/g)||[]; if(rows.length<3) return x;
+  const head=rows[0], firsts=rows.slice(1).filter(r=>/colAddr="0" rowAddr="/.test(r)), normal=rows.slice(1).find(r=>!/colAddr="0" rowAddr="/.test(r)); if(firsts.length<4||!normal) return x;
+  const H=+((normal.match(/<hp:cellSz width="\d+" height="(\d+)"/)||[])[1]||282);
+  const setC=(row,c,v)=>{ const mk=row.match(new RegExp('<hp:cellAddr colAddr="'+c+'" rowAddr="\\d+"\\/>')); if(!mk) return row; const i=row.indexOf(mk[0]), a=row.lastIndexOf('<hp:tc ',i); return row.slice(0,a)+hxSetIn(row.slice(a,i),v)+row.slice(i); };
+  let out=head, r=1;
+  [1,2,3,4].forEach((qq,qi)=>{ const L=CS_MILES.filter(d=>d[1]===qq); L.forEach((d,j)=>{ let row=(j===0?firsts[qi]:normal).replace(/rowAddr="\d+"/g,'rowAddr="'+r+'"');
+      if(j===0){ const a=row.indexOf('<hp:cellAddr colAddr="0"'), b=row.indexOf('</hp:tc>',a); row=row.slice(0,a)+row.slice(a,b).replace(/rowSpan="\d+"/,'rowSpan="'+L.length+'"').replace(/(<hp:cellSz width="\d+" height=")\d+"/,'$1'+(H*L.length)+'"')+row.slice(b); }
+      row=setC(row,1,String(CS_MNO[d[0]])); row=setC(row,2,d[2]+(csMCnt(d)?'':' ('+d[6].ex+'년 점수 미반영)')); row=setC(row,3,d[3]); row=setC(row,4,d[4]==='ox'?'O / X':'(    )'+csMUnit(d)); row=setC(row,5,' ');
+      out+=row; r++; }); });
+  const a=tx.indexOf(head), z=tx.lastIndexOf(rows[rows.length-1])+rows[rows.length-1].length;
+  tx=tx.slice(0,a)+out+tx.slice(z); tx=tx.replace(/(<hp:tbl\b[^>]*?rowCnt=")(\d+)"/,(m,p1)=>p1+r+'"');
+  return x.slice(0,T[0])+tx+x.slice(T[1]); }
 async function hxMileOne(q,o){ const T=await hxTpl('mile'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const D=csOrgR(o), M=D.mile||{}, ym=csYm(), sb=(D.sub||{})[ym];
   x=hxCells(x,0,{'0,1':o,'0,3':ym.slice(0,4)+'년 ('+(+ym.slice(5))+')월','1,3':sb?String(sb).slice(0,10).replace(/-/g,'. ')+'.':''});
-  const c1={}; CS_MILES.forEach(d=>{ const it=M[d[0]]||{}, v=it.v; if(v!=null&&v!=='') c1[d[0]+',4']=d[4]==='ox'?v:'( '+v+' )'+(d[4]==='c'?'건':'회'); if(it.note) c1[d[0]+',5']=it.note; }); x=hxCells(x,1,c1);
+  x=hxMileTbl(x);
+  const c1={}; CS_MILES.forEach(d=>{ const it=M[d[0]]||{}, v=csMV(it,d,o), rw=CS_MNO[d[0]]; if(v!=null&&v!=='') c1[rw+',4']=d[4]==='ox'?v:'( '+v+' )'+csMUnit(d); if(it.note) c1[rw+',5']=it.note; }); x=hxCells(x,1,c1);
   const c2={}; [1,2,3,4].forEach(qq=>{ if(qq>q) return; const p=csProg(o,qq); c2[qq+',3']=String(p.done); c2[qq+',4']=(p.p==null?'-':p.p)+'%'; c2[qq+',5']=CS_JL[csFinal(o,qq)]||''; }); x=hxCells(x,2,c2);
   return hxPack(T,x); }
 async function csHwpRep(q,orgs){ const all=orgs.length>1, Y=csYear(), qn=CS_QN[q].replace(/ .*/,'');
@@ -6420,12 +6444,12 @@ async function csXlsRep(q,orgs){ if(typeof ExcelJS==='undefined') throw new Erro
   const out=await wb.xlsx.writeBuffer(); await saveBinaryBuf(out,`${csYear()} ${CS_QN[q].replace(/ .*/,'')} 운영 보고 ${all?'통합':csUS(U[0])}.xlsx`,'운영 보고 양식을 내려받았습니다'); }
 async function csXlsMile(q,orgs,ret){ if(typeof ExcelJS==='undefined') throw new Error('엑셀 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
   const K=csXlsKit(), wb=new ExcelJS.Workbook(), P='0.0%', all=orgs.length>1, U=orgs, ym=csYm();
-  const val=(o,d)=>{ const it=(csOrgR(o).mile||{})[d[0]]||{}; if(it.v==null||it.v==='') return ''; return d[4]==='ox'?it.v:`${it.v}${d[4]==='c'?'건':'회'}`; };
-  const qcum=qq=>CS_MILES.filter(d=>d[1]<=qq).length;
+  const val=(o,d)=>{ const it=(csOrgR(o).mile||{})[d[0]]||{}, v=csMV(it,d,o); if(v==null||v==='') return ''; return d[4]==='ox'?v:`${v}${csMUnit(d)}`; };
+  const qcum=qq=>CS_MILES.filter(d=>d[1]<=qq&&csMCnt(d)).length;
   if(all){ const n=U.length, ws=wb.addWorksheet('통합'); [8,6,30,22].forEach((w,i)=>ws.getColumn(i+1).width=w); for(let c=5;c<5+n;c++) ws.getColumn(c).width=9;
     let r=1; K.title(ws,r,`${csYear()}년 늘봄학교 고도화 공통 마일스톤 점검표 (통합 · ${+ym.slice(5)}월 기준)`,4+n); r+=2;
     ['구분','연번','마일스톤','완료 기준(증빙)',...U.map(csUS)].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
-    [1,2,3,4].forEach(qq=>{ const L=CS_MILES.filter(d=>d[1]===qq); if(!L.length) return; K.box(ws,r,1,r+L.length-1,1,`${qq}분기`,{b:1}); L.forEach(d=>{ K.put(ws,r,2,d[0]); K.put(ws,r,3,d[2],{al:'left'}); K.put(ws,r,4,d[3],{al:'left'}); U.forEach((o,j)=>K.put(ws,r,5+j,val(o,d))); r++; }); });
+    [1,2,3,4].forEach(qq=>{ const L=CS_MILES.filter(d=>d[1]===qq); if(!L.length) return; K.box(ws,r,1,r+L.length-1,1,`${qq}분기`,{b:1}); L.forEach(d=>{ K.put(ws,r,2,CS_MNO[d[0]]); K.put(ws,r,3,d[2]+(csMCnt(d)?'':` (${d[6].ex}년 점수 미반영)`),{al:'left'}); K.put(ws,r,4,d[3],{al:'left'}); U.forEach((o,j)=>K.put(ws,r,5+j,val(o,d))); r++; }); });
     r++; K.sec(ws,r,'사업 진행률 · 판정'); r++; ['분기','누적 예정',...U.map(csUS)].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
     [1,2,3,4].forEach(qq=>{ K.put(ws,r,1,`${qq}분기`); K.put(ws,r,2,qcum(qq)); U.forEach((o,j)=>{ const p=csProg(o,qq); K.put(ws,r,3+j,qq<=q?`${p.done}개 · ${p.p==null?'-':p.p+'%'} · ${(CS_JL[csFinal(o,qq)]||'-').replace(/\(.*\)/,'')}`:''); }); r++; });
   }
@@ -6434,9 +6458,9 @@ async function csXlsMile(q,orgs,ret){ if(typeof ExcelJS==='undefined') throw new
     const D=csOrgR(o), sb=(D.sub||{})[ym]; K.put(ws,r,1,'대 학 명',{h:1}); K.box(ws,r,2,r,3,o); K.put(ws,r,4,'점검 기준월',{h:1}); K.box(ws,r,5,r,6,`${ym.slice(0,4)}년 ${+ym.slice(5)}월`); r++;
     K.put(ws,r,1,'작 성 자',{h:1}); K.box(ws,r,2,r,3,''); K.put(ws,r,4,'작 성 일',{h:1}); K.box(ws,r,5,r,6,sb?String(sb).slice(0,10).replace(/-/g,'.'):''); r+=2;
     ['구분','연번','마일스톤','완료 기준(증빙)','실적','비고'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
-    [1,2,3,4].forEach(qq=>{ const L=CS_MILES.filter(d=>d[1]===qq); if(!L.length) return; K.box(ws,r,1,r+L.length-1,1,`${qq}분기`,{b:1}); L.forEach(d=>{ const it=(D.mile||{})[d[0]]||{}; K.put(ws,r,2,d[0]); K.put(ws,r,3,d[2],{al:'left'}); K.put(ws,r,4,d[3],{al:'left'}); K.put(ws,r,5,val(o,d)); K.put(ws,r,6,it.note||'',{al:'left'}); r++; }); });
+    [1,2,3,4].forEach(qq=>{ const L=CS_MILES.filter(d=>d[1]===qq); if(!L.length) return; K.box(ws,r,1,r+L.length-1,1,`${qq}분기`,{b:1}); L.forEach(d=>{ const it=(D.mile||{})[d[0]]||{}; K.put(ws,r,2,CS_MNO[d[0]]); K.put(ws,r,3,d[2]+(csMCnt(d)?'':` (${d[6].ex}년 점수 미반영)`),{al:'left'}); K.put(ws,r,4,d[3],{al:'left'}); K.put(ws,r,5,val(o,d)); K.put(ws,r,6,it.note||'',{al:'left'}); r++; }); });
     r++; K.sec(ws,r,'□ 사업 진행률 산출 및 판정'); r++; ['구분','분기 마일스톤','누적 예정','누적 완료','사업 진행률','판정'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
-    [1,2,3,4].forEach(qq=>{ const p=csProg(o,qq), on=qq<=q; K.put(ws,r,1,`${qq}분기`); K.put(ws,r,2,CS_MILES.filter(d=>d[1]===qq).length); K.put(ws,r,3,qcum(qq)); K.put(ws,r,4,on?p.done:''); K.put(ws,r,5,on&&p.need?p.done/p.need:'',{fmt:P}); K.put(ws,r,6,on?CS_JL[csFinal(o,qq)]||'-':''); r++; });
+    [1,2,3,4].forEach(qq=>{ const p=csProg(o,qq), on=qq<=q; K.put(ws,r,1,`${qq}분기`); K.put(ws,r,2,CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)).length); K.put(ws,r,3,qcum(qq)); K.put(ws,r,4,on?p.done:''); K.put(ws,r,5,on&&p.need?p.done/p.need:'',{fmt:P}); K.put(ws,r,6,on?CS_JL[csFinal(o,qq)]||'-':''); r++; });
   });
   wb.worksheets.forEach(w=>{ w.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}}; });
   const out=await wb.xlsx.writeBuffer(); if(ret) return out; await saveBinaryBuf(out,`${csYear()} 마일스톤 점검표 ${all?'통합':csUS(U[0])} (${+ym.slice(5)}월).xlsx`,'마일스톤 점검표를 내려받았습니다'); }
@@ -8158,7 +8182,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.108';
+const APP_VER = '11.109';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
