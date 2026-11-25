@@ -2247,7 +2247,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.87';
+const LIB_VER='11.88';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6019,7 +6019,7 @@ const CS_QN = ['','1분기 (3~5월)','2분기 (6~8월)','3분기 (9~11월)','4�
 const CS_BUD = ['인건비','장학금','교육·연구 프로그램 개발·운영비','교육·연구 환경개선비','실험·실습 장비 및 기자재 구입·운영비','성과 활용·확산 지원비','그 밖의 사업운영 경비','간접비'];
 const CS_PER = ['1학기','여름방학','2학기','겨울방학','학교밖','한마당','집합형(외부)','집합형(캠퍼스)'];
 const CS_SIG = {g:['Green 정상','cs-g'],y:['Yellow 주의','cs-y'],r:['Red 지원','cs-r'],n:['판정 전','cs-n']};
-const CS_GKINDS = {univ:[['meet','협의회 참석 요청'],['work','업무 진행 협조'],['sub','제출 협조 요청'],['etc','기타']],school:[['op','운영 협조 요청'],['sat','만족도 조사 협조'],['att','출석부 제출 협조'],['etc','기타']]};
+const CS_GKINDS = {univ:[['meet','협의회 참석 요청'],['perf','운영 실적 입력 요청'],['work','업무 진행 협조'],['sub','제출 협조 요청'],['etc','기타']],school:[['op','운영 협조 요청'],['sat','만족도 조사 협조'],['att','출석부 제출 협조'],['etc','기타']]};
 const CS_DEF = () => ({pen:{gong:2,mile:2,meet:1},base:100,cut:85,mileDay:25,mileDue:{},mileFrom:csYm(),sender:'앵커늘봄총괄센터장',docPre:'앵커늘봄총괄센터',tel:'041-423-2420',mail:'',fiscal:''});
 const csToday = () => kstNow().slice(0,10);
 const csYm = () => kstNow().slice(0,7);
@@ -6151,6 +6151,7 @@ function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep|
 function csGTpl(kind,tgt,def){ const T=((S.consCfg||{}).gtpl||{})[`${tgt}:${kind}`]; if(!def&&T&&(T.t!=null||T.b!=null)){ const D=csGTpl(kind,tgt,true); return [T.t!=null?T.t:D[0], T.b!=null?T.b:D[1]]; }
   const c=csCfg(), sn=season().name, A={
   meet:['{차수} 실무협의회 참석 요청','1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화(1권역) 컨소시엄 실무협의회를 다음과 같이 개최하오니 사업 담당자가 참석할 수 있도록 협조하여 주시기 바랍니다.\n\n 가. 일    시: \n 나. 장    소: \n 다. 참석 대상: 대학별 사업 담당자\n 라. 회신 사항: 참석자 명단 ({기한}까지)\n 마. 문 의 처: {보내는곳} ({전화번호})\n\n붙임: 실무협의회 안건 1부. 끝.'],
+  perf:['충남 앵커늘봄학교 고도화(1권역) 컨소시엄 운영 실적 입력 협조 요청','1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화(1권역) 컨소시엄 사업의 운영 실적을 체계적으로 관리하고자 온라인 운영 점검 시스템을 운영하오니, 대학별 사업 담당자가 운영 실적을 입력할 수 있도록 협조하여 주시기 바랍니다.\n\n 가. 입력 내용\n  1) 마일스톤 점검표: 매월 입력·제출 (제출 후 수정 불가, 보완 요청 항목만 수정)\n  2) 분기 운영 보고: 분기별 운영 실적·예산 집행·우수 사례 입력·제출\n  3) 컨소시엄 공문 회신 확인\n 나. 최초 입력 기한: {기한}\n 다. 접속 방법: 대학별 접속 링크로 접속 → 처음 1회 담당자 등록(이름·연락처·비밀번호) → 이후 같은 링크에서 로그인\n 라. 대학별 접속 링크\n{접속링크}\n 마. 문 의 처: {보내는곳} ({전화번호}, {메일})\n\n※ 접속 링크는 대학별로 다르며, 외부에 공유하지 않도록 유의하여 주시기 바랍니다. 끝.'],
   work:['충남 앵커늘봄학교 고도화 사업 업무 협조 요청','1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화(1권역) 컨소시엄 사업과 관련하여 다음과 같이 협조를 요청드립니다.\n\n 가. 협조 내용: \n 나. 기    한: {기한}\n 다. 문 의 처: {보내는곳} ({전화번호}). 끝.'],
   sub:['충남 앵커늘봄학교 고도화 자료 제출 요청','1. 귀 대학의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화(1권역) 컨소시엄 대학별 자료를 취합하고자 하오니 다음과 같이 제출하여 주시기 바랍니다.\n\n 가. 제출자료: \n 나. 제출기한: {기한}\n 다. 제출방법: 운영 관리 시스템 등록 또는 e-mail 제출({메일})\n 라. 문 의 처: {보내는곳} (전화번호: {전화번호})\n\n붙임: 제출 양식 1부. 끝.'],
   op:['{차수} 초등방과후 프로그램 운영 협조 요청','1. 귀 학교의 무궁한 발전을 기원합니다.\n\n2. 충남 앵커늘봄학교 고도화 사업의 일환으로 {차수} 초등방과후 프로그램 운영이 확정되어 붙임과 같이 안내하오니, 원활한 운영을 위해 협조하여 주시기 바랍니다.\n\n 가. 운영 기간: {운영기간}\n 나. 운영 학교(기관): {대상수}곳\n 다. 협조 사항: 수업 장소 준비, 학생 안내, 강사 출입 협조\n 라. 문 의 처: {보내는곳} ({전화번호})\n\n붙임: {차수} 운영 확정 목록 1부. 끝.'],
@@ -6161,7 +6162,7 @@ function csGTpl(kind,tgt,def){ const T=((S.consCfg||{}).gtpl||{})[`${tgt}:${kind
 function csGFill(g,s,part){ const c=csCfg(), F=matchRows().filter(r=>r.status==='final'), st=F.map(r=>r.start).filter(Boolean).sort(), en=F.map(r=>r.end).filter(Boolean).sort();
   const dd=d=>{ if(!d) return '(  )'; const [y,m,x]=d.split('-'); return `${y}.${m}.${x}(${DOWS[dowOf(d)]})`; };
   return String(s||'').replace(/\{차수\}/g,`${csYear()}년 ${season().name.replace(/^\d{4}\s*/,'')}`).replace(/\{기한\}/g,m=>part?m:g.due?dd(g.due)+(g.dueT?' '+g.dueT:''):'(  )').replace(/\{보내는곳\}/g,'호서대학교 앵커늘봄총괄센터').replace(/\{전화번호\}/g,m=>part?m:(g.tel||'(  )')).replace(/\{메일\}/g,m=>part?m:(g.mail||'(  )'))
-    .replace(/\{운영기간\}/g,st.length?`${dd(st[0])} ~ ${dd(en[en.length-1])}`:'(  )').replace(/\{대상수\}/g,String((g.rc||[]).length)); }
+    .replace(/\{운영기간\}/g,st.length?`${dd(st[0])} ~ ${dd(en[en.length-1])}`:'(  )').replace(/\{대상수\}/g,String((g.rc||[]).length)).replace(/\{접속링크\}/g,m=>part?m:univJoinText().split('\n').map(x=>'  - '+x).join('\n')); }
 const csRcName = (g,r) => g.tgt==='univ'?`${r.name}총장`:`${r.name.replace(/\s/g,'')}${/학교$/.test(r.name)?'장':''}`;
 function csGTplV(){ const sel=S.ui.csTk||'univ:meet', [tg,k]=sel.split(':'), [t,b]=csGTpl(k,tg), cus=!!(((S.consCfg||{}).gtpl||{})[sel]), cp=`consCfg.gtpl.${sel}`;
   const item=(tgt,K,l)=>`<button type="button" class="${sel===tgt+':'+K?'on':''}" data-act="cstk" data-v="${tgt}:${K}">${esc(l)}${(((S.consCfg||{}).gtpl||{})[tgt+':'+K])?' <i class="cs-mod">수정됨</i>':''}</button>`;
@@ -6170,14 +6171,14 @@ function csGTplV(){ const sel=S.ui.csTk||'univ:meet', [tg,k]=sel.split(':'), [t,
    <div class="panel stack" style="gap:10px;flex:1;min-width:0"><div class="row between"><b>${esc((CS_GKINDS[tg].find(x=>x[0]===k)||[0,''])[1])} <span class="muted small" style="font-weight:400">· ${tg==='univ'?'타대학':'학교 · 기관'}</span></b>${cus?`<button class="btn sm" data-act="cstkreset" data-v="${sel}">처음 문안으로 되돌리기</button>`:'<span class="small muted">처음 제공된 문안</span>'}</div>
     <label class="f">제목<input data-cp="${cp}.t" value="${esc(t)}"></label>
     <label class="f">본문<textarea data-cp="${cp}.b" rows="18" style="font-family:inherit;line-height:1.6">${esc(b)}</textarea></label>
-    <div class="small muted">자리표시: {차수} {운영기간} {대상수} {보내는곳} 은 공문을 만들 때, {기한} {전화번호} {메일} 은 「본문 복사」 때 채워집니다.</div></div></div>`; }
+    <div class="small muted">자리표시: {차수} {운영기간} {대상수} {보내는곳} 은 공문을 만들 때, {기한} {전화번호} {메일} {접속링크}(대학별 접속 링크 목록) 는 「본문 복사」·「기안문 파일 받기」 때 채워집니다.</div></div></div>`; }
 function csGNew(kind,tgt){ const [t,b]=csGTpl(kind,tgt); let rc;
   if(tgt==='univ') rc=CS_UNIVS().filter(o=>o!=='호서대학교').map(name=>({name}));
   else { const F=matchRows().filter(r=>r.status==='final'&&r.status!=='cancel'); rc=[...new Set(F.map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko')).map(name=>({name})); }
   const g={id:'g'+Date.now().toString(36),tgt,kind,title:'',body:b,reply:tgt==='univ'&&kind!=='work'?true:kind==='att',due:'',sent:'',no:'',rc,at:Date.now()}; const last=csGong().find(x=>x.tel||x.mail)||{}; g.tel=last.tel||''; g.mail=last.mail||''; g.title=csGFill(g,t,true); g.body=csGFill(g,b,true);
   S.gongmun=S.gongmun||{items:[]}; S.gongmun.items=[g,...(S.gongmun.items||[])]; S.ui.csGopen=g.id; return g; }
 function csGSt(g){ const t=csToday(), rc=g.rc||[], left=rc.filter(r=>!r.rep&&!r.ex).length; if(!g.sent) return ['기안 준비','']; if(!g.reply) return ['발송 완료','ok']; if(!left) return ['회신 완료','ok']; if(g.due&&t>g.due) return ['기한 지남','x']; return ['회신 받는 중','info']; }
-function csGongV(){ const f=S.ui.csGf||'', L=csGong().filter(g=>!f||(f==='late'?csGSt(g)[0]==='기한 지남':g.tgt===f)), op=csGong().find(g=>g.id===S.ui.csGopen);
+function csGongV(){ if(!S.adminOrg&&!S.univJoin&&!S.ui.ujLoading){ S.ui.ujLoading=1; univJoinCall('',false).then(x=>{ S.univJoin=x||{}; }).catch(()=>{ S.univJoin={}; }).finally(()=>{ S.ui.ujLoading=0; }); } const f=S.ui.csGf||'', L=csGong().filter(g=>!f||(f==='late'?csGSt(g)[0]==='기한 지남':g.tgt===f)), op=csGong().find(g=>g.id===S.ui.csGopen);
   const n=k=>csGong().filter(g=>!k||(k==='late'?csGSt(g)[0]==='기한 지남':g.tgt===k)).length;
   return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="seg2">${[['','전체'],['univ','타대학'],['school','학교 · 기관'],['late','기한 지남']].map(([k,l])=>`<button class="${f===k?'on':''}" data-act="csgf" data-v="${k}">${l} ${n(k)}</button>`).join('')}</div><span style="flex:1"></span>
     <select id="cs-gnew" aria-label="새 공문 종류"><option value="">새 공문…</option><optgroup label="타대학">${CS_GKINDS.univ.map(([k,l])=>`<option value="univ:${k}">${l}</option>`).join('')}</optgroup><optgroup label="학교 · 기관">${CS_GKINDS.school.map(([k,l])=>`<option value="school:${k}">${l}</option>`).join('')}</optgroup></select></div>
