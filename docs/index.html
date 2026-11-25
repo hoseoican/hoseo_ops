@@ -730,7 +730,7 @@ if(EMBED) document.documentElement.classList.add('embed');
   html.embed #side { padding-top: 10px; }
   /* 운영 관리 9번 안: 운영 관리 화면과 같은 틀(가운데 1320px · 떠 있는 왼쪽 메뉴 카드 · 회색 바탕 위 제목 · 같은 글자 크기) */
   html.embed body { background: #f4f3f2; }
-  html.embed #app { max-width: 1320px; margin: 0 auto; padding: 18px 16px 24px; box-sizing: border-box; grid-template-columns: 240px minmax(0, 1fr); column-gap: 24px; min-height: 0; }
+  html.embed #app { max-width: 1680px; margin: 0 auto; padding: 18px 16px 24px; box-sizing: border-box; grid-template-columns: 240px minmax(0, 1fr); column-gap: 24px; min-height: 0; }
   html.embed #side { position: sticky; top: 12px; align-self: start; height: auto; max-height: calc(100vh - 24px); border: 1px solid #e3dedd; border-right: 1px solid #e3dedd; border-radius: 14px; background: #fff; padding: 10px 0 12px; box-shadow: 0 1px 0 rgba(40,14,16,.03), 0 1px 3px rgba(40,14,16,.06); }
   html.embed #nav > label { margin: 1px 8px; }
   html.embed #nav .navg { margin: 14px 8px 4px; }
@@ -742,6 +742,7 @@ if(EMBED) document.documentElement.classList.add('embed');
   html.embed #phStep::before { content: "강사서류 › "; }
   html.embed #phName { font-size: 21px; font-weight: 700; letter-spacing: -.02em; margin: 6px 0 2px; }
   html.embed .work { padding: 0 0 8px; }
+  #rvSea.on, #rvKind.on { border-color: var(--hs); color: var(--hs); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -821,11 +822,11 @@ if(EMBED) document.documentElement.classList.add('embed');
 
   <!-- ⓪ 기준정보: 서류 구비·발송 현황 -->
   <section data-sec="review" hidden>
-    <div class="card" style="max-width:1400px">
+    <div class="card">
       <h3>배치 강사 서류 <small id="rvBasis"></small></h3>
       <div class="row" style="margin:0 0 10px;gap:8px;justify-content:space-between;align-items:center">
         <div class="fchips" id="rvFilter" style="margin:0"></div>
-        <input type="text" id="rvQ" placeholder="이름·학교 찾기" autocomplete="off" style="width:180px">
+        <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><select id="rvSea" title="배치 시기" aria-label="배치 시기"></select><select id="rvKind" title="출강 기관" aria-label="출강 기관"><option value="">학교 · 학교밖 전체</option><option value="school">학교</option><option value="out">학교밖</option></select><input type="text" id="rvQ" placeholder="이름·학교 찾기" autocomplete="off" style="width:180px"></div>
       </div>
       <div class="rvwrap"><table class="rvt" id="rvTable"></table></div>
     </div>
@@ -1306,7 +1307,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.25-5';
+var APP_VERSION = '2026.11.25-6';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1492,7 +1493,16 @@ async function openSplit(){
 // 칸: 인적사항·이미지·PDF·이력서. 칸을 누르면 그 강사의 서류를 한 화면에서 보고 보완 표시·검토 완료를 한다
 var RV_COLS=[['rrn','주민번호'],['phone','연락처'],['addr','주소'],['cv','이력'],['sign','서명'],['photo','사진'],['idcard','신분증'],['bank','통장'],['exam','4-1 검사서'],['tb','4-2 결핵'],['grad','5 학력'],['cert','6 자격·경력']];
 var RV_FILTERS=[['all','전체'],['todo','검토 전'],['miss','미제출 있음'],['fix','보완 필요'],['done','검토 완료'],['chg','검토 후 수정'],['unreg','미등록'],['|'],['main','주강사'],['sub','보조강사']];
-var rvF='todo', rvList=[], rvIdx=-1, rvUrls=[];
+var rvF='todo', rvList=[], rvIdx=-1, rvUrls=[], rvSea='', rvKind='';
+/* 서류 검토 「시기 · 출강 기관」: 이 사업 운영현황 전체(모든 학기 파일)에서 그 시기·구분에 배치된 강사만 */
+function rvKindOf(r){ return /학교\s*밖/.test(rowFile(r)) ? 'out' : 'school'; }
+function rvTermOf(r){ var f=rowFile(r), t='', y='';
+  if(rvKindOf(r)==='out'){ t=outTerm(r); var m=/^(\d{4})-(\d{2})/.exec(r.start||''); if(m){ y=+m[1]; if(+m[2]<=2) y--; } }
+  else { var mf=/(20\d\d)\s*[-.]?\s*(?:\(|_)?\s*(1학기|2학기|하계|동계|여름|겨울|1|2)\b/.exec(f)||/(20\d\d)[^\d]{0,6}(1학기|2학기|하계|동계|여름방학|겨울방학)/.exec(f); if(mf){ y=mf[1]; var k=mf[2]; t=/1/.test(k)?'1학기':/2/.test(k)?'2학기':/하계|여름/.test(k)?'여름방학':'겨울방학'; } else { t=dateTerm(r.start); var m2=/^(\d{4})-(\d{2})/.exec(r.start||''); if(m2){ y=+m2[1]; if(+m2[2]<=2) y--; } } }
+  return t ? (y?y+' ':'')+t : ''; }
+function rvTermList(){ var m={}, O=['1학기','여름방학','2학기','겨울방학']; (ops.rows||[]).forEach(function(r){ if(rowBizOk(r)&&r.src!=='직접 추가'){ var t=rvTermOf(r); if(t) m[t]=1; } });
+  return Object.keys(m).sort(function(a,b){ var ya=parseInt(a,10)||0, yb=parseInt(b,10)||0; return ya!==yb ? yb-ya : O.indexOf(b.replace(/^\d+ /,''))-O.indexOf(a.replace(/^\d+ /,'')); }); }
+function rvScoped(){ if(!rvSea && !rvKind) return null; var rows=(ops.rows||[]).filter(function(r){ return rowBizOk(r) && (!rvKind || rvKindOf(r)===rvKind) && (!rvSea || rvTermOf(r)===rvSea); }); return Ops.byPerson(rows); }
 function rvState(p){ if(!p || !p.rv || !p.rv.at) return 'todo'; return (p.updated||0) > p.rv.at+3000 ? 'chg' : 'done'; }
 function rvCell(x, k){
   var p=x.p; if(x.unreg) return {lv:'na', t:'미등록'};
@@ -1517,6 +1527,11 @@ function rvCell(x, k){
   return {lv:'na'};
 }
 function rvBuild(){
+  var SP=rvScoped();
+  if(SP){ var byN={}; SP.forEach(function(o){ byN[String(o.name).replace(/\s/g,'')]=o; });
+    var reg2=people.filter(function(p){ return p.name.trim() && byN[p.name.replace(/\s/g,'')]; }).map(function(p){ var x=rosterInfo(p); x.ops=byN[p.name.replace(/\s/g,'')]; x.schools=x.ops.schools.slice(); return x; });
+    var un2=SP.filter(function(o){ return !personBy(o.name); }).map(function(o){ var p={ id:'u:'+o.name, name:o.name, role:o.role, phone:o.tels[0]||'', schools:o.schools.slice(), updated:0, unreg:true }; return { p:p, name:o.name, miss:[], fix:[], ok:false, send:sendStateOf(p), schools:o.schools.slice(), unreg:true, flagged:o.flagged, ops:o }; });
+    return reg2.concat(un2).sort(function(a,b){ return natSort(a.name||'힣', b.name||'힣'); }); }
   var on=typeof opsLoaded==='function' && opsLoaded(), reg=people.filter(function(p){ return p.name.trim() && (!on || opsPersonOf(p.name)); }).map(rosterInfo);
   var un=on ? unregList() : [];
   return reg.concat(un).sort(function(a,b){ return natSort(a.name||'힣', b.name||'힣'); });
@@ -1544,9 +1559,13 @@ function rvBadge(x){
   return lsubWait(x.p) ? '<span class="badge sent">강사 제출</span>' : '<span class="badge no">검토 전</span>';
 }
 function renderReview(){
+  var TL=rvTermList(); if(rvSea && TL.indexOf(rvSea)<0) rvSea='';
+  $('rvSea').innerHTML='<option value="">전체 시기 (적용 학기)</option>'+TL.map(function(t){ return '<option'+(t===rvSea?' selected':'')+'>'+esc(t)+'</option>'; }).join('');
+  $('rvKind').value=rvKind; $('rvSea').classList.toggle('on', !!rvSea); $('rvKind').classList.toggle('on', !!rvKind);
+  $('rvSea').onchange=function(){ rvSea=this.value; renderReview(); }; $('rvKind').onchange=function(){ rvKind=this.value; renderReview(); };
   var all=rvBuild(), q=$('rvQ').value||'', cnt={};
   RV_FILTERS.forEach(function(f){ if(f[0]!=='|') cnt[f[0]]=all.filter(function(x){ return rvMatch(x, f[0], ''); }).length; });
-  $('rvBasis').textContent='대상 '+all.length+'명 · 검토 완료 '+cnt.done+'명'+(cnt.unreg?' · 미등록 '+cnt.unreg+'명':'');
+  $('rvBasis').textContent=(rvSea||rvKind?[rvSea,rvKind==='out'?'학교밖':rvKind==='school'?'학교':''].filter(Boolean).join(' · ')+' 배치 · ':'')+'대상 '+all.length+'명 · 검토 완료 '+cnt.done+'명'+(cnt.unreg?' · 미등록 '+cnt.unreg+'명':'');
   $('rvFilter').innerHTML=RV_FILTERS.map(function(f){ return f[0]==='|' ? '<span class="sep"></span>' : '<button type="button" data-rvf="'+f[0]+'" class="'+(rvF===f[0]?'on':'')+'">'+f[1]+'<b>'+cnt[f[0]]+'</b></button>'; }).join('');
   each('[data-rvf]', function(b){ b.onclick=function(){ rvF=b.dataset.rvf; renderReview(); }; }, $('rvFilter'));
   rvList=all.filter(function(x){ return rvMatch(x, rvF, q); });
