@@ -2257,7 +2257,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.78';
+const LIB_VER='11.79';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5330,6 +5330,9 @@ function joinLayerHtml(){
    <div class="conds"><div class="conds-h"><span>문자 내용</span><span class="muted small">${smsTo(q)?`받는 번호 <span class="mono">${esc(smsTo(q))}</span> · `:'휴대폰 없음 · '}${smsBytes(joinSmsOf(q))}바이트 · ${smsKind(smsBytes(joinSmsOf(q)))}</span></div><div style="padding:10px 12px" class="stack"><textarea readonly rows="6">${esc(joinSmsOf(q))}</textarea><div class="row"><button class="btn sm" data-act="copytext" data-t="${esc(joinSmsOf(q))}">문자 내용 복사</button>${smsTo(q)?`<button class="btn sm" data-act="copytext" data-t="${esc(smsTo(q))}">번호 복사</button>${smsBrBtn('smsjoin',1,'i-ONE으로 문자 보내기',`data-id="${q.id}"`)}`:''}</div></div></div>
   </div></div></div>`;
 }
+/* 강사서류(9번)가 읽는 배치 확정 강사 목록: 강사서류에 없으면 「서류 없음」으로 자동 등록 */
+window.opsPlacedInstructors = () => { try{ if(S.ui.role!=='admin'||S.adminOrg) return null; const m=new Map(); matchRows().filter(r=>r.status==='final').forEach(r=>[[r.inst,'주강사'],[r.asstPend?'':r.asst,'보조강사']].forEach(([id,role])=>{ if(!id) return; const o=m.get(id)||{id,roles:new Set(),schools:new Set()}; o.roles.add(role); o.schools.add(r.school); m.set(id,o); }));
+  return [...m.values()].map(o=>({id:o.id,role:o.roles.has('주강사')?'주강사':'보조강사',schools:[...o.schools]})); }catch(e){ return null; } };
 /* 배치 확정 강사별 안내 문자 (사무실 문자 시스템 일괄 개별 발송용 엑셀) */
 function instSmsList(kind){
   const by=new Map(); matchRows().filter(r=>r.status==='final'&&(r.inst||r.asst)).forEach(r=>(kind==='asst'?[[r.asstPend?'':r.asst,'보조강사']]:[[r.inst,'']]).forEach(([id,role])=>{ if(!id) return; const t=S.instructors.find(x=>x.id===id); if(!t) return; if(!by.has(id)) by.set(id,{t,items:[]}); by.get(id).items.push({r,role}); }));
@@ -5382,10 +5385,10 @@ const DOC_GUIDE_DEF={main:'https:/'+'/nb.hoseo.ac.kr/VM7HkHtEDOPo',asst:'https:/
 const docGuide=()=>({...DOC_GUIDE_DEF,...(((S.ops||{}).docGuide)||{})});
 const DOC_RO={map:null,at:'',err:'',busy:null};
 function docRosterLoad(force){ if(S.adminOrg||!window.DOCS_API) return Promise.resolve(); if(DOC_RO.map&&!force) return Promise.resolve(); if(DOC_RO.busy) return DOC_RO.busy;
-  DOC_RO.busy=docsCall('roster').then(j=>{ const m={}; (j.people||[]).forEach(x=>{ (m[x.name]=m[x.name]||[]).push(x); }); DOC_RO.map=m; DOC_RO.at=now(); DOC_RO.err=''; })
+  DOC_RO.busy=docsCall('roster').then(j=>{ const m={}, b={}; (j.people||[]).forEach(x=>{ (m[x.name]=m[x.name]||[]).push(x); if(x.opsId) b[x.opsId]=x; }); DOC_RO.map=m; DOC_RO.byId=b; DOC_RO.at=now(); DOC_RO.err=''; })
     .catch(e=>{ DOC_RO.err=e&&e.message||String(e); }).finally(()=>{ DOC_RO.busy=null; }); return DOC_RO.busy; }
 /* true = 서류 없음 · false = 있음 · null = 확인 못 함 */
-function noDocs(t){ if(!DOC_RO.map||!t) return null; const L=DOC_RO.map[String(t.name||'').replace(/\s/g,'')]||[]; if(!L.length) return true; const tel=digits(t.phone).slice(-4), hit=L.find(x=>x.tel&&x.tel===tel)||L[0]; return !(hit.docs>0); }
+function noDocs(t){ if(!DOC_RO.map||!t) return null; const byId=DOC_RO.byId||{}; if(byId[t.id]) return !(byId[t.id].docs>0); const L=(DOC_RO.map[String(t.name||'').replace(/\s/g,'')]||[]).filter(x=>!x.opsId); if(!L.length) return true; const tel=digits(t.phone).slice(-4), hit=L.find(x=>x.tel&&x.tel===tel)||L[0]; return !(hit.docs>0); }
 function docGuideText(kind){ const g=docGuide(); return String(g.text||'').replace(/\{안내링크\}/g,(kind==='asst'?g.asst:g.main)||''); }
 const SMS_KEYS_ITEM=['번호','학교','역할','분야','프로그램','시작일','종료일','요일','시간','횟수','운영대학','참여일','참여횟수'];
 const SMS_TPL_DEF_A={
@@ -7617,7 +7620,7 @@ function showAdminLogin(pwSet, after, bizL) {
 }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.78';
+const APP_VER = '11.79';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
