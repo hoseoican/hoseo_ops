@@ -2246,7 +2246,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.74';
+const LIB_VER='11.75';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4289,7 +4289,7 @@ function viewStats(){
   const dups=Object.entries(dup).filter(([,n])=>n>1).map(([k])=>k.split('|').join(' · '));
   return `<div class="stack st-page">
   <div class="row between st-head"><div class="row" style="gap:8px;align-items:center"><h2 style="margin:0">운영 통계</h2>${VW?`<span class="chip">보기 전용</span>${qt(['충남 1권역 앵커늘봄 운영기관별 통계','연도·운영기관을 눌러 보기','KPI 목표가 있으면 달성률 표시','학생 수 = 확정 인원(없으면 예상 인원)','차시 수 = 총차시(없으면 일별차시 × 운영일)'])}`:qt(['올린 운영현황 엑셀로 집계','연도·운영기관을 골라 보기','KPI 목표를 넣으면 달성률 표시','학급 수 = 엑셀의 학급(행) 수','학생 수 = 확정 인원(없으면 예상 인원)','차시 수 = 총차시(없으면 일별차시 × 운영일)'])}</div>
-   ${VW?(S.stats.at?`<span class="small muted">${esc(S.stats.at)} 기준</span>`:''):`<div class="row" style="gap:6px"><button class="btn sm" data-act="st-panel" data-v="data">자료 관리 (${dsList.length})</button><button class="btn sm" data-act="st-panel" data-v="kpi">KPI 목표</button><button class="btn sm" data-act="st-panel" data-v="share">공유 링크${S.statsLink?' (사용 중)':''}</button><button class="btn sm pri" data-act="st-panel" data-v="rep">보고용 파일</button></div>`}</div>
+   ${VW?(S.stats.at?`<span class="small muted">${esc(S.stats.at)} 기준</span>`:''):`<div class="row" style="gap:6px;align-items:center"><span class="small muted">${stSyncInfo()}</span><button class="btn sm pri" data-act="st-sync" title="구글 운영현황 시트(대학별 탭)의 매칭 현황을 읽어 반영">운영현황 시트 반영</button><button class="btn sm" data-act="st-panel" data-v="data">자료 관리 (${dsList.length})</button><button class="btn sm" data-act="st-panel" data-v="kpi">KPI 목표</button><button class="btn sm" data-act="st-panel" data-v="share">공유 링크${S.statsLink?' (사용 중)':''}</button><button class="btn sm pri" data-act="st-panel" data-v="rep">보고용 파일</button></div>`}</div>
   ${VW&&S.ui.stBack?`<div class="row"><button class="btn sm" data-act="st-back">← 관리자 화면으로 (체험판)</button></div>`:''}
   ${VW?'':u.stPanel==='data'?stDataPanel():u.stPanel==='kpi'?stKpiPanel(years,orgs):u.stPanel==='rep'?stRepPanel(sel,Y,O):u.stPanel==='share'?stSharePanel():''}
   ${!all.length?VW?`<div class="panel st-empty"><b>아직 공개된 통계가 없습니다.</b></div>`:`<div class="panel st-empty"><b>아직 통계 자료가 없습니다.</b><button class="btn pri sm" data-act="st-panel" data-v="data">자료 업로드</button></div>`:`
@@ -4346,6 +4346,28 @@ function stCxList(list,act,key){ return `<td colspan="9" class="st-cx">${list.ma
 const stIn=d=>d.rows.filter(r=>!r._x), stOut=d=>d.rows.filter(r=>r._x);
 const stDsList=()=>((S.stats||{}).ds||[]).filter(d=>d.id!=='live'&&!stIsMc(d));
 /* 강사서류 화면(같은 주소)의 연동 설정을 읽어 그쪽에 등록된 운영현황 구글 시트 목록을 받는다 */
+/* ===== 운영현황 시트 반영 =====
+   구글 운영현황 시트(강사서류에 등록된 시트, 대학별 탭)를 읽어 운영 통계 자료로 바로 반영. 시트가 원본:
+   같은 연도·시기의 기존 통계 자료(엑셀 업로드 포함)는 시트 내용으로 바뀜. 대학별 추가 열은 무시하고 필요한 열만 읽음(stParseA).
+   타대학 계정도 누를 수 있음(시트 목록은 호서대가 반영할 때 S.kpi.opsSheets에 저장) */
+const stSyncDs = () => ((S.stats||{}).ds||[]).filter(d=>String(d.id).startsWith('gs_'));
+function stSyncInfo(){ const L=stSyncDs(); if(!L.length) return ''; const d=L.slice().sort((a,b)=>String(b.at).localeCompare(String(a.at)))[0], by=(String(d.name).match(/ · ([^·]+)$/)||[])[1]||''; return `마지막 반영 ${esc(String(d.at||'').slice(5,16).replace('-','.').replace('T',' '))}${by?' · '+esc(by):''}`; }
+const stSyncBar = () => S.ui.role==='stats'?'':`<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm pri" data-act="st-sync">운영현황 시트 반영</button><span class="small muted">${stSyncInfo()||'아직 반영 전'}</span>${qt(['구글 운영현황 시트(대학별 탭)의 매칭 현황을 읽어 통계·운영 점검에 반영','시트를 고친 뒤 직접 누르거나, 현황을 보기 직전에 누르기','같은 연도·시기의 기존 통계 자료는 시트 내용으로 바뀜','대학에서 추가한 열은 무시하고 필요한 항목만 읽음'])}</div>`;
+function stSheetSync(btn){
+  const org=!!S.adminOrg, saved=(S.kpi||{}).opsSheets||[];
+  const getList=org?Promise.resolve(saved):docsOpsList().then(L=>{ L=(L||[]).map(o=>({id:o.id,label:o.label||''})); if(L.length&&JSON.stringify(L)!==JSON.stringify(saved)){ S.kpi={...(S.kpi||{}),opsSheets:L}; save(); } return L; }).catch(e=>{ if(saved.length) return saved; throw e; });
+  const lb=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='시트 읽는 중…'; }
+  return getList.then(L=>{ if(!L.length) throw new Error(org?'운영현황 시트 목록이 아직 없습니다. 호서대에서 한 번 반영한 뒤 쓸 수 있습니다':'강사서류 「운영현황」에 등록된 구글 시트가 없습니다');
+    const grp={}, bad=[]; let ch=Promise.resolve(), i=0;
+    L.forEach(o=>{ ch=ch.then(()=>{ i++; if(btn) btn.textContent=`시트 읽는 중… ${i}/${L.length}`; return run('adminSheetRead',ADMIN_KEY,'https:/'+'/docs.google.com/spreadsheets/d/'+o.id); }).then(d=>{ if(!d) return; const p=stParseA(d.sheets.map(x=>({name:x.name,A:x.values})),((o.label||'')+' '+d.name).trim());
+        if(!p.period||!p.year){ bad.push(`${o.label||d.name}: 연도·시기를 알 수 없음(시트 이름에 연도와 1학기·하계·2학기·동계·학교밖을 넣어 주세요)`); return; }
+        const k=p.year+'_'+p.period, g=grp[k]=grp[k]||{id:'gs_'+k,name:`운영현황 시트 · ${p.year} ${p.period}`,year:+p.year,period:p.period,at:now(),rows:[],files:[]};
+        g.rows.push(...[...p.rows,...p.cx].map(r=>{ const x={...r,period:p.period}; delete x._raw; return x; })); g.files.push(o.label||d.name); }).catch(e=>{ bad.push((o.label||o.id)+': '+(e&&e.message||String(e))); }); });
+    return ch.then(()=>{ const list=Object.values(grp).map(g=>({id:g.id,name:g.name,year:g.year,period:g.period,at:g.at,rows:g.rows})); if(!list.length) throw new Error('읽은 시트가 없습니다. '+(bad[0]||''));
+      if(btn) btn.textContent='반영하는 중…';
+      return run('adminStatsSync',ADMIN_KEY,list).then(r=>{ S.ui.stLoaded=false; S.stats=null; if(typeof statsLoad==='function') statsLoad();
+        toast(`운영현황 시트 반영: ${list.map(g=>`${g.year} ${g.period} ${g.rows.filter(x=>!x._x).length}학급`).join(' · ')}${r&&r.replaced?` (기존 자료 ${r.replaced}개 대체)`:''}${bad.length?` · 읽지 못함 ${bad.length}개`:''}`); if(bad.length) console.warn(bad.join('\n')); }); }); })
+   .catch(e=>{ toast(e&&e.message||String(e)); }).finally(()=>{ if(btn){ btn.disabled=false; btn.textContent=lb; } render(); }); }
 function docsOpsList(){
   return new Promise((res,rej)=>{ let q; try{ q=indexedDB.open('anchor-lecturer-docs',1); }catch(e){ rej(new Error('이 브라우저에서 강사서류 설정을 읽을 수 없습니다')); return; }
     q.onupgradeneeded=()=>{ try{ q.transaction.abort(); }catch(e){} };
@@ -5946,13 +5968,13 @@ const CS_MENU_ORG = [['입력',[['mile','마일스톤 점검표'],['rep','운영
 const CS_IC = {dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',judge:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',mile:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',rep:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',gong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',gtpl:'<path d="M8 3h9l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M10 12h7M10 16h5"/>',mygong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',rule:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
 function viewCons(){
   if(!S.consCfg&&!csMine()){ S.consCfg=CS_DEF(); }
-  if(!csMine()&&!S.ui.stLoaded&&!S.ui.stLoading&&typeof statsLoad==='function') setTimeout(statsLoad,0);
+  if(!S.ui.stLoaded&&!S.ui.stLoading&&typeof statsLoad==='function') setTimeout(statsLoad,0);
   const M=csMine()?CS_MENU_ORG:CS_MENU, all=M.flatMap(g=>g[1]); let cur=S.ui.csTab; if(!all.some(x=>x[0]===cur)) cur=all[0][0];
   const btn=([k,l])=>`<button type="button" role="tab" aria-selected="${cur===k}" class="${cur===k?'on':''}" data-act="cstab" data-v="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CS_IC[k]||''}</svg>${esc(l)}</button>`;
   const menu=`<nav class="lmenu" aria-label="컨소시엄 관리 메뉴">${M.map(([g,L])=>`<div class="lg">${esc(g)}</div>${L.map(btn).join('')}`).join('')}</nav>`;
   const grp=M.find(g=>g[1].some(x=>x[0]===cur)), lab=all.find(x=>x[0]===cur)[1];
   const body={dash:csDash,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,gtpl:csGTplV,mygong:csMyGong,rule:csRule}[cur]();
-  return `<div class="stack noenh"><div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">${csMine()?esc(orgShort(csMine())):'운영 점검'} › ${esc(grp[0])}</div><h2 style="margin:0">${esc(lab)}</h2>${body}</div></div></div>`; }
+  return `<div class="stack noenh"><div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">${csMine()?esc(orgShort(csMine())):'운영 점검'} › ${esc(grp[0])}</div><h2 style="margin:0">${esc(lab)}</h2>${['dash','rep'].includes(cur)?stSyncBar():''}${body}</div></div></div>`; }
 const csQSeg = (k,q) => `<div class="seg2" role="tablist">${[1,2,3,4].map(i=>`<button class="${q===i?'on':''}" data-act="csq" data-k="${k}" data-v="${i}">${CS_QN[i]}</button>`).join('')}</div>`;
 const csKp = (v,t,c) => `<div class="cs-kp"><b class="${c||''}">${v}</b><span>${t}</span></div>`;
 const csBar = p => `<div class="cs-bar"><div style="width:${Math.max(0,Math.min(100,p||0))}%" class="${p==null?'':p>=90?'b-g':p>=70?'b-y':'b-r'}"></div></div>`;
@@ -7134,6 +7156,7 @@ document.addEventListener('click',async e=>{
     case 'st-wy': S.ui.stWy=+el.dataset.v; break;
     case 'st-wfsave': { const y=el.dataset.v, L=[...new Set(String((document.getElementById('st-wf')||{}).value||'').split(/[\n,;]+/).map(x=>x.replace(/^\s*\d+[.)]\s*/,'').trim()).filter(Boolean))]; S.kpi={...(S.kpi||{}),welfare:{...((S.kpi||{}).welfare||{}),[y]:L}}; save(); toast(`${y}년 교육복지우선지원대상학교 ${L.length}곳을 저장했습니다`); break; }
     case 'st-wfprev': { const ta=document.getElementById('st-wf'); if(ta) ta.value=(((S.kpi||{}).welfare||{})[el.dataset.v]||[]).join('\n'); toast('이전 연도 명단을 불러왔습니다. 「저장」을 눌러야 반영됩니다'); return; }
+    case 'st-sync': stSheetSync(el); return;
     case 'st-docs': {
       el.disabled=true; el.textContent='불러오는 중…';
       docsOpsList().then(L=>{ if(!L.length) throw new Error('강사서류 「운영현황」에 등록된 구글 시트가 없습니다');
