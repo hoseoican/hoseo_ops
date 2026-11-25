@@ -1570,11 +1570,16 @@ const BSORT = [['no','순번'],['school','학교명'],['cls','학급(교실)'],[
 const BSORT_DESC0 = ['hrs','iss'];
 const rowHrs = r => classDays(r).length*r.perDay;
 /* 지역(시·군): 지역 칸이 비었거나 기관 이름이 잘못 들어간 경우 주소·이름에서 찾음 (예: 천안, 아산) */
-function rowRegion(r){ const g=String(r.region||'').trim().replace(/시$/,''), bad=!g||g===r.school||g===r.srcSchool||/센터|돌봄|아동|복지|교실|학교/.test(g)||g.length>5;
-  if(!bad) return g;
-  const addr=[r.addr,(S.addr||{})[r.school],(S.contacts[r.school]||{}).addr].filter(Boolean).join(' ');
-  const m=/(천안|아산|공주|보령|서산|논산|계룡|당진|대전|세종)/.exec(addr+' '+r.school)||/([가-힣]{2,3})시(?:\s|$)/.exec(addr);
-  return m?m[1]:''; }
+/* 지역2(시·군): 충남 15개 시·군 + 대전·세종. 이름만(천안, 홍성) 쓰고, 내보낼 때 regionFull로 「천안시」「홍성군」 */
+const RG_SI=['천안','공주','보령','아산','서산','논산','계룡','당진'], RG_GUN=['금산','부여','서천','청양','홍성','예산','태안'], RG_ALL=[...RG_SI,...RG_GUN,'대전','세종'];
+const rgBase = v => { const t=String(v||'').replace(/\s/g,'').replace(/(특별자치시|광역시|시|군)$/,''); return RG_ALL.includes(t)?t:''; };
+const regionFull = r => { const b=rowRegion(r); return !b?'':RG_GUN.includes(b)?b+'군':b==='대전'?'대전광역시':b==='세종'?'세종특별자치시':b+'시'; };
+function rowRegion(r){
+  const c=(S.contacts||{})[r.school]||{}, cs=rgBase(c.addrSi); if(isOut(r)&&cs) return cs;   /* 학교밖: 기관이 고른 시·군이 우선 */
+  const g=rgBase(r.region); if(g) return g;
+  const addr=[r.addr,(S.addr||{})[r.school],c.addr].filter(Boolean).join(' ');
+  for(const t of [addr,r.school]){ const m=new RegExp('('+RG_ALL.join('|')+')').exec(String(t||'')); if(m) return m[1]; }
+  return ''; }
 function fixRegionsAll(){ let n=0; (S.rows||[]).forEach(r=>{ const g=rowRegion(r), cur=String(r.region||'').trim(); if(g&&g!==cur){ r.region=g; n++; } else if(!g&&cur&&(cur===r.school||cur===r.srcSchool)){ r.region=''; n++; } }); return n; }
 /* 시작일·종료일을 실제 첫 수업일·마지막 수업일로 맞춤 (운영 요일·공휴일·휴업일 반영 · 바뀐 학급 수 돌려줌) */
 function snapDatesAll(){ let n=0; (S.rows||[]).forEach(r=>{ if(!r||r.status==='cancel') return; const cd=classDays(r); if(!cd.length) return; const a=cd[0], b=cd[cd.length-1]; if(r.start!==a||r.end!==b){ r.start=a; r.end=b; n++; } }); return n; }
@@ -1866,6 +1871,21 @@ const orgContactTable = only => `<table class="orgct"><tbody>${Object.entries(OR
 const sysContact = () => `${esc(S.ops.name||'')}${S.ops.pos?' '+esc(S.ops.pos):''}${S.ops.title?` <span class="muted">(${esc(S.ops.title)})</span>`:''}${S.ops.phone?` · <span class="mono">${esc(S.ops.phone)}</span>`:''}${S.ops.chat?` · <a href="${esc(S.ops.chat)}" target="_blank" rel="noopener">오픈채팅</a>`:''}`;
 const orgAsk = r => orgOfRow(r)===MY_ORG?'호서대 운영 담당자':`${orgShort(orgOfRow(r))} 운영 담당자`;
 /* 방학집중형 등(앵커늘봄 외 사업): 학교(신청기관) 지역 구분 — 드롭다운 + 직접 입력 */
+/* 기관 주소: 시·도와 시·군·구는 골라서, 나머지만 직접 입력 → c.addr = 「충청남도 천안시 서북구 ○○로 12」 */
+const ADDR_DO={'충청남도':['천안시','공주시','보령시','아산시','서산시','논산시','계룡시','당진시','금산군','부여군','서천군','청양군','홍성군','예산군','태안군'],'대전광역시':['동구','중구','서구','유성구','대덕구'],'세종특별자치시':['세종시']};
+const addrJoin = c => [c.addrDo,c.addrDo==='세종특별자치시'?'':c.addrSi,c.addrRest].map(x=>String(x||'').trim()).filter(Boolean).join(' ');
+const addrOk = c => !!(c&&ADDR_DO[c.addrDo]&&ADDR_DO[c.addrDo].includes(c.addrSi)&&String(c.addrRest||'').trim());
+/* 예전에 한 줄로 적은 주소에서 시·도 / 시·군·구 / 나머지 추정 */
+function addrGuess(a){ let t=String(a||'').replace(/\s+/g,' ').trim(), d='', si='';
+  const dm=t.match(/^(충청남도|충남|대전광역시|대전시|대전|세종특별자치시|세종시|세종)\s*/); if(dm){ d=/충/.test(dm[1])?'충청남도':/대전/.test(dm[1])?'대전광역시':'세종특별자치시'; t=t.slice(dm[0].length); }
+  const all=Object.entries(ADDR_DO).flatMap(([k,L])=>L.map(x=>[k,x]));
+  for(const [k,x] of all){ const b=x.replace(/(시|군|구)$/,''), m=t.match(new RegExp('^'+b+'(시|군|구)?\\s*')); if((!d||d===k)&&m&&(k!=='대전광역시'||d)){ d=k; si=x; t=t.slice(m[0].length); break; } }
+  if(d==='세종특별자치시') si='세종시';
+  return {addrDo:d,addrSi:si,addrRest:t}; }
+function addrFields(c,dis,pre){ const g=pre||c, L=ADDR_DO[g.addrDo]||[], k=pre?'data-fa':'data-c';
+  return `<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><select ${k}="addrDo" aria-label="시·도" ${dis?'disabled':''}><option value="">시·도 선택</option>${Object.keys(ADDR_DO).map(o=>`<option ${g.addrDo===o?'selected':''}>${o}</option>`).join('')}</select>
+   <select ${k}="addrSi" aria-label="시·군·구" ${dis||!g.addrDo?'disabled':''}><option value="">${g.addrDo?'시·군·구 선택':'시·도를 먼저 고르세요'}</option>${L.map(o=>`<option ${g.addrSi===o?'selected':''}>${o}</option>`).join('')}</select>
+   <input ${k}="addrRest" value="${esc(g.addrRest||'')}" placeholder="나머지 주소 (예: 서북구 ○○로 12, 3층)" autocomplete="off" style="flex:1 1 260px" aria-label="나머지 주소" ${dis?'disabled':''}></div>`; }
 const AREA_MAP = {'충남':['천안시','아산시','당진시','홍성군'],'대전':['동구','중구','서구','유성구','대덕구']};
 const needArea = () => curBiz()!=='anchor';
 const areaParts = a => { const m=String(a||'').trim().match(/^(충남|대전)(?:\s+(.+))?$/); return m?[m[1],m[2]||'']:['','']; };
@@ -2045,7 +2065,7 @@ function formSubmitErr(){ const rs=S.rows.filter(x=>x.school===S.ui.school&&(x.s
   { const c=contactOf(S.ui.school)||{}, md=String(c.mobile||'').replace(/\D/g,''); if(c.consent==='yes'&&(md.length<10||md.length>11)) return md?'담당자 휴대폰번호를 확인해 주세요':'담당자 정보에 휴대폰번호를 입력해 주세요'; }
   if(FC.texts.agree&&!(contactOf(S.ui.school)||{}).orAgree) return '제출 칸의 확인 문항을 체크해 주세요';
   return ''; }
-function outSubmitErr(){ const fe=formSubmitErr(); if(fe) return fe; const rs=S.rows.filter(x=>x.school===S.ui.school&&isOut(x)&&(x.status==='wait'||x.reopen)); if(!rs.length) return ''; if(!String((contactOf(S.ui.school)||{}).addr||'').trim()) return '기관 주소를 입력해 주세요'; return ''; if(!outRules().on) return '';
+function outSubmitErr(){ const fe=formSubmitErr(); if(fe) return fe; const rs=S.rows.filter(x=>x.school===S.ui.school&&isOut(x)&&(x.status==='wait'||x.reopen)); if(!rs.length) return ''; if(!addrOk(contactOf(S.ui.school)||{})) return '기관 주소(시·도, 시·군·구, 나머지 주소)를 입력해 주세요'; return ''; if(!outRules().on) return '';
   const ob=rs.filter(x=>!outCx(x)&&outBad(x)); if(ob.length) return `${ob.map(clsName).join(', ')}: 운영 조건을 모두 충족해야 제출할 수 있습니다. 맞출 수 없으면 「운영 취소」로 정해 주세요`;
   if(!contactOf(S.ui.school).orAgree) return '제출 칸의 「운영 조건을 모두 확인했습니다」를 체크해 주세요'; return ''; }
 const outBad = r => isOut(r)&&(outRuleList(r).some(x=>x.ok!==true)||(condState(r).list.length&&!condState(r).ok));
@@ -2272,7 +2292,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.104';
+const LIB_VER='11.105';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2981,18 +3001,21 @@ function schIsOut(){ const sch=S.ui.school||(S.rows[0]||{}).school; return S.row
    지금 대상: 학년(담당자 화면 항목 설정에서 켜져 있고 필수일 때). 이미 제출한 수업도 이 항목만 고칠 수 있음 */
 const FILL_DEFS=[{k:'grade',l:'학년',on:r=>{ const G=fcOf(r).fields.grade; return !!(G&&G.on&&G.req); },miss:r=>!/^[1-6](~[1-6])?학년$/.test(rowGrade(r))}];
 let schoolFillCall = list => Promise.resolve({ok:true,n:list.length});
+const fillAddrNeed = rs => schIsOut()&&!rs.some(r=>r.status==='wait'||r.reopen)&&rs.some(r=>isOut(r)&&r.status!=='cancel')&&!addrOk(contactOf(S.ui.school));
 const fillRows = rs => rs.filter(r=>!(r.status==='wait'||r.reopen)&&r.status!=='cancel'&&!(isOut(r)&&outCx(r))&&FILL_DEFS.some(d=>d.on(r)&&d.miss(r)));
 function fillPanel(rs){
-  const L=fillRows(rs); if(!L.length) return '';
-  const labs=[...new Set(L.flatMap(r=>FILL_DEFS.filter(d=>d.on(r)&&d.miss(r)).map(d=>d.l)))], F=S.ui.fill=S.ui.fill||{};
+  const L=fillRows(rs), c=contactOf(S.ui.school), AN=fillAddrNeed(rs); if(!L.length&&!AN) return '';
+  const labs=[...(AN?['기관 주소']:[]),...new Set(L.flatMap(r=>FILL_DEFS.filter(d=>d.on(r)&&d.miss(r)).map(d=>d.l)))], F=S.ui.fill=S.ui.fill||{};
+  if(AN&&!S.ui.fillAddr) S.ui.fillAddr=c.addrDo?{addrDo:c.addrDo,addrSi:c.addrSi,addrRest:c.addrRest}:addrGuess(c.addr);
   L.forEach(r=>{ if(!F[r.id]) F[r.id]={gk:r.sc.gk||'',ga:r.sc.ga||'',gb:r.sc.gb||''}; });
   if(S.ui.role==='school'&&!S.ui.fillToast){ S.ui.fillToast=1; setTimeout(()=>toast(`${labs.map(x=>`「${x}」`).join('')} 항목 정보 기입이 필요합니다`),300); }
   const W=schIsOut()?'수업':'학급';
-  return `<div class="notice bad stack" id="fillbox" style="gap:8px"><div><b>${labs.map(x=>`「${esc(x)}」`).join('')} 항목 정보 기입이 필요합니다</b><div class="small" style="margin-top:2px">제출하신 ${W} 중 ${L.length}개에 ${labs.join('·')} 정보가 빠져 있습니다. 아래에서 고른 뒤 「입력 내용 저장」을 눌러 주세요. 혼합학년은 몇 학년~몇 학년을 숫자로 입력합니다.</div></div>
-   <div class="tw"><table><thead><tr><th>${W}</th><th>프로그램 · 기간</th><th>학년 *</th></tr></thead><tbody>${L.map(r=>{ const d=F[r.id], bad=d.gk==='mix'&&d.ga&&d.gb&&gradeMiss(d);
+  return `<div class="notice bad stack" id="fillbox" style="gap:8px"><div><b>${labs.map(x=>`「${esc(x)}」`).join('')} 항목 정보 기입이 필요합니다</b><div class="small" style="margin-top:2px">${L.length?`제출하신 ${W} 중 ${L.length}개에 학년 정보가 빠져 있습니다. 혼합학년은 몇 학년~몇 학년을 숫자로 입력합니다. `:''}${AN?'기관 주소는 시·도와 시·군·구를 고르고 나머지 주소만 적어 주세요. ':''}입력한 뒤 「입력 내용 저장」을 눌러 주세요.</div></div>
+   ${AN?`<div class="stack" style="gap:4px"><b class="small">기관 주소 *</b>${addrFields(c,false,S.ui.fillAddr)}${c.addr?`<div class="small muted">예전에 입력한 주소: ${esc(c.addr)}</div>`:''}</div>`:''}
+   ${L.length?`<div class="tw"><table><thead><tr><th>${W}</th><th>프로그램 · 기간</th><th>학년 *</th></tr></thead><tbody>${L.map(r=>{ const d=F[r.id], bad=d.gk==='mix'&&d.ga&&d.gb&&gradeMiss(d);
      return `<tr><td><b>${esc(clsName(r))}</b>${r.gradeSrc||r.grade?`<div class="small muted">신청 내용: ${esc(r.gradeSrc!=null?r.gradeSrc:r.grade)||'-'}</div>`:''}</td><td class="small">${esc(prog(r.prog).name)}<div class="muted">${md(r.start)}~${md(r.end)} ${daysTxt(r.days)}</div></td>
       <td><div class="row" style="gap:6px;align-items:center;flex-wrap:wrap"><select data-gf="gk" data-r="${r.id}" aria-label="${esc(clsName(r))} 학년"><option value="">골라 주세요</option>${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${String(d.gk)===String(n)?'selected':''}>${n}학년</option>`).join('')}<option value="mix" ${d.gk==='mix'?'selected':''}>혼합학년</option></select>
-       ${d.gk==='mix'?`<span class="row" style="gap:4px;align-items:center;white-space:nowrap"><input data-gf="ga" data-r="${r.id}" type="number" inputmode="numeric" min="1" max="5" value="${esc(d.ga)}" placeholder="1" style="width:56px" aria-label="시작 학년">학년 ~<input data-gf="gb" data-r="${r.id}" type="number" inputmode="numeric" min="2" max="6" value="${esc(d.gb)}" placeholder="3" style="width:56px" aria-label="끝 학년">학년</span>`:''}</div>${bad?'<div class="small lv-warn">앞 학년이 뒤 학년보다 작게 입력해 주세요</div>':''}</td></tr>`; }).join('')}</tbody></table></div>
+       ${d.gk==='mix'?`<span class="row" style="gap:4px;align-items:center;white-space:nowrap"><input data-gf="ga" data-r="${r.id}" type="number" inputmode="numeric" min="1" max="5" value="${esc(d.ga)}" placeholder="1" style="width:56px" aria-label="시작 학년">학년 ~<input data-gf="gb" data-r="${r.id}" type="number" inputmode="numeric" min="2" max="6" value="${esc(d.gb)}" placeholder="3" style="width:56px" aria-label="끝 학년">학년</span>`:''}</div>${bad?'<div class="small lv-warn">앞 학년이 뒤 학년보다 작게 입력해 주세요</div>':''}</td></tr>`; }).join('')}</tbody></table></div>`:''}
    <div class="row"><button class="btn pri sm" data-act="gfill">입력 내용 저장</button></div></div>`;
 }
 function viewSchool(){
@@ -3032,7 +3055,7 @@ function viewSchool(){
      :c.consent==='no'?`<div class="fgrid"><label class="f">학교 대표번호 *<input id="c-phone" data-c="phone" value="${esc(c.phone)}" placeholder="041-000-0000" inputmode="tel" autocomplete="off"></label><label class="f">학교 대표 이메일 *<input id="c-email" data-c="email" type="email" value="${esc(c.email)}" inputmode="email" autocomplete="off"></label></div>`:''}
    </div>`}
    ${(()=>{ const c=contactOf(S.ui.school), W=schIsOut()?'기관(센터)':'학교', nf=c.nameFix&&c.nameFix!==S.ui.school; return `<div class="panel stack" style="gap:6px"><h3>${W} 이름</h3><input id="c-namefix" data-c="nameFix" value="${esc(c.nameFix||S.ui.school)}" ${open?'':'disabled'} aria-label="${W} 이름">${nf?`<div class="small muted">수정 요청: ${esc(S.ui.school)} → ${esc(c.nameFix)} · 운영기관 확인 후 반영됩니다</div>`:''}</div>`; })()}
-   ${schIsOut()?(()=>{ const c=contactOf(S.ui.school); return `<div class="panel stack" style="gap:6px"><h3>기관 주소 <span class="lv-crit small">*</span></h3><input id="c-addr" data-c="addr" value="${esc(c.addr||'')}" placeholder="예: 충남 천안시 동남구 ○○로 12, 3층" autocomplete="street-address" ${open?'':'disabled'} aria-label="기관 주소"></div>`; })():''}
+   ${schIsOut()?(()=>{ const c=contactOf(S.ui.school); return `<div class="panel stack" style="gap:6px"><h3>기관 주소 <span class="lv-crit small">*</span></h3>${addrFields(c,!open)}${c.addr&&!addrOk(c)?`<div class="small muted">예전에 입력한 주소: ${esc(c.addr)}</div>`:''}</div>`; })():''}
    <div><h3><span class="stepno">2</span>학급별 운영 정보 확인 <span class="muted small" style="font-weight:400">· ${rs.length}학급</span></h3><div class="muted small" style="margin-top:2px">${open?`학급마다 인원·교실·일정 확인, 운영 조건에 답하기 ${qt(['예: 태블릿 제공 여부','입력한 내용은 자동으로 임시 저장'])}`:`제출한 내용과 진행 상황 ${qt('강사 배치가 끝나면 학급 카드 아래에 확정 내용과 배치 강사가 나옴')}`}</div></div>
    ${props.length?`<div class="notice"><b>운영안이 도착했습니다.</b> 학급별로 프로그램, 기간, 요일·시간, 인원을 보고 수락하거나 조정을 요청해 주세요. 수락하면 운영이 확정되고 강사 배치가 시작됩니다.</div>`:''}
    ${rs.map((r,i)=>schoolCard(r,i+1,rs.length)).join('')}
@@ -5073,7 +5096,7 @@ function resultAoa(sch){
   const N=Math.max(1,...rs.map(r=>classDays(r).length));
   const head=[...RESULT_HEAD,...Array.from({length:N},(_,k)=>`수업일${k+1}`)];
   const rows=rs.map((r,i)=>{ const p=prog(r.prog), sc=r.sc, days=classDays(r), t=S.instructors.find(x=>x.id===r.inst), cnt=sc.count!==''&&sc.count!=null?sc.count:r.expected;
-    return [i+1,orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),'충남',rowRegion(r)?rowRegion(r)+'시':'',r.school,seasonTerm(),sc.room||r.room||'',p.name,p.field||'',days.length*r.perDay,rowGrade(r)||'',cnt===''||cnt==null?'':(isNaN(+cnt)?cnt:+cnt),D(r.start),D(r.end),daysTxt(r.days),r.ts==null?'':hm(r.ts),r.te==null?'':hm(r.te),t?t.name:'',t?t.phone||'':'',t?t.email||'':'',...days.map(D)]; });
+    return [i+1,orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),'충남',regionFull(r),r.school,seasonTerm(),sc.room||r.room||'',p.name,p.field||'',days.length*r.perDay,rowGrade(r)||'',cnt===''||cnt==null?'':(isNaN(+cnt)?cnt:+cnt),D(r.start),D(r.end),daysTxt(r.days),r.ts==null?'':hm(r.ts),r.te==null?'':hm(r.te),t?t.name:'',t?t.phone||'':'',t?t.email||'':'',...days.map(D)]; });
   return {head,rows};
 }
 async function resultXlsxBuf(sch){
@@ -5652,7 +5675,7 @@ function buildExportAoa(rowsArg,opt){
     const tab=cs.list.find(x=>/태블릿/.test(x.c.text));
     const memo=opsMemo(r,opt.school);
     const row=new Array(65).fill('');
-    Object.assign(row,{0:i+1,1:'-',2:'충남RISE센터',3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:'충남',5:rowRegion(r)?rowRegion(r)+'시':'',6:r.school,7:'동계',8:memo,
+    Object.assign(row,{0:i+1,1:'-',2:'충남RISE센터',3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:'충남',5:regionFull(r),6:r.school,7:'동계',8:memo,
       9:tab?(tab.a.ans==='yes'?'가능':tab.a.ans==='no'?'불가':'미확인'):'해당 없음',10:tab&&tab.a.ans==='yes'&&tab.a.qty!==''?Number(tab.a.qty):'',11:sc.room||r.room,12:c.name||'',13:cPhones(c,'\n'),14:c.email||'',
       15:p.name,16:p.field,17:days.length,18:r.perDay,19:days.length*r.perDay,20:1,21:rowGrade(r),22:CL[r.id]||'A',23:r.expected,24:sc.count===''?'':Number(sc.count),25:D(r.start),26:D(r.end),27:daysTxt(r.days),
       28:r.ts==null?'':r.ts/1440,29:r.te==null?'':r.te/1440,30:sc.multi===''?'':Number(sc.multi),31:sc.low===''?'':Number(sc.low),32:regionSize(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr||''):S.addr[r.school]),33:(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr):S.addr[r.school])||'',34:t?t.name:'',35:t?t.phone||'':'',36:t?t.email||'':'',37:a?a.name:'-',38:a?a.phone||'':''});
@@ -7218,7 +7241,9 @@ document.addEventListener('click',async e=>{
       else { r.sc.off.splice(i,1); r.offLog=r.offLog.filter(x=>x.d!==d); r.thread.push({who:'학교',text:`휴강 취소: ${lab} 수업 진행`,at:now()}); toast(`${lab} 휴강을 취소했습니다`); }
       S.ui.offAsk=null; break; }
     case 'toff': { const d=el.dataset.d, i=r.sc.off.indexOf(d); i<0?r.sc.off.push(d):r.sc.off.splice(i,1); break; }
-    case 'gfill': { const L=fillRows(liveRows().filter(x=>x.school===S.ui.school)), F=S.ui.fill||{};
+    case 'gfill': { const rsF=liveRows().filter(x=>x.school===S.ui.school), L=fillRows(rsF), F=S.ui.fill||{};
+      if(fillAddrNeed(rsF)){ const d=S.ui.fillAddr||{}; if(!addrOk(d)){ toast(!d.addrDo?'기관 주소의 시·도를 골라 주세요':!d.addrSi?'기관 주소의 시·군·구를 골라 주세요':'기관 주소의 나머지 주소를 입력해 주세요'); return; }
+        const c=contactOf(S.ui.school); c.addrDo=d.addrDo; c.addrSi=d.addrSi; c.addrRest=String(d.addrRest).trim(); c.addr=addrJoin(c); delete c.example; S.ui.fillAddr=null; save(); if(!L.length){ toast('기관 주소를 저장했습니다'); break; } }
       const bad=L.filter(x=>gradeMiss(F[x.id]||{})); if(bad.length){ toast(`${bad.map(clsName).join(', ')}: 학년을 골라 주세요${bad.some(x=>(F[x.id]||{}).gk==='mix')?' (혼합학년은 앞 학년 < 뒤 학년)':''}`); return; }
       const list=L.map(x=>({id:x.id,sc:{gk:F[x.id].gk,ga:F[x.id].gk==='mix'?F[x.id].ga:'',gb:F[x.id].gk==='mix'?F[x.id].gb:''}}));
       el.disabled=true; schoolFillCall(list).then(()=>{ list.forEach(d=>{ const x=R(d.id); if(!x) return; Object.assign(x.sc,d.sc); gradeApply(x); delete F[d.id]; }); save(); toast(`${list.length}개 학년 정보를 저장했습니다`); }).catch(e=>toast(e&&e.message||String(e))).finally(()=>render()); return; }
@@ -7230,7 +7255,7 @@ document.addEventListener('click',async e=>{
       if(c.consent==='no'&&(!c.phone.trim()||!c.email.trim())){ toast('학교 대표번호와 학교 대표 이메일을 입력해 주세요'); return; }
       if(!okMail){ toast('이메일 주소 형식을 확인해 주세요 (예: name@school.kr)'); return; }
       const rs=liveRows().filter(x=>x.school===S.ui.school&&(x.status==='wait'||x.reopen));
-      if(rs.some(isOut)&&!String(c.addr||'').trim()){ toast('기관 주소를 입력해 주세요'); return; }
+      if(rs.some(isOut)&&!addrOk(c)){ toast(!c.addrDo?'기관 주소의 시·도를 골라 주세요':!c.addrSi?'기관 주소의 시·군·구를 골라 주세요':'기관 주소의 나머지 주소를 입력해 주세요'); return; }
       const miss=rs.filter(x=>condState(x).unanswered); if(miss.length){ toast(`${miss.map(clsName).join(', ')}: 운영 조건에 모두 답해 주세요`); return; }
       const grm=rs.filter(x=>{ const GF=fcOf(x).fields.grade; return GF&&GF.on&&GF.req&&!(isOut(x)&&outCx(x))&&gradeMiss(x.sc); }); if(grm.length){ toast(`${grm.map(clsName).join(', ')}: 학년을 골라 주세요${grm.some(x=>x.sc.gk==='mix')?' (혼합학년은 몇 학년~몇 학년을 숫자로)':''}`); return; }
       const spm=rs.filter(x=>{ const SF=fcOf(x).fields.sp; return SF.on&&SF.req&&spMiss(x.sc); }); if(spm.length){ toast(`${spm.map(clsName).join(', ')}: 특수학생 여부${spm.some(x=>x.sc.spYn==='yes')?'와 인원':''}를 입력해 주세요`); return; }
@@ -7600,6 +7625,8 @@ document.addEventListener('input',e=>{
   const SQ={tq:v=>{ tF().q=v; },'jq-done':v=>{ S.ui.jq=v; },'as-q':v=>{ S.ui.asQ=v; },iq:v=>{ S.ui.if={...(S.ui.if||{}),q:v}; },uq:v=>{ S.ui.uq=v; },mq:v=>{ S.ui.mq=v; },q:v=>{ S.ui.q=v.trim(); }};
   if(SQ[t.id]){ SQ[t.id](t.value); liveSearch(t.id); return; }
   if(e.isComposing) return;
+  if(t.dataset.c&&/^addr(Do|Si|Rest)$/.test(t.dataset.c)){ const c=contactOf(S.ui.school), k=t.dataset.c; c[k]=t.value; if(k==='addrDo') c.addrSi=t.value==='세종특별자치시'?'세종시':''; c.addr=addrJoin(c); delete c.example; save(); if(t.tagName==='SELECT') render(); return; }
+  if(t.dataset.fa){ const k=t.dataset.fa, d=S.ui.fillAddr=S.ui.fillAddr||{}; d[k]=t.value; if(k==='addrDo') d.addrSi=t.value==='세종특별자치시'?'세종시':''; if(t.tagName==='SELECT') render(); return; }
   if(t.dataset.c&&t.type!=='radio'&&t.type!=='checkbox'){ const c=contactOf(S.ui.school); c[t.dataset.c]=t.value; if(t.dataset.c==='nameFix'){ const v=t.value.replace(/\s+/g,' ').trim(); c.nameFix=v&&v!==S.ui.school?v:''; } delete c.example; save(); return; }
   if(t.dataset.gf&&t.tagName!=='SELECT'){ const v=String(t.value).replace(/\D/g,'').slice(0,1); if(t.value!==v) t.value=v; ((S.ui.fill=S.ui.fill||{})[t.dataset.r]=S.ui.fill[t.dataset.r]||{})[t.dataset.gf]=v; return; }
   if(t.dataset.r&&t.dataset.g&&t.tagName!=='SELECT'){ const x=R(t.dataset.r), v=String(t.value).replace(/\D/g,'').slice(0,1); if(t.value!==v) t.value=v; x.sc[t.dataset.g]=v; gradeApply(x); save(); return; }
@@ -8063,7 +8090,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.104';
+const APP_VER = '11.105';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
