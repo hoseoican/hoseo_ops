@@ -1399,7 +1399,7 @@ function freshState(){
 }
 /* 배정 취소: 강사가 직접 취소(by='강사')하거나 운영기관이 배치 취소(by='운영기관'). 기록은 학급에 남기고 그 강사의 신청은 지움 */
 function instCancel(r,tid,why,by){ const wasFinal=r.status==='final';
-  (r.instCancels=r.instCancels||[]).push({tid,name:instName(tid),at:now(),why,by,wasFinal,seen:by==='운영기관'});
+  (r.instCancels=r.instCancels||[]).push({tid,name:instName(tid),at:now(),why,by,wasFinal,prev:r.status,seen:by==='운영기관'});
   r.inst=''; r.apps=r.apps.filter(a=>a.tid!==tid);
   if(by==='강사'){ if(wasFinal) r.status='fixed'; r.thread.push({who:'시스템',text:'배정된 강사의 사정으로 강사 배치를 다시 진행합니다.',at:now()}); }
   else r.thread.push({who:'호서대',text:'강사 배치를 다시 진행합니다.',at:now()}); }
@@ -2247,7 +2247,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.90';
+const LIB_VER='11.91';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2927,7 +2927,7 @@ function matchDetail(r){
    ${extMemoBox(r)}
    ${S.ui.acx===r.id&&r.inst?`<div class="notice bad stack" style="gap:6px"><b>${esc(instName(r.inst))} 강사의 배치를 취소하고 강사 모집을 다시 열까요?</b><div class="small">학급은 「강사 모집 중」으로 다시 올라갑니다. ${qt(['이 강사의 신청도 지워짐','취소 기록은 학급에 남음','운영기관 취소는 강사의 「배치 후 취소」 횟수에 넣지 않음'])}</div>
      <input id="acx-why-${r.id}" placeholder="배치 취소 사유 (예: 강사 사정, 일정 중복)" aria-label="배치 취소 사유"><div class="row"><button class="btn sm danger" data-act="admcxl" data-id="${r.id}">배치 취소 확정</button><button class="btn sm" data-act="acxopen" data-id="${r.id}">그대로 두기</button></div></div>`:''}
-   ${(r.instCancels||[]).length?`<div class="small"><b>배정 취소 기록</b>${r.instCancels.map(x=>`<div class="${x.by==='강사'?'lv-crit':'muted'}">${esc(x.at)} · ${esc(x.name)} 강사 · ${x.by==='강사'?'강사 직접 취소':'운영기관 배치 취소'}${x.wasFinal?' (배치 확정 후)':''} · ${esc(x.why)}</div>`).join('')}</div>`:''}
+   ${(r.instCancels||[]).length?`<div class="small"><b>배정 취소 기록</b>${r.instCancels.map(x=>`<div class="${x.by==='강사'?'lv-crit':'muted'}">${esc(x.at)} · ${esc(x.name)} 강사 · ${x.by==='강사'?'강사 직접 취소':'운영기관 배치 취소'}${x.wasFinal?' (배치 확정 후)':''} · ${esc(x.why)}${x.by==='운영기관'&&!r.inst&&x===r.instCancels[r.instCancels.length-1]?` <button class="btn sm" data-act="cxundo" data-id="${r.id}" title="잘못 취소했을 때: ${esc(x.name)} 강사를 취소 전 상태(${x.wasFinal?'배치 확정':'가배치'})로 되돌림">되돌리기</button>`:''}</div>`).join('')}</div>`:''}
    ${unmetReq(r).length?`<div class="small lv-warn">학교 요청 미반영: ${unmetReq(r).join(', ')} · 학교 화면에 '반영하지 못함' 안내가 표시됩니다</div>`:''}
    <div class="row"><span>주강사: <b>${r.inst?esc(instName(r.inst)):'미배정'}</b>${r.inst&&r.status!=='final'?' <span class="chip warn" title="배치 확정 전에는 학교·강사 화면에 보이지 않습니다">가배치</span>':''}</span>${r.inst?`<button class="btn sm" data-act="uninst" data-id="${r.id}">주강사 해제</button>`:''}<span>보조강사: <b>${r.asst?esc(instName(r.asst)):'없음'}</b>${r.asstPend?' <span class="chip warn" title="「7. 보조강사 배치」에서 확정하면 강사 화면에 보입니다">가배치</span>':''}</span>${r.asst?`<button class="btn sm" data-act="unasst" data-id="${r.id}">보조 해제</button>`:''}
     ${r.inst?`<button class="btn sm danger" data-act="acxopen" data-id="${r.id}">배치 취소 · 다시 모집…</button>`:''}
@@ -7173,6 +7173,9 @@ document.addEventListener('click',async e=>{
     case 'unapply': if(!canApplyNow(r)&&!(r&&(fi(r)||r.status!=='recruit'))){ toast('신청 기간이 끝나 신청을 취소할 수 없습니다'); S.ui.unapAsk=''; break; } S.ui.unapAsk=''; bunRows(r).forEach(g=>{ if(fi(g)!==S.ui.teacher) g.apps=g.apps.filter(x=>x.tid!==S.ui.teacher); }); toast('신청을 취소했습니다'); break;
     case 'tcancel': { const why=((document.getElementById('tcx-why-'+r.id)||{}).value||'').trim(), ok=(document.getElementById('tcx-ok-'+r.id)||{}).checked; if(!why){ toast('취소 사유를 적어 주세요'); return; } if(!ok){ toast('확인 문항에 체크해 주세요'); return; }
       bunRows(r).filter(x=>x===r||(fi(x)===S.ui.teacher&&x.status==='final')).forEach(x=>instCancel(x,S.ui.teacher,why,'강사')); S.ui.tDetail=''; toast('배정을 취소했습니다. 운영기관에 알림이 남았습니다'); break; }
+    case 'cxundo': { const L=r.instCancels||[], x=L[L.length-1]; if(!x||x.by!=='운영기관'||r.inst) return;
+      const cl=teacherClash(x.tid,r), msg=`${x.name} 강사의 배치 취소를 되돌릴까요?\n취소 전 상태(${x.wasFinal?'배치 확정':'가배치'})로 돌아가고 취소 기록은 지워집니다.`+(cl.length?`\n\n주의: 그 사이 이 강사가 겹치는 수업 ${cl.length}개에 신청·배치되어 있습니다.`:'');
+      if(!confirm(msg)) return; r.inst=x.tid; r.status=x.prev||(x.wasFinal?'final':'recruit'); r.instCancels=L.slice(0,-1); r.thread.push({who:'호서대',text:'배치 취소를 되돌렸습니다.',at:now()}); toast(`${x.name} 강사 배치를 되돌렸습니다`); break; }
     case 'admcxl': { const why=((document.getElementById('acx-why-'+r.id)||{}).value||'').trim(); if(!why){ toast('배치 취소 사유를 적어 주세요'); return; } instCancel(r,r.inst,why,'운영기관'); r.status='recruit'; r.openedAt=now(); S.ui.acx=''; toast('배치를 취소하고 강사 모집을 다시 열었습니다'); break; }
     case 'acxopen': S.ui.acx=S.ui.acx===r.id?'':r.id; break;
     case 'cxlseen': (r.instCancels||[]).forEach(x=>x.seen=true); toast('처리 완료로 표시했습니다'); break;
