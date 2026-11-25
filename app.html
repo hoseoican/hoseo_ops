@@ -537,7 +537,7 @@ table.mtt td{vertical-align:top}
 .sbt{border:1px solid transparent;background:none;color:inherit;border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer;font-weight:600}.sbt:hover{background:var(--sunk)}.sbt.on{background:var(--accent);color:#fff}.sbt.add{color:var(--muted);font-weight:500;font-size:13px;border:1px dashed var(--line)}.sb-pub{font-style:normal;font-size:11px;font-weight:700;background:#2e7d4f;color:#fff;border-radius:6px;padding:1px 6px;margin-left:4px}
 .scopebar{display:flex;align-items:center;gap:6px;margin:0 0 12px;flex-wrap:wrap}.scopebar.in{display:inline-flex;margin:0;gap:4px}.scopebar.in .scp{padding:5px 11px;font-size:13.5px;border-radius:8px}.scp{border:1.5px solid var(--line);background:var(--surface);color:inherit;border-radius:10px;padding:7px 16px;font-size:14px;font-weight:600;cursor:pointer}.scp em{font-style:normal;font-weight:500;color:var(--muted);margin-left:4px;font-size:12.5px}.scp.on{border-color:var(--accent);background:var(--accent);color:#fff}.scp.on em{color:#fff;opacity:.85}
 .aschip{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:2px 10px;font-size:12.5px;cursor:pointer;color:inherit}.aschip:hover{border-color:var(--accent)}.aschip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}.aschip.bad{border-style:dashed;color:var(--muted)}.aschip.bad.on{color:#fff}
-.aschip.sib{border-style:dashed}.aschip.sib .sibf{font-size:11px;color:var(--muted);margin-left:2px}.aschip.sib.on .sibf{color:inherit;opacity:.85}
+.aschip.cxd{text-decoration:line-through;color:var(--muted);background:var(--sunk)}.ascx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 4px;line-height:1}.ascx:hover{color:#B42318}.aschip.sib{border-style:dashed}.aschip.sib .sibf{font-size:11px;color:var(--muted);margin-left:2px}.aschip.sib.on .sibf{color:inherit;opacity:.85}
 .appn{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:1px 9px;border-radius:10px;white-space:nowrap}
 .appn i,.fchip.needc i{width:8px;height:8px;border-radius:50%;display:inline-block;background:currentColor}
 .appn.lv0{background:var(--conf-fg);color:var(--surface)}.appn.lv1{background:var(--fin-bg);color:var(--fin-fg)}.appn.lv2{background:var(--blk-bg);color:var(--blk-fg)}
@@ -1550,8 +1550,8 @@ const orgShort = o => String(o||'미지정').replace(/학교$/,'');
 const spTxt = sc => !sc||!sc.spYn?'':sc.spYn==='yes'?`있음 ${+sc.sp||0}명`:'없음';
 const spMiss = sc => !sc||(sc.spYn!=='yes'&&sc.spYn!=='no')||(sc.spYn==='yes'&&!(+sc.sp>=1));
 const asstCell = r => r.asst?`<div class="small asc-line">보조 <b>${esc(instName(r.asst))}</b>${r.asstPend?' <span class="chip warn">가배치</span>':' <span class="chip ok">확정</span>'}${aDaysPart(r)?` <span class="muted">${aDaysOf(r).length}회</span>`:''}</div>`
-  :r.aOpen?`<div class="small muted asc-line">보조 모집 중${(r.aApps||[]).length?` · <span class="chip app">신청 ${(r.aApps||[]).length}명</span>`:' · 신청 없음'}</div>`
-  :S.ui.role==='admin'&&!S.adminOrg&&typeof asOk==='function'&&asOk(r)?`<div class="small asc-line"><span class="muted">보조 없음</span>${(r.aApps||[]).length?` · <span class="chip app">신청 ${(r.aApps||[]).length}명</span>`:''} <button class="btn sm" data-act="asrec1" data-id="${r.id}" title="이 학급 보조강사 모집을 강사 화면에 공개">보조 모집 공개</button></div>`:'';
+  :r.aOpen?`<div class="small muted asc-line">보조 모집 중${(r.aApps||[]).filter(a=>!asCx(r,a.tid)).length?` · <span class="chip app">신청 ${(r.aApps||[]).filter(a=>!asCx(r,a.tid)).length}명</span>`:' · 신청 없음'}</div>`
+  :S.ui.role==='admin'&&!S.adminOrg&&typeof asOk==='function'&&asOk(r)?`<div class="small asc-line"><span class="muted">보조 없음</span>${(r.aApps||[]).filter(a=>!asCx(r,a.tid)).length?` · <span class="chip app">신청 ${(r.aApps||[]).filter(a=>!asCx(r,a.tid)).length}명</span>`:''}${(r.aCancels||[]).length?` · <span class="lv-crit">배치 취소 ${(r.aCancels||[]).length}명</span>`:''} <button class="btn sm" data-act="asrec1" data-id="${r.id}" title="이 학급 보조강사 모집을 강사 화면에 공개">보조 모집 공개</button></div>`:'';
 const srcIdx = (r,d) => { if(r.srcIdx!=null) return r.srcIdx; if(r.splitFrom&&(d||0)<5){ const o=S.rows.find(x=>x.id===r.splitFrom); if(o) return srcIdx(o,(d||0)+1)+0.5; } const m=/^[ro](\d+)(?:-|$)/.exec(r.id||''); return m?+m[1]:1e6; };
 const rowNoN = r => { const n=parseFloat(String(r.no??'').replace(/[^\d.]/g,'')); return isNaN(n)?1e9:n; };
 const rowNoTxt = r => (r.no!=null&&String(r.no).trim()!=='')?String(r.no).trim():'-';
@@ -2259,7 +2259,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.93';
+const LIB_VER='11.94';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2482,6 +2482,9 @@ function spPanel(){
 }
 /* 보조강사 배치: 배치 확정 학급 중 고른 학급만 모집 공개 → 강사가 신청 → 운영기관 가배치(asstPend) → 확정하면 강사 화면에 공개 */
 const asApps = r => r.aApps||[];
+/* 보조강사 배치 후 취소 기록(r.aCancels): 신청 목록에서 「배치 취소함」으로 구분 */
+const asCx = (r,tid) => (r.aCancels||[]).filter(x=>x.tid===tid).slice(-1)[0]||null;
+const asCxTip = x => x?`${String(x.at||'').slice(0,16)} 배치 취소${x.why?' · '+x.why:''}`:'';
 /* 보조강사 분반 배치: 같은 학교 · 같은 날 같은 시간(프로그램 상관없음) 학급의 보조강사 신청자도 이 학급에 배치 가능 */
 function asSibs(r){ if(!r||r.ts==null) return []; const d=new Set(aDaysOf(r)); return S.rows.filter(x=>x.id!==r.id&&x.status!=='cancel'&&x.school===r.school&&rowSeason(x)===rowSeason(r)&&x.ts!=null&&x.ts<r.te&&r.ts<x.te&&aDaysOf(x).some(y=>d.has(y))); }
 const asSibApps = r => { const own=new Set(asApps(r).map(a=>a.tid)), m=new Map(); asSibs(r).forEach(x=>asApps(x).forEach(a=>{ if(!own.has(a.tid)&&!m.has(a.tid)) m.set(a.tid,{...a,from:x}); })); return [...m.values()]; };
@@ -2489,7 +2492,7 @@ const asState = r => r.asst&&!r.asstPend?'fin':r.asst?'pend':r.aOpen?'open':'non
 const AS_ST = {none:['모집 전','muted'],open:['모집 중','lv-info'],pend:['가배치','lv-warn'],fin:['확정','lv-ok']};
 function asRows(){ return matchRows().filter(asOk).sort((a,b)=>a.school.localeCompare(b.school,'ko')||clsName(a).localeCompare(clsName(b),'ko')); }
 function asList(){ const u=S.ui, f=u.asF||'', q=String(u.asQ||'').trim().toLowerCase();
-  const ok={'':()=>true,req:r=>r.sc.req.assist,none:r=>asState(r)==='none',open:r=>!!r.aOpen,app:r=>asApps(r).length&&!r.asst,pend:r=>asState(r)==='pend',fin:r=>asState(r)==='fin'}[f]||(()=>true);
+  const ok={'':()=>true,req:r=>r.sc.req.assist,none:r=>asState(r)==='none',open:r=>!!r.aOpen,app:r=>asApps(r).some(a=>!asCx(r,a.tid))&&!r.asst,pend:r=>asState(r)==='pend',fin:r=>asState(r)==='fin'}[f]||(()=>true);
   return asRows().filter(r=>ok(r)&&(!q||[r.school,clsName(r),prog(r.prog).name,instName(r.inst),instName(r.asst)].join(' ').toLowerCase().includes(q))); }
 function asDayRow(r){ const c=classDays(r), on=new Set(aDaysOf(r));
   return `<tr class="asday"><td></td><td colspan="6"><div class="stack" style="gap:6px"><div class="small"><b>보조강사 참여일</b> </div>
@@ -2502,25 +2505,25 @@ function asByTeacher(list){ const u=S.ui, q=String(u.asQ||'').trim();
   const ks=u.asTs||'apps', L=[...T.values()].filter(x=>!q||instName(x.tid).includes(q)||x.apps.some(({r})=>[r.school,clsName(r),prog(r.prog).name].join(' ').includes(q)));
   L.sort((a,b)=>ks==='name'?instName(a.tid).localeCompare(instName(b.tid),'ko'):ks==='asg'?(a.asg.length-b.asg.length)||(b.apps.length-a.apps.length):(b.apps.length-a.apps.length)||instName(a.tid).localeCompare(instName(b.tid),'ko'));
   const chipL=r=>`${esc(shortSch(r.school))} ${esc(clsName(r))} · ${daysTxt(r.days)} ${hm(r.ts)}`;
-  const chip=(r,tid,a,extra)=>{ const on=r.asst===tid, pend=on&&r.asstPend, other=!on&&r.asst, hard=!on&&(tid===r.inst||conflictsFor(tid,r,true).some(x=>x.hard));
-    const tip=[prog(r.prog).name,`${md(r.start)}~${md(r.end)}`,a&&a.at?'신청 '+a.at:'',a&&a.note?'메모: '+a.note:'',on?(pend?'가배치됨 · 누르면 해제':'보조강사 확정됨 · 누르면 해제'):other?`${instName(r.asst)} 대신 이 강사로 가배치`:'',hard?(tid===r.inst?'이 학급의 주강사':'같은 시간 다른 수업 배정'):''].filter(Boolean).join(' · ');
-    return `<button class="aschip ${on?'on':''} ${hard?'bad':''}" data-act="${on?'asunpick':'aspick'}" data-id="${r.id}" data-t="${tid}" title="${esc(tip)}">${on?'✓ ':''}${chipL(r)}${extra||''}${other?' · 다른 강사 배치됨':''}${hard?' · 겹침':''}</button>`; };
+  const chip=(r,tid,a,extra)=>{ const on=r.asst===tid, pend=on&&r.asstPend, other=!on&&r.asst, hard=!on&&(tid===r.inst||conflictsFor(tid,r,true).some(x=>x.hard)), cx=!on&&asCx(r,tid);
+    const tip=[prog(r.prog).name,`${md(r.start)}~${md(r.end)}`,a&&a.at?'신청 '+a.at:'',a&&a.note?'메모: '+a.note:'',on?(pend?'가배치됨 · 누르면 해제':'보조강사 확정됨 · 누르면 해제'):other?`${instName(r.asst)} 대신 이 강사로 가배치`:'',hard?(tid===r.inst?'이 학급의 주강사':'같은 시간 다른 수업 배정'):'',asCxTip(cx)].filter(Boolean).join(' · ');
+    return `<span class="row" style="gap:2px;display:inline-flex"><button class="aschip ${on?'on':''} ${hard?'bad':''} ${cx?'cxd':''}" data-act="${on?'asunpick':'aspick'}" data-id="${r.id}" data-t="${tid}" title="${esc(tip)}">${on?'✓ ':''}${chipL(r)}${extra||''}${cx?' · 배치 취소함':''}${other?' · 다른 강사 배치됨':''}${hard?' · 겹침':''}</button>${!on&&!cx&&a?`<button class="ascx" data-act="ascxmark" data-id="${r.id}" data-t="${tid}" title="이 학급에 배치됐다가 취소한 강사로 표시">×</button>`:''}</span>`; };
   return `<div class="row" style="gap:8px"><span class="small muted">신청 강사 ${L.length}명 · 신청 ${L.reduce((n,x)=>n+x.apps.length,0)}건</span><label class="row small" style="margin-left:auto">정렬 <select id="as-ts"><option value="apps" ${ks==='apps'?'selected':''}>신청 많은 순</option><option value="asg" ${ks==='asg'?'selected':''}>배정 적은 순</option><option value="name" ${ks==='name'?'selected':''}>이름순</option></select></label></div>
    <div class="tw" style="max-height:480px;overflow:auto"><table class="mt mtt"><thead><tr><th>강사</th><th class="nowrap">신청 · 배정</th><th>신청한 학급</th></tr></thead><tbody>
    ${L.length?L.map(x=>{ const t=instOf(x.tid)||{}; return `<tr><td class="nowrap"><b>${esc(instName(x.tid)||'(명단에 없음)')}</b>${t.id?tKindChip(t):''}<div class="small muted">${esc([t.region,t.phone].filter(Boolean).join(' · '))}</div></td>
-     <td class="nowrap"><b>${x.apps.length}</b> 신청 · <b class="${x.asg.length?'lv-ok':''}">${x.asg.length}</b> 배정${x.asg.some(r=>r.asstPend)?`<div class="small lv-warn">가배치 ${x.asg.filter(r=>r.asstPend).length}</div>`:''}</td>
+     <td class="nowrap"><b>${x.apps.filter(({r})=>!asCx(r,x.tid)).length}</b> 신청 · <b class="${x.asg.length?'lv-ok':''}">${x.asg.length}</b> 배정${x.apps.some(({r})=>asCx(r,x.tid))?`<div class="small lv-crit">배치 취소 ${x.apps.filter(({r})=>asCx(r,x.tid)).length}</div>`:''}${x.asg.some(r=>r.asstPend)?`<div class="small lv-warn">가배치 ${x.asg.filter(r=>r.asstPend).length}</div>`:''}</td>
      <td><div class="row" style="gap:4px;flex-wrap:wrap">${x.apps.slice().sort((a,b)=>String(a.r.start).localeCompare(String(b.r.start))||(a.r.ts-b.r.ts)).map(({r,a})=>chip(r,x.tid,a)).join('')}${x.asg.filter(r=>!x.apps.some(y=>y.r.id===r.id)).map(r=>chip(r,x.tid,null,' (미신청)')).join('')}</div></td></tr>`; }).join(''):`<tr><td colspan="3" class="muted small">${list.some(r=>r.aOpen)?'아직 신청한 강사가 없습니다.':'모집 공개한 학급이 없습니다. 「학급별 신청 · 배치」에서 학급을 골라 모집을 공개해 주세요.'}</td></tr>`}
    </tbody></table></div>`; }
 function asPanel(){
   const u=S.ui, all=asRows(), L=asList(), f=u.asF||'', sl=u.asSel||{};
   const sel=all.filter(r=>sl[r.id]), pend=all.filter(r=>asState(r)==='pend');
-  const n=k=>k===''?all.length:all.filter({req:r=>r.sc.req.assist,none:r=>asState(r)==='none',open:r=>!!r.aOpen,app:r=>asApps(r).length&&!r.asst,pend:r=>asState(r)==='pend',fin:r=>asState(r)==='fin'}[k]).length;
+  const n=k=>k===''?all.length:all.filter({req:r=>r.sc.req.assist,none:r=>asState(r)==='none',open:r=>!!r.aOpen,app:r=>asApps(r).some(a=>!asCx(r,a.tid))&&!r.asst,pend:r=>asState(r)==='pend',fin:r=>asState(r)==='fin'}[k]).length;
   const chip=(k,l)=>`<button class="fchip ${f===k?'on':''}" data-act="asf" data-v="${k}">${l} <em>${n(k)}</em></button>`;
   const appsH=r=>{ const A=asApps(r), B=r.status==='final'?asSibApps(r):[]; if(!A.length&&!B.length) return r.aOpen?'<span class="small muted">아직 신청 없음</span>':'';
     const sibH=B.map(a=>{ const on=r.asst===a.tid, hard=!on&&(a.tid===r.inst||conflictsFor(a.tid,r,true).some(x=>x.hard));
       return `<button class="aschip sib ${on?'on':''} ${hard?'bad':''}" data-act="${on?'asunpick':'aspick'}" data-id="${r.id}" data-t="${a.tid}" title="${esc(['같은 시간 '+clsName(a.from)+' ('+prog(a.from.prog).name+') 신청자',hard?'같은 시간 다른 수업 배정':''].filter(Boolean).join(' · '))}">${esc(instName(a.tid)||'(명단에 없음)')} <span class="sibf">${esc(clsName(a.from))} 신청</span>${hard?' · 겹침':''}${on?' ✓':''}</button>`; }).join('');
-    return (A.length?'':`<span class="small muted">이 학급 신청 없음 · </span>`)+A.map(a=>{ const t=instOf(a.tid), on=r.asst===a.tid, hard=a.tid===r.inst||conflictsFor(a.tid,r,true).some(x=>x.hard);
-      return `<button class="aschip ${on?'on':''} ${hard?'bad':''}" data-act="${on?'asunpick':'aspick'}" data-id="${r.id}" data-t="${a.tid}" title="${esc([t&&t.region,t&&t.phone,a.at,a.note?'메모: '+a.note:'',hard?'같은 시간 다른 수업 배정':''].filter(Boolean).join(' · '))}">${esc(instName(a.tid)||'(명단에 없음)')}${hard?' · 겹침':''}${on?' ✓':''}</button>`; }).join('')+(B.length?`<div class="small muted" style="margin-top:4px">같은 시간 다른 학급 신청자 ${qt(['같은 학교 · 같은 날 같은 시간 학급의 보조강사 신청자','눌러서 이 학급에 가배치 (같은 시간 다른 학급에 이미 배치됐으면 「겹침」)'])}</div>${sibH}`:''); };
+    return (A.length?'':`<span class="small muted">이 학급 신청 없음 · </span>`)+A.map(a=>{ const t=instOf(a.tid), on=r.asst===a.tid, hard=a.tid===r.inst||conflictsFor(a.tid,r,true).some(x=>x.hard), cx=!on&&asCx(r,a.tid);
+      return `<button class="aschip ${on?'on':''} ${hard?'bad':''} ${cx?'cxd':''}" data-act="${on?'asunpick':'aspick'}" data-id="${r.id}" data-t="${a.tid}" title="${esc([t&&t.region,t&&t.phone,a.at,a.note?'메모: '+a.note:'',hard?'같은 시간 다른 수업 배정':'',asCxTip(cx)].filter(Boolean).join(' · '))}">${esc(instName(a.tid)||'(명단에 없음)')}${cx?' · 배치 취소함':''}${hard?' · 겹침':''}${on?' ✓':''}</button>`; }).join('')+(B.length?`<div class="small muted" style="margin-top:4px">같은 시간 다른 학급 신청자 ${qt(['같은 학교 · 같은 날 같은 시간 학급의 보조강사 신청자','눌러서 이 학급에 가배치 (같은 시간 다른 학급에 이미 배치됐으면 「겹침」)'])}</div>${sibH}`:''); };
   return `<div class="panel stack" style="gap:10px;border-color:var(--accent)">
    <div class="row between"><h3>보조강사 배치</h3><button class="btn sm" data-act="asopen">닫기</button></div>
    <div class="small">학급 선택 → 모집 공개 → 신청 강사 이름 눌러 가배치 → 보조강사 확정 ${qt(['배치 확정 학급만 모집할 수 있음','가배치는 운영기관만 보임','확정하면 강사 화면에 공개','학교 화면에는 학교 공개를 마친 학급에만 보임','참여일을 줄이면 강사 화면·문자에 그 날짜만 나감'])}</div>
@@ -6942,8 +6945,11 @@ document.addEventListener('click',async e=>{
     case 'aspickcls': S.ui.asView='class'; toast('모집할 학급 왼쪽 칸을 체크한 뒤 「선택 학급 보조강사 모집 공개」를 누르세요'); break;
     case 'asrec': { const rs=asRows().filter(x=>(S.ui.asSel||{})[x.id]), go=rs.filter(x=>!x.aOpen&&asState(x)!=='fin'); go.forEach(x=>{ x.aOpen={at:now()}; x.aApps=x.aApps||[]; }); S.ui.asSel={}; const sk=rs.length-go.length; toast(`${go.length}학급 보조강사 모집을 강사 화면에 공개했습니다${sk?` · 이미 모집 중이거나 확정된 ${sk}학급은 건너뜀`:''}`); break; }
     case 'asclose': { const rs=asRows().filter(x=>(S.ui.asSel||{})[x.id]&&x.aOpen); rs.forEach(x=>{ delete x.aOpen; }); S.ui.asSel={}; toast(`${rs.length}학급 보조강사 모집을 닫았습니다. 받은 신청은 그대로 남습니다`); break; }
-    case 'aspick': { const tid=el.dataset.t; if(!r) return; if(!asOk(r)){ toast('운영 확정 뒤에 보조강사를 배치할 수 있습니다'); return; } if(r.inst===tid){ toast('이 학급의 주강사입니다'); return; } if(conflictsFor(tid,r,true).some(x=>x.hard)){ toast('같은 시간에 배정된 다른 수업이 있어 배치할 수 없습니다'); return; } const prev=r.asst; r.asst=tid; r.asstPend=true; toast(`${shortSch(r.school)} ${clsName(r)}: ${instName(tid)} 보조강사 가배치${prev&&prev!==tid?` (${instName(prev)} → 변경)`:''}`); break; }
-    case 'asunpick': { if(!r) return; const prev=r.asst; r.asst=''; delete r.asstPend; toast(`${instName(prev)} 보조강사 배치를 해제했습니다`); break; }
+    case 'aspick': { const tid=el.dataset.t; if(!r) return; if(asCx(r,tid)&&!confirm(`${instName(tid)} 강사는 이 학급 배치를 취소한 적이 있습니다 (${asCxTip(asCx(r,tid))}).\n다시 가배치할까요?`)) return; if(!asOk(r)){ toast('운영 확정 뒤에 보조강사를 배치할 수 있습니다'); return; } if(r.inst===tid){ toast('이 학급의 주강사입니다'); return; } if(conflictsFor(tid,r,true).some(x=>x.hard)){ toast('같은 시간에 배정된 다른 수업이 있어 배치할 수 없습니다'); return; } const prev=r.asst; r.asst=tid; r.asstPend=true; toast(`${shortSch(r.school)} ${clsName(r)}: ${instName(tid)} 보조강사 가배치${prev&&prev!==tid?` (${instName(prev)} → 변경)`:''}`); break; }
+    case 'asunpick': { if(!r) return; const prev=r.asst, fin=!r.asstPend;
+      if(fin){ const why=prompt(`${instName(prev)} 보조강사의 확정된 배치를 취소합니다.\n취소 사유를 적어 주세요 (신청 목록에 「배치 취소함」으로 남습니다).`,'개인 사정'); if(why===null) return; (r.aCancels=r.aCancels||[]).push({tid:prev,name:instName(prev),at:now(),why:why.trim(),by:'운영기관',wasFinal:true}); }
+      r.asst=''; delete r.asstPend; toast(`${instName(prev)} 보조강사 배치를 ${fin?'취소':'해제'}했습니다`); break; }
+    case 'ascxmark': { const tid=el.dataset.t; if(!r||!tid) return; const why=prompt(`${instName(tid)} 강사를 이 학급(${clsName(r)})에 배치됐다가 취소한 강사로 표시합니다.\n사유를 적어 주세요.`,'개인 사정'); if(why===null) return; (r.aCancels=r.aCancels||[]).push({tid,name:instName(tid),at:now(),why:why.trim(),by:'운영기관',wasFinal:true,manual:true}); toast(`${instName(tid)}: 배치 취소함으로 표시했습니다`); break; }
     case 'asfin': { const rs=asRows().filter(x=>asState(x)==='pend'); rs.forEach(x=>{ delete x.asstPend; x.asstAt=now(); delete x.aOpen; if(!x.schPend) x.thread.push({who:'호서대',text:`보조강사 배치: ${instName(x.asst)} 강사`,at:now()}); }); const nf=rs.filter(x=>x.status!=='final').length; toast(`${rs.length}학급 보조강사를 확정했습니다. `+(nf?`강사 화면에 공개되었습니다 (주강사 확정 전인 ${nf}학급은 주강사 확정 후 공개)`:'강사 화면에 공개되었습니다')); break; }
     case 'afask': S.ui.afAsk=!S.ui.afAsk; S.ui.afSel={}; break;
     case 'assignfinal': { const rs=afReady().filter(afOn); S.ui.afAsk=false; S.ui.afSel={}; rs.forEach(r=>{ r.status='final'; r.schPend=true; r.finalAt=now(); }); toast(`${rs.length}학급 배치를 확정했습니다. 강사 화면에 공개되었고, 학교에는 「5. 학교 공개」 후 보입니다`); break; }
@@ -7803,7 +7809,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.93';
+const APP_VER = '11.94';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
