@@ -2260,7 +2260,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.97';
+const LIB_VER='11.98';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6152,7 +6152,7 @@ function csSum(){ const q=S.ui.csSq||csQNow(), U=CS_UNIVS(), ym=csYm(), pc=(a,b)
   const V={}; U.forEach(o=>{ V[o]=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)); });
   const rowT=i=>U.reduce((t,o)=>({cls:t.cls+V[o][i].cls,ses:t.ses+V[o][i].ses,stu:t.stu+V[o][i].stu}),{cls:0,ses:0,stu:0}), G=CS_OPROWS.map((_,i)=>rowT(i)).reduce((t,x)=>({cls:t.cls+x.cls,ses:t.ses+x.ses,stu:t.stu+x.stu}),{cls:0,ses:0,stu:0});
   const sumO=(o,k)=>V[o].reduce((a,x)=>a+x[k],0);
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('sum',q)}<span style="flex:1"></span><button class="btn sm pri" data-act="csxls-rep" data-q="${q}">운영 보고 받기 (통합 + 대학별)</button><button class="btn sm pri" data-act="csxls-mile" data-q="${q}">마일스톤 점검표 받기 (통합 + 대학별)</button>${qt(['엑셀 한 파일에 「통합」 시트와 대학별 시트가 들어감','첨부 양식(운영 보고 통합·개별, 마일스톤 점검표)과 같은 표 구성','한글 양식에 붙여 넣으려면 엑셀 표를 복사해 한글 표에 붙여 넣기'])}</div>
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('sum',q)}<span style="flex:1"></span><button class="btn sm pri" data-act="csxls-rep" data-q="${q}">운영 보고 받기 (한글 · 통합 + 대학별)</button><button class="btn sm pri" data-act="csxls-mile" data-q="${q}">마일스톤 점검표 받기 (한글 · 대학별 + 통합 엑셀)</button><button class="btn sm" data-act="csxls-rep" data-q="${q}" data-f="x">운영 보고 엑셀</button>${qt(['한글 양식(hwpx)에 값을 채워 ZIP 하나로 받음: 통합 1개 + 대학별 5개','마일스톤 점검표는 통합 양식이 없어 통합은 엑셀, 대학별은 한글','숫자는 입력값 기준이며, 한글에서 열어 확인 후 저장'])}</div>
    <div class="panel stack" style="gap:8px"><div class="row" style="gap:8px;align-items:center"><b>제출 현황</b><span class="chip ${done===U.length?'ok':''}">모두 제출 ${done}/${U.length}</span><span class="small muted">마일스톤은 ${+ym.slice(5)}월 점검표, 운영 보고는 ${CS_QN[q]}</span></div>
     <div class="tw"><table><thead><tr><th>대학</th><th>마일스톤 진행률</th><th>${+ym.slice(5)}월 점검표</th><th>운영 보고</th><th>판정</th><th>대학별 양식</th></tr></thead><tbody>${U.map(o=>{ const pr=csProg(o,q); return `<tr><td><b>${esc(o)}</b></td><td>${pr.done}/${pr.need} · <b class="${csRateC(pr.p)}">${pr.p==null?'-':pr.p+'%'}</b></td><td>${stM(o)}</td><td>${stR(o)}</td><td>${CS_JL[csFinal(o,q)]||'-'}</td><td class="nowrap"><button class="btn sm" data-act="csxls-rep" data-q="${q}" data-o="${esc(o)}">운영 보고</button> <button class="btn sm" data-act="csxls-mile" data-q="${q}" data-o="${esc(o)}">마일스톤</button></td></tr>`; }).join('')}</tbody></table></div></div>
    <div class="panel stack" style="gap:8px"><b>1. 프로그램 운영 현황 (통합)</b>
@@ -6161,6 +6161,80 @@ function csSum(){ const q=S.ui.csSq||csQNow(), U=CS_UNIVS(), ym=csYm(), pc=(a,b)
      <tr class="cs-qh"><td colspan="2">합계</td>${['cls','ses','stu'].map(k=>U.map(o=>`<td class="num">${sumO(o,k).toLocaleString()}</td>`).join('')).join('')}<td class="num">100%</td><td class="num">100%</td></tr></tbody></table></div></div>
    <div class="panel stack" style="gap:8px"><b>2. 강사연수 · 4. 예산 집행 (통합)</b>
     <div class="tw"><table class="small"><thead><tr><th>대학</th><th>내부 목표/참여</th><th>외부 목표/참여</th><th>연수 비율</th><th>예산액(천원)</th><th>지출액</th><th>집행률</th></tr></thead><tbody>${U.map(o=>{ const T=((((csOrgR(o).rep||{})[q])||{}).train)||{}, g=k=>+(T[k]||{}).goal||0, t=k=>+(T[k]||{}).got||0, b=csBud(o,q), tp=csPct(t('in')+t('out'),g('in')+g('out')); return `<tr><td>${esc(csUS(o))}</td><td>${g('in')}/${t('in')}</td><td>${g('out')}/${t('out')}</td><td class="${csRateC(tp)}">${tp==null?'-':tp+'%'}</td><td class="num">${b.b.toLocaleString()}</td><td class="num">${b.s.toLocaleString()}</td><td class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</td></tr>`; }).join('')}</tbody></table></div></div>`; }
+/* ---------- 한글(HWPX) 양식 채우기: cs_hwpx/*.json = 첨부 양식(hwpx)을 풀어 둔 파일. 표 칸(행·열 주소)에 값을 넣고 다시 묶음 ---------- */
+const HX_TPL = {};
+function hxTpl(k){ if(HX_TPL[k]) return Promise.resolve(HX_TPL[k]); return fetch('cs_hwpx/'+k+'.json?v='+LIB_VER).then(r=>{ if(!r.ok) throw new Error('한글 양식 파일을 불러오지 못했습니다'); return r.json(); }).then(j=>(HX_TPL[k]=j)); }
+const HX_CRC = (()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
+function hxCrc(u){ let c=0xFFFFFFFF; for(let i=0;i<u.length;i++) c=HX_CRC[(c^u[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function hxZip(entries,type){ const enc=new TextEncoder(), parts=[], cen=[]; let off=0;
+  entries.forEach(e=>{ const nm=enc.encode(e.name), d=e.data, crc=hxCrc(d), h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true); h.setUint16(12,0x21,true); h.setUint32(14,crc,true); h.setUint32(18,d.length,true); h.setUint32(22,d.length,true); h.setUint16(26,nm.length,true);
+    parts.push(new Uint8Array(h.buffer),nm,d);
+    const c=new DataView(new ArrayBuffer(46)); c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0x0800,true); c.setUint16(14,0x21,true); c.setUint32(16,crc,true); c.setUint32(20,d.length,true); c.setUint32(24,d.length,true); c.setUint16(28,nm.length,true); c.setUint32(42,off,true);
+    cen.push(new Uint8Array(c.buffer),nm); off+=30+nm.length+d.length; });
+  const cs=cen.reduce((a,x)=>a+x.length,0), e=new DataView(new ArrayBuffer(22)); e.setUint32(0,0x06054b50,true); e.setUint16(8,entries.length,true); e.setUint16(10,entries.length,true); e.setUint32(12,cs,true); e.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:type||'application/zip'}); }
+function hxPack(T,sec){ const enc=new TextEncoder(); return hxZip(T.files.map(f=>({name:f.n,data:f.n==='Contents/section0.xml'?enc.encode(sec):f.t!=null?enc.encode(f.t):Uint8Array.from(atob(f.b),ch=>ch.charCodeAt(0))})),'application/hwp+zip'); }
+const hxEsc = t => String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function hxTables(x){ const out=[], st=[], re=/<hp:tbl\b|<\/hp:tbl>/g; let m; while((m=re.exec(x))){ if(m[0]==='</hp:tbl>'){ const a=st.pop(); if(!st.length) out.push([a,m.index+9]); } else st.push(m.index); } return out; }
+function hxSetIn(seg,val){ const t=hxEsc(val).replace(/\n/g,'<hp:lineBreak/>'); seg=seg.replace(/<hp:linesegarray>[\s\S]*?<\/hp:linesegarray>/g,'');
+  if(/<hp:t>/.test(seg)){ let first=true; return seg.replace(/<hp:t>[^<]*<\/hp:t>/g,()=>{ if(first){ first=false; return '<hp:t>'+t+'</hp:t>'; } return ''; }); }
+  return seg.replace(/<hp:run charPrIDRef="(\d+)"\/>/,(m,id)=>'<hp:run charPrIDRef="'+id+'"><hp:t>'+t+'</hp:t></hp:run>'); }
+/* 표 ti의 칸들에 값 넣기: V = {'행,열': 값} */
+function hxCells(x,ti,V){ const T=hxTables(x)[ti]; if(!T) return x; let tx=x.slice(T[0],T[1]);
+  Object.entries(V).forEach(([k,v])=>{ if(v==null||v==='') return; const [r,c]=k.split(','), mk='<hp:cellAddr colAddr="'+c+'" rowAddr="'+r+'"/>', i=tx.indexOf(mk); if(i<0) return; const a=tx.lastIndexOf('<hp:tc ',i); tx=tx.slice(0,a)+hxSetIn(tx.slice(a,i),v)+tx.slice(i); });
+  return x.slice(0,T[0])+tx+x.slice(T[1]); }
+/* 표 ti 끝에 마지막 줄을 n번 복제(행 주소 이어서) */
+function hxAddRows(x,ti,n){ if(n<=0) return x; const T=hxTables(x)[ti]; let tx=x.slice(T[0],T[1]); const rows=tx.match(/<hp:tr>[\s\S]*?<\/hp:tr>/g)||[]; if(!rows.length) return x;
+  const last=rows[rows.length-1], r0=+((last.match(/rowAddr="(\d+)"/)||[])[1]||0); let add='';
+  for(let k=1;k<=n;k++) add+=last.replace(/rowAddr="\d+"/g,'rowAddr="'+(r0+k)+'"').replace(/<hp:t>[^<]*<\/hp:t>/g,'');
+  const at=tx.lastIndexOf(last)+last.length; tx=tx.slice(0,at)+add+tx.slice(at); tx=tx.replace(/(<hp:tbl\b[^>]*?rowCnt=")(\d+)"/,(m,a,b)=>a+(+b+n)+'"');
+  return x.slice(0,T[0])+tx+x.slice(T[1]); }
+/* 글자(예: 「나. 우수사례」)가 있는 문단 바로 다음 빈 문단에 글 넣기 */
+function hxParaAfter(x,mark,val){ if(!val) return x; const i=x.indexOf(mark); if(i<0) return x; const e=x.indexOf('</hp:p>',i)+7, n=x.indexOf('</hp:p>',e)+7; return x.slice(0,e)+hxSetIn(x.slice(e,n),val)+x.slice(n); }
+const hxP = (a,b) => b?(Math.round(a/b*1000)/10).toFixed(1):'';
+const hxN = v => v?Number(v).toLocaleString():'';
+const HX_U = ['호서','상명','유원','단국','연암'];
+async function hxRepOne(q,o){ const T=await hxTpl('rep_one'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const R=((csOrgR(o).rep||{})[q])||{};
+  x=hxCells(x,1,{'0,0':o});
+  const V=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)), S2=V.reduce((t,v)=>({cls:t.cls+v.cls,ses:t.ses+v.ses,stu:t.stu+v.stu}),{cls:0,ses:0,stu:0}), c2={};
+  V.forEach((v,i)=>{ const r=i+1; c2[r+',2']=hxN(v.cls); c2[r+',3']=hxN(v.ses); c2[r+',4']=hxN(v.stu); c2[r+',5']=v.cls?hxP(v.cls,S2.cls):''; c2[r+',6']=v.ses?hxP(v.ses,S2.ses):''; });
+  Object.assign(c2,{'9,2':hxN(S2.cls)||'0','9,3':hxN(S2.ses)||'0','9,4':hxN(S2.stu)||'0','9,5':S2.cls?'100.0':'','9,6':S2.ses?'100.0':''}); x=hxCells(x,2,c2);
+  const tr=R.train||{}, g=k=>+(tr[k]||{}).goal||0, t=k=>+(tr[k]||{}).got||0;
+  x=hxCells(x,3,{'1,2':hxN(g('in')),'1,3':hxN(t('in')),'1,4':hxP(t('in'),g('in')),'2,2':hxN(g('out')),'2,3':hxN(t('out')),'2,4':hxP(t('out'),g('out')),'3,2':hxN(g('in')+g('out')),'3,3':hxN(t('in')+t('out')),'3,4':hxP(t('in')+t('out'),g('in')+g('out'))});
+  const D=(R.dev||[]).filter(d=>d.name); x=hxAddRows(x,4,D.length-5); const c4={}; D.forEach((d,i)=>{ const r=i+1; c4[r+',0']=String(r); c4[r+',1']=d.name; c4[r+',2']=d.kind; c4[r+',3']=d.plan; c4[r+',4']=d.lesson; c4[r+',5']=d.ppt; c4[r+',6']=d.note; }); x=hxCells(x,4,c4);
+  const B=R.bud||{}, c5={}; let tb=0,ts=0; CS_BUD.forEach((k,i)=>{ const v=B[k]||{}, b=+v.b||0, sp=+v.s||0; tb+=b; ts+=sp; const r=i+1; c5[r+',1']=hxN(b); c5[r+',2']=hxN(sp); c5[r+',3']=b?hxN(b-sp):''; c5[r+',4']=v.note; }); Object.assign(c5,{'9,1':hxN(tb),'9,2':hxN(ts),'9,3':tb?hxN(tb-ts):'','9,4':R.budAt?'기준일 '+R.budAt:''}); x=hxCells(x,5,c5);
+  const E=(R.press||[]).filter(e=>e.t||e.d); x=hxAddRows(x,6,E.length-2); const c6={}; E.forEach((e,i)=>{ const r=i+1; c6[r+',0']=String(r); c6[r+',1']=e.d; c6[r+',2']=e.t; c6[r+',3']=e.by; c6[r+',4']=e.note; }); x=hxCells(x,6,c6);
+  x=hxParaAfter(x,'나. 우수사례',R.best); x=hxParaAfter(x,'다. 건의사항',R.ask);
+  return hxPack(T,x); }
+async function hxRepAll(q,U){ const T=await hxTpl('rep_all'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const repOf=o=>((csOrgR(o).rep||{})[q])||{}, col=o=>HX_U.indexOf(csUS(o));
+  const V={}; U.forEach(o=>{ V[o]=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)); }); const rt=i=>U.reduce((t,o)=>({cls:t.cls+V[o][i].cls,ses:t.ses+V[o][i].ses}),{cls:0,ses:0}), G=CS_OPROWS.map((_,i)=>rt(i)).reduce((t,v)=>({cls:t.cls+v.cls,ses:t.ses+v.ses}),{cls:0,ses:0}), c2={};
+  U.forEach(o=>{ const j=col(o); if(j<0) return; let a={cls:0,ses:0,stu:0}; V[o].forEach((v,i)=>{ const r=i+2; c2[r+','+(2+j)]=hxN(v.cls); c2[r+','+(7+j)]=hxN(v.ses); c2[r+','+(12+j)]=hxN(v.stu); a.cls+=v.cls; a.ses+=v.ses; a.stu+=v.stu; }); c2['10,'+(2+j)]=hxN(a.cls)||'0'; c2['10,'+(7+j)]=hxN(a.ses)||'0'; c2['10,'+(12+j)]=hxN(a.stu)||'0'; });
+  CS_OPROWS.forEach((_,i)=>{ const t=rt(i), r=i+2; c2[r+',17']=t.cls?hxP(t.cls,G.cls):''; c2[r+',18']=t.ses?hxP(t.ses,G.ses):''; }); c2['10,17']=G.cls?'100.0':''; c2['10,18']=G.ses?'100.0':''; x=hxCells(x,2,c2);
+  const tv=(o,k,f)=>+(((repOf(o).train||{})[k])||{})[f]||0, c3={}; let sg={in:0,out:0}, st={in:0,out:0};
+  U.forEach(o=>{ const j=col(o); if(j<0) return; [['in',2],['out',3]].forEach(([k,r])=>{ c3[r+','+(2+j)]=hxN(tv(o,k,'goal')); c3[r+','+(7+j)]=hxN(tv(o,k,'got')); sg[k]+=tv(o,k,'goal'); st[k]+=tv(o,k,'got'); }); c3['4,'+(2+j)]=hxN(tv(o,'in','goal')+tv(o,'out','goal')); c3['4,'+(7+j)]=hxN(tv(o,'in','got')+tv(o,'out','got')); });
+  c3['2,12']=hxP(st.in,sg.in); c3['3,12']=hxP(st.out,sg.out); c3['4,12']=hxP(st.in+st.out,sg.in+sg.out); x=hxCells(x,3,c3);
+  const D=[]; U.forEach(o=>(repOf(o).dev||[]).filter(d=>d.name).forEach(d=>D.push({...d,name:'['+csUS(o)+'] '+d.name}))); x=hxAddRows(x,4,D.length-5); const c4={}; D.forEach((d,i)=>{ const r=i+1; c4[r+',0']=String(r); c4[r+',1']=d.name; c4[r+',2']=d.kind; c4[r+',3']=d.plan; c4[r+',4']=d.lesson; c4[r+',5']=d.ppt; c4[r+',6']=d.note; }); x=hxCells(x,4,c4);
+  const c5={}; let tb=0,ts=0; CS_BUD.forEach((k,i)=>{ let b=0,sp=0; U.forEach(o=>{ const v=((repOf(o).bud||{})[k])||{}; b+=+v.b||0; sp+=+v.s||0; }); tb+=b; ts+=sp; const r=i+1; c5[r+',1']=hxN(b); c5[r+',2']=hxN(sp); c5[r+',3']=b?hxN(b-sp):''; }); Object.assign(c5,{'9,1':hxN(tb),'9,2':hxN(ts),'9,3':tb?hxN(tb-ts):''}); x=hxCells(x,5,c5);
+  const E=[]; U.forEach(o=>(repOf(o).press||[]).filter(e=>e.t||e.d).forEach(e=>E.push({...e,note:['['+csUS(o)+']',e.note].filter(Boolean).join(' ')}))); x=hxAddRows(x,6,E.length-2); const c6={}; E.forEach((e,i)=>{ const r=i+1; c6[r+',0']=String(r); c6[r+',1']=e.d; c6[r+',2']=e.t; c6[r+',3']=e.by; c6[r+',4']=e.note; }); x=hxCells(x,6,c6);
+  const joinF=f=>U.map(o=>repOf(o)[f]?'['+csUS(o)+'] '+repOf(o)[f]:'').filter(Boolean).join('\n');
+  x=hxParaAfter(x,'나. 우수사례',joinF('best')); x=hxParaAfter(x,'다. 건의사항',joinF('ask'));
+  return hxPack(T,x); }
+async function hxMileOne(q,o){ const T=await hxTpl('mile'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const D=csOrgR(o), M=D.mile||{}, ym=csYm(), sb=(D.sub||{})[ym];
+  x=hxCells(x,0,{'0,1':o,'0,3':ym.slice(0,4)+'년 ('+(+ym.slice(5))+')월','1,3':sb?String(sb).slice(0,10).replace(/-/g,'. ')+'.':''});
+  const c1={}; CS_MILES.forEach(d=>{ const it=M[d[0]]||{}, v=it.v; if(v!=null&&v!=='') c1[d[0]+',4']=d[4]==='ox'?v:'( '+v+' )'+(d[4]==='c'?'건':'회'); if(it.note) c1[d[0]+',5']=it.note; }); x=hxCells(x,1,c1);
+  const c2={}; [1,2,3,4].forEach(qq=>{ if(qq>q) return; const p=csProg(o,qq); c2[qq+',3']=String(p.done); c2[qq+',4']=(p.p==null?'-':p.p)+'%'; c2[qq+',5']=CS_JL[csFinal(o,qq)]||''; }); x=hxCells(x,2,c2);
+  return hxPack(T,x); }
+async function csHwpRep(q,orgs){ const all=orgs.length>1, Y=csYear(), qn=CS_QN[q].replace(/ .*/,'');
+  if(!all){ const b=await hxRepOne(q,orgs[0]); return saveBinaryBuf(await b.arrayBuffer(),`${Y} ${qn} 운영 보고 ${csUS(orgs[0])}.hwpx`,'운영 보고(한글)를 내려받았습니다'); }
+  const L=[{name:`${Y} ${qn} 운영 보고 통합.hwpx`,data:new Uint8Array(await (await hxRepAll(q,orgs)).arrayBuffer())}];
+  for(const o of orgs) L.push({name:`${Y} ${qn} 운영 보고 ${csUS(o)}.hwpx`,data:new Uint8Array(await (await hxRepOne(q,o)).arrayBuffer())});
+  return saveBinaryBuf(await hxZip(L).arrayBuffer(),`${Y} ${qn} 운영 보고 (통합·대학별).zip`,'운영 보고(한글) 통합·대학별 파일을 내려받았습니다'); }
+async function csHwpMile(q,orgs){ const all=orgs.length>1, Y=csYear(), m=+csYm().slice(5);
+  if(!all){ const b=await hxMileOne(q,orgs[0]); return saveBinaryBuf(await b.arrayBuffer(),`${Y} 마일스톤 점검표 ${csUS(orgs[0])} (${m}월).hwpx`,'마일스톤 점검표(한글)를 내려받았습니다'); }
+  const L=[]; const xb=await csXlsMile(q,orgs,true); if(xb) L.push({name:`${Y} 마일스톤 점검표 통합 (${m}월).xlsx`,data:new Uint8Array(xb)});
+  for(const o of orgs) L.push({name:`${Y} 마일스톤 점검표 ${csUS(o)} (${m}월).hwpx`,data:new Uint8Array(await (await hxMileOne(q,o)).arrayBuffer())});
+  return saveBinaryBuf(await hxZip(L).arrayBuffer(),`${Y} 마일스톤 점검표 (통합·대학별, ${m}월).zip`,'마일스톤 점검표 통합·대학별 파일을 내려받았습니다'); }
 /* ---------- 양식 내려받기 (엑셀: 첨부 한글 양식과 같은 표 구성) ---------- */
 function csXlsKit(){ const thin={style:'thin',color:{argb:'FF999999'}}, B={top:thin,left:thin,bottom:thin,right:thin};
   const put=(ws,r,c,v,o)=>{ const cell=ws.getCell(r,c); cell.value=v==null?'':v; cell.border=B; cell.alignment={vertical:'middle',horizontal:(o&&o.al)||'center',wrapText:true}; if(o&&o.h){ cell.font={bold:true}; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2EDEC'}}; } if(o&&o.b) cell.font={bold:true}; if(o&&o.fmt) cell.numFmt=o.fmt; return cell; };
@@ -6215,7 +6289,7 @@ async function csXlsRep(q,orgs){ if(typeof ExcelJS==='undefined') throw new Erro
   });
   wb.worksheets.forEach(w=>{ w.pageSetup={paperSize:9,orientation:w.name==='통합'?'landscape':'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}}; });
   const out=await wb.xlsx.writeBuffer(); await saveBinaryBuf(out,`${csYear()} ${CS_QN[q].replace(/ .*/,'')} 운영 보고 ${all?'통합':csUS(U[0])}.xlsx`,'운영 보고 양식을 내려받았습니다'); }
-async function csXlsMile(q,orgs){ if(typeof ExcelJS==='undefined') throw new Error('엑셀 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+async function csXlsMile(q,orgs,ret){ if(typeof ExcelJS==='undefined') throw new Error('엑셀 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
   const K=csXlsKit(), wb=new ExcelJS.Workbook(), P='0.0%', all=orgs.length>1, U=orgs, ym=csYm();
   const val=(o,d)=>{ const it=(csOrgR(o).mile||{})[d[0]]||{}; if(it.v==null||it.v==='') return ''; return d[4]==='ox'?it.v:`${it.v}${d[4]==='c'?'건':'회'}`; };
   const qcum=qq=>CS_MILES.filter(d=>d[1]<=qq).length;
@@ -6236,7 +6310,7 @@ async function csXlsMile(q,orgs){ if(typeof ExcelJS==='undefined') throw new Err
     [1,2,3,4].forEach(qq=>{ const p=csProg(o,qq), on=qq<=q; K.put(ws,r,1,`${qq}분기`); K.put(ws,r,2,CS_MILES.filter(d=>d[1]===qq).length); K.put(ws,r,3,qcum(qq)); K.put(ws,r,4,on?p.done:''); K.put(ws,r,5,on&&p.need?p.done/p.need:'',{fmt:P}); K.put(ws,r,6,on?CS_JL[csFinal(o,qq)]||'-':''); r++; });
   });
   wb.worksheets.forEach(w=>{ w.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}}; });
-  const out=await wb.xlsx.writeBuffer(); await saveBinaryBuf(out,`${csYear()} 마일스톤 점검표 ${all?'통합':csUS(U[0])} (${+ym.slice(5)}월).xlsx`,'마일스톤 점검표를 내려받았습니다'); }
+  const out=await wb.xlsx.writeBuffer(); if(ret) return out; await saveBinaryBuf(out,`${csYear()} 마일스톤 점검표 ${all?'통합':csUS(U[0])} (${+ym.slice(5)}월).xlsx`,'마일스톤 점검표를 내려받았습니다'); }
 /* ---------- 운영 보고 ---------- */
 function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep||{})[q])||{}, cp=`consOrg.${o}.rep.${q}`, sec=S.ui.csRs||'op', adm=!csMine(), lk=!adm&&!!R.subAt, D_=lk?'disabled':'', rFix=R.fix&&!R.subAt;
   const inp=(path,v,w,ph,num)=>`<input ${D_} ${num===false?'':'type="number"'} data-cp="${cp}.${path}" data-cat="${cp}" value="${esc(v??'')}" style="width:${w||'80px'}" placeholder="${esc(ph||'')}">`;
@@ -6404,8 +6478,8 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
   switch(a){
     case 'cstab': if(U.csTab!==el.dataset.v){ subNavPush({csTab:el.dataset.v}); } U.csTab=el.dataset.v; return true;
     case 'csq': { const k=el.dataset.k, v=+el.dataset.v; if(k==='rep') U.csRq=v; else if(k==='judge') U.csJq=v; else if(k==='sum') U.csSq=v; else U.csQ=v; return true; }
-    case 'csxls-rep': csXlsRep(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
-    case 'csxls-mile': csXlsMile(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
+    case 'csxls-rep': (el.dataset.f==='x'?csXlsRep:csHwpRep)(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
+    case 'csxls-mile': (el.dataset.f==='x'?csXlsMile:csHwpMile)(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
     case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab='mile'; } return true;
     case 'csmq': { const m=U.csMq||{[csQNow()]:true}; m[el.dataset.v]=!m[el.dataset.v]; U.csMq=m; return true; }
     case 'csox': { if(el.disabled) return false; const p=`consOrg.${o}.mile.${el.dataset.n}`, cur=csGet(p+'.v'); csSet(p+'.v',cur===el.dataset.v?'':el.dataset.v); csStamp(p); return true; }
@@ -7935,7 +8009,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.97';
+const APP_VER = '11.98';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
