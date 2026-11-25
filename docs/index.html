@@ -728,6 +728,20 @@ if(EMBED) document.documentElement.classList.add('embed');
 <style>
   html.embed #side h1.brandbar, html.embed #navBack, html.embed #bizLogo { display: none !important; } /* 운영 관리 9번 안: 위쪽 머리글과 겹치는 로고 줄 숨김 */
   html.embed #side { padding-top: 10px; }
+  /* 운영 관리 9번 안: 운영 관리 화면과 같은 틀(가운데 1320px · 떠 있는 왼쪽 메뉴 카드 · 회색 바탕 위 제목 · 같은 글자 크기) */
+  html.embed body { background: #f4f3f2; }
+  html.embed #app { max-width: 1320px; margin: 0 auto; padding: 18px 16px 24px; box-sizing: border-box; grid-template-columns: 240px minmax(0, 1fr); column-gap: 24px; min-height: 0; }
+  html.embed #side { position: sticky; top: 12px; align-self: start; height: auto; max-height: calc(100vh - 24px); border: 1px solid #e3dedd; border-right: 1px solid #e3dedd; border-radius: 14px; background: #fff; padding: 10px 0 12px; box-shadow: 0 1px 0 rgba(40,14,16,.03), 0 1px 3px rgba(40,14,16,.06); }
+  html.embed #nav > label { margin: 1px 8px; }
+  html.embed #nav .navg { margin: 14px 8px 4px; }
+  html.embed #side .sidefoot { background: none; border-top: 1px solid #efebea; margin: 8px 14px 0; padding: 12px 0 0; }
+  html.embed #side .sidefoot .ver, html.embed #storeHint, html.embed footer.copy { display: none !important; }
+  html.embed #main > .panel { background: none; box-shadow: none; padding: 0; }
+  html.embed #pageHead { border-bottom: 0; padding-bottom: 0; margin-bottom: 14px; }
+  html.embed #phStep { font-size: 13px; font-weight: 400; color: #6b6465; letter-spacing: 0; }
+  html.embed #phStep::before { content: "강사서류 › "; }
+  html.embed #phName { font-size: 21px; font-weight: 700; letter-spacing: -.02em; margin: 6px 0 2px; }
+  html.embed .work { padding: 0 0 8px; }
 </style>
 </head>
 <body>
@@ -1292,7 +1306,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.25-4';
+var APP_VERSION = '2026.11.25-5';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
