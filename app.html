@@ -2313,7 +2313,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.119';
+const LIB_VER='11.120';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6288,7 +6288,7 @@ function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csY
   return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('dash',q)}<span class="small muted">사업 연도 ${csYear()}</span></div>
    <div class="cs-kps">${csKp(U.length+'개교','참여대학')}${csKp(`${cnt('g')} · ${cnt('y')} · ${cnt('r')}`,'Green · Yellow · Red')}${csKp(CS_MILES.filter(d=>d[1]<=Math.min(q,csMileQ())&&csMCnt(d)).length+'개','누적 예정 마일스톤')}${csKp(nos.length+'개교',`${+ym.slice(5)}월 점검표 미제출`,nos.length?'lv-warn':'')}${csKp(lateG+'건','기한 지난 미회신 공문',lateG?'lv-crit':'')}</div>
    <div class="panel stack" style="gap:8px"><div class="row between" style="flex-wrap:wrap;gap:8px"><b>대학별 현황</b><div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-act="csxls-rep" data-q="${q}">운영 보고 다운로드 (한글)</button><button class="btn sm pri" data-act="csxls-mile" data-q="${q}">마일스톤 점검표 다운로드 (한글)</button><button class="btn sm" data-act="csxls-rep" data-q="${q}" data-f="x">운영 보고 엑셀</button>${qt(['운영 보고: 통합 1개 + 대학별 5개를 ZIP 하나로','마일스톤 점검표: 통합은 엑셀, 대학별은 한글','대학 이름을 누르면 그 대학 마일스톤 점검표로 이동'])}</div></div>
-    ${S.ui.stLoaded?'':'<div class="small muted">운영 통계 자료를 불러오는 중이라 목표 달성률이 잠시 비어 있을 수 있습니다.</div>'}
+    ${!S.ui.stLoaded?'<div class="small muted">운영 통계 자료를 불러오는 중이라 목표 달성률이 잠시 비어 있을 수 있습니다.</div>':S.ui.stCached&&S.ui.stLoading?'<div class="small muted">지난번 받은 통계로 보여 주는 중 · 최신 자료 확인 중…</div>':''}
     <div class="tw"><table class="cs-ut"><thead><tr><th>대학</th><th>판정</th><th>목표 달성률</th><th>사업 진행률</th><th>예산 집행률</th><th>성실도</th><th>${+ym.slice(5)}월 점검표</th><th>운영 보고</th><th>대학별 양식</th></tr></thead><tbody>
      ${st.map(x=>`<tr><td class="nowrap"><button class="lnk" data-act="csgo" data-v="${esc(x.o)}"><b>${esc(csUS(x.o))}대</b></button>${x.o===MY_ORG?' <span class="chip sm">주관</span>':''}</td><td>${csSig(x.fin)}</td><td>${rate(x.g.p)}</td><td>${rate(x.p.p)}<div class="small muted">${x.p.done}/${x.p.need}</div></td><td>${rate(x.b.p)}</td><td><span class="chip ${x.a.P.score<csCfg().cut?'x':''}">${x.a.P.score}점</span></td><td>${stM(x.o)}</td><td>${stR(x.o)}</td><td class="nowrap small"><button class="lnk" data-act="csxls-rep" data-q="${q}" data-o="${esc(x.o)}">운영 보고</button> · <button class="lnk" data-act="csxls-mile" data-q="${q}" data-o="${esc(x.o)}">마일스톤</button></td></tr>`).join('')}</tbody></table></div></div>
    <div class="panel stack" style="gap:6px"><b>할 일 <span class="small muted" style="font-weight:400">기한 순</span></b>
@@ -8238,7 +8238,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.119';
+const APP_VER = '11.120';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -8441,7 +8441,11 @@ function resultSend(sch) {
 }
 /* 운영기관: 최근 강사 확인 실패 기록 (서버가 원인 추정) */
 /* 운영 통계 자료: 서버 「통계자료」 탭 */
-function statsLoad() { if (S.ui.stLoading) return; S.ui.stLoading = true; run('adminStatsLoad', ADMIN_KEY).then(d => { S.stats = d || { ds: [] }; S.ui.stLoaded = true; S.ui.stLoading = false; render(); }).catch(err => { S.ui.stLoading = false; S.stats = { ds: [], err: errMsg(err) }; S.ui.stLoaded = true; toast('통계 자료를 불러오지 못했습니다: ' + errMsg(err)); render(); }); }
+/* 운영 통계 자료: 지난번 받은 자료를 이 브라우저에 보관해 두었다가 바로 보여 주고, 서버 최신 자료는 뒤에서 받아 바꿈 */
+const stCacheKey = () => 'anc_stats_' + (S.biz || 'anchor') + '_' + (S.adminOrg || 'hq');
+function statsLoad() { if (S.ui.stLoading) return; S.ui.stLoading = true;
+  if (!S.stats) { try { const c = JSON.parse(localStorage.getItem(stCacheKey()) || 'null'); if (c && c.ds) { S.stats = c; S.ui.stLoaded = true; S.ui.stCached = true; setTimeout(render, 0); } } catch (e) {} }
+  run('adminStatsLoad', ADMIN_KEY).then(d => { S.stats = d || { ds: [] }; S.ui.stLoaded = true; S.ui.stLoading = false; S.ui.stCached = false; try { localStorage.setItem(stCacheKey(), JSON.stringify(S.stats)); } catch (e) { try { localStorage.removeItem(stCacheKey()); } catch (_) {} } render(); }).catch(err => { S.ui.stLoading = false; if (S.ui.stCached && S.stats && S.stats.ds) { toast('최신 통계를 불러오지 못해 지난번 받은 자료로 보여 줍니다: ' + errMsg(err)); render(); return; } S.stats = { ds: [], err: errMsg(err) }; S.ui.stLoaded = true; toast('통계 자료를 불러오지 못했습니다: ' + errMsg(err)); render(); }); }
 function statsPut(d) { return run('adminStatsPut', ADMIN_KEY, d).then(() => render()); }
 function statsDel(id) { return run('adminStatsDel', ADMIN_KEY, id).then(() => render()); }
 function loginFailsLoad() { toast('강사 확인 실패 기록을 불러오는 중…'); return run('adminLoginFails', ADMIN_KEY).then(L => { S.ui.lfails = L || []; render(); }).catch(err => toast('기록을 불러오지 못했습니다: ' + errMsg(err))); }

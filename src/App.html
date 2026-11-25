@@ -331,7 +331,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.119';
+const APP_VER = '11.120';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -534,7 +534,11 @@ function resultSend(sch) {
 }
 /* 운영기관: 최근 강사 확인 실패 기록 (서버가 원인 추정) */
 /* 운영 통계 자료: 서버 「통계자료」 탭 */
-function statsLoad() { if (S.ui.stLoading) return; S.ui.stLoading = true; run('adminStatsLoad', ADMIN_KEY).then(d => { S.stats = d || { ds: [] }; S.ui.stLoaded = true; S.ui.stLoading = false; render(); }).catch(err => { S.ui.stLoading = false; S.stats = { ds: [], err: errMsg(err) }; S.ui.stLoaded = true; toast('통계 자료를 불러오지 못했습니다: ' + errMsg(err)); render(); }); }
+/* 운영 통계 자료: 지난번 받은 자료를 이 브라우저에 보관해 두었다가 바로 보여 주고, 서버 최신 자료는 뒤에서 받아 바꿈 */
+const stCacheKey = () => 'anc_stats_' + (S.biz || 'anchor') + '_' + (S.adminOrg || 'hq');
+function statsLoad() { if (S.ui.stLoading) return; S.ui.stLoading = true;
+  if (!S.stats) { try { const c = JSON.parse(localStorage.getItem(stCacheKey()) || 'null'); if (c && c.ds) { S.stats = c; S.ui.stLoaded = true; S.ui.stCached = true; setTimeout(render, 0); } } catch (e) {} }
+  run('adminStatsLoad', ADMIN_KEY).then(d => { S.stats = d || { ds: [] }; S.ui.stLoaded = true; S.ui.stLoading = false; S.ui.stCached = false; try { localStorage.setItem(stCacheKey(), JSON.stringify(S.stats)); } catch (e) { try { localStorage.removeItem(stCacheKey()); } catch (_) {} } render(); }).catch(err => { S.ui.stLoading = false; if (S.ui.stCached && S.stats && S.stats.ds) { toast('최신 통계를 불러오지 못해 지난번 받은 자료로 보여 줍니다: ' + errMsg(err)); render(); return; } S.stats = { ds: [], err: errMsg(err) }; S.ui.stLoaded = true; toast('통계 자료를 불러오지 못했습니다: ' + errMsg(err)); render(); }); }
 function statsPut(d) { return run('adminStatsPut', ADMIN_KEY, d).then(() => render()); }
 function statsDel(id) { return run('adminStatsDel', ADMIN_KEY, id).then(() => render()); }
 function loginFailsLoad() { toast('강사 확인 실패 기록을 불러오는 중…'); return run('adminLoginFails', ADMIN_KEY).then(L => { S.ui.lfails = L || []; render(); }).catch(err => toast('기록을 불러오지 못했습니다: ' + errMsg(err))); }
