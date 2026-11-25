@@ -1841,7 +1841,7 @@ const T_SYS = '호서대 운영 담당자';
 /* 대학별 매칭·수업 문의처 (운영자 제공 2026-11-05). 바뀌면 여기만 고치면 강사 화면 전체에 반영 */
 const ORG_CONTACTS = {'호서대학교':{phone:'041-423-2429',chat:'https://open.kakao.com/o/sE2yXvfh'},'상명대학교':{phone:'041-623-0047',chat:'https://open.kakao.com/o/sOjKDfEi'},'유원대학교':{phone:'041-536-5845',chat:'https://open.kakao.com/o/gB1p3lGi'},'단국대학교':{phone:'010-3193-2839',chat:'https://open.kakao.com/o/sBcPKxNi'},'연암대학교':{phone:'041-580-5624',chat:'https://open.kakao.com/o/gFIXJfEi'}};
 const orgContactHtml = o => { const c=ORG_CONTACTS[o]; return c?`<span class="mono">${esc(c.phone)}</span> · <a href="${esc(c.chat)}" target="_blank" rel="noopener">오픈채팅 문의</a>`:'<span class="muted">연락처는 기존 공지 참고</span>'; };
-const orgContactTable = () => `<table class="orgct"><tbody>${Object.entries(ORG_CONTACTS).map(([o,c])=>`<tr><th scope="row">${esc(o)}</th><td class="mono">${esc(c.phone)}</td><td><a href="${esc(c.chat)}" target="_blank" rel="noopener">오픈채팅 문의</a></td></tr>`).join('')}</tbody></table>`;
+const orgContactTable = only => `<table class="orgct"><tbody>${Object.entries(ORG_CONTACTS).filter(([o])=>!only||!only.length||only.includes(o)).map(([o,c])=>`<tr><th scope="row">${esc(o)}</th><td class="mono">${esc(c.phone)}</td><td><a href="${esc(c.chat)}" target="_blank" rel="noopener">오픈채팅 문의</a></td></tr>`).join('')}</tbody></table>`;
 const sysContact = () => `${esc(S.ops.name||'')}${S.ops.pos?' '+esc(S.ops.pos):''}${S.ops.title?` <span class="muted">(${esc(S.ops.title)})</span>`:''}${S.ops.phone?` · <span class="mono">${esc(S.ops.phone)}</span>`:''}${S.ops.chat?` · <a href="${esc(S.ops.chat)}" target="_blank" rel="noopener">오픈채팅</a>`:''}`;
 const orgAsk = r => orgOfRow(r)===MY_ORG?'호서대 운영 담당자':`${orgShort(orgOfRow(r))} 운영 담당자`;
 /* 방학집중형 등(앵커늘봄 외 사업): 학교(신청기관) 지역 구분 — 드롭다운 + 직접 입력 */
@@ -1867,16 +1867,19 @@ const bizContactTable = () => { const L=(S.bizInfo||[]).filter(b=>b.ops&&(b.ops.
   return `<table class="orgct"><tbody>${L.map(b=>`<tr><th scope="row">${esc(b.name)}${b.center?` <span class="muted">(${esc(b.center)})</span>`:''}</th><td>${esc(b.ops.name||'')}</td><td class="mono">${esc(b.ops.phone||'')}</td><td>${b.ops.chat?`<a href="${esc(b.ops.chat)}" target="_blank" rel="noopener">오픈채팅</a>`:''}</td></tr>`).join('')}</tbody></table>`; };
 /* 문의 안내: 사업별로 묶음. 앵커늘봄 = 총괄센터 담당자 + 매칭·수업은 학급 운영 대학(호서대·상명대·유원대·단국대·연암대), 그 밖의 사업 = 그 사업 담당자 */
 const tHelpOps = o => o&&(o.name||o.phone)?`<b>${esc(o.name||'')}</b>${o.pos?` ${esc(o.pos)}`:''}${o.phone?` · <span class="mono">${esc(o.phone)}</span>`:''}${o.chat?` · <a href="${esc(o.chat)}" target="_blank" rel="noopener">오픈채팅</a>`:''}`:'<span class="muted">담당자 정보 준비 중</span>';
-const tHelp = (compact,inst) => { if(!(S.bizInfo||[]).length&&!S._bizAsk&&typeof google!=='undefined'&&google.script&&google.script.run){ S._bizAsk=1; google.script.run.withSuccessHandler(L=>{ if(L&&L.length){ S.bizInfo=L; render(); } }).withFailureHandler(()=>{}).bizContacts(); }
+const tHelp = (compact,inst,orgs) => { if(!(S.bizInfo||[]).length&&!S._bizAsk&&typeof google!=='undefined'&&google.script&&google.script.run){ S._bizAsk=1; google.script.run.withSuccessHandler(L=>{ if(L&&L.length){ S.bizInfo=L; render(); } }).withFailureHandler(()=>{}).bizContacts(); }
   const L=(S.bizInfo||[]).length?S.bizInfo:[{k:curBiz(),name:bizOf(curBiz()).name||'앵커늘봄',center:bizOf(curBiz()).center||'',ops:S.ops}], cur=(S.ui.role==='teacher'||inst)?curBiz():'';
-  const sorted=L.slice().sort((a,b)=>(b.k===cur)-(a.k===cur));
+  let sorted=L.slice().sort((a,b)=>(b.k===cur)-(a.k===cur));
+  /* 학교·기관 담당자 화면: 이 기관 수업을 관리하는 사업(과 운영 대학)만 */
+  if(inst){ const only=sorted.filter(b=>b.k===curBiz()); if(only.length) sorted=only; }
+  const og=inst&&orgs&&orgs.filter(o=>ORG_CONTACTS[o]).length?orgs.filter(o=>ORG_CONTACTS[o]):null;
   return `<div class="helpbox small${compact?' compact':''}"><b>문의 안내</b>
-  <span class="muted">${inst?'사업마다 문의처가 다릅니다. 우리 기관 수업이 속한 사업의 담당자에게 문의해 주세요.':'사업마다 문의처가 다릅니다. 수업이 속한 사업의 담당자에게 문의해 주세요.'}</span>
+  <span class="muted">${inst?'우리 기관 수업을 관리하는 담당자입니다. 아래 담당자에게 문의해 주세요.':'사업마다 문의처가 다릅니다. 수업이 속한 사업의 담당자에게 문의해 주세요.'}</span>
   <div class="hb-grid">${sorted.map((b,i)=>`<section class="hb-card hb-c${bzIdx(b.k)}"><div class="hb-head"><span class="hb-tag">사업</span><b>${esc(b.name)}</b><span class="hb-ctr">${esc(b.center||'')}</span></div><div class="hb-body">
     ${b.k==='anchor'?`<div class="hb-row"><span class="hb-l">운영 · 시스템</span><span>${tHelpOps(b.ops)}</span></div>
      <div class="hb-row"><span class="hb-l">매칭 · 수업</span><span><b>해당 학급의 운영 대학 담당자</b> <span class="muted">${inst?'(프로그램·학급 정보, 강사 배치, 수업 운영)':'(프로그램·학급 정보, 강사 선발·등록, 배치, 수업 운영 · 강사 선발·등록은 면접을 본 대학)'}</span></span></div>
-     ${compact?`<details class="orgct-d"><summary>운영 대학별 문의처 (호서대 · 상명대 · 유원대 · 단국대 · 연암대)</summary>${orgContactTable()}</details>`:orgContactTable()}`
-    :`<div class="hb-row"><span class="hb-l">모든 문의</span><span>${tHelpOps(b.ops)} <span class="muted">(운영·시스템·매칭·수업)</span></span></div>`}</div></section>`).join('')}</div></div>`; };
+     ${og?orgContactTable(og):compact?`<details class="orgct-d"><summary>운영 대학별 문의처 (호서대 · 상명대 · 유원대 · 단국대 · 연암대)</summary>${orgContactTable()}</details>`:orgContactTable()}`
+    :`<div class="hb-row"><span class="hb-l">사업 관련 문의</span><span>${tHelpOps(b.ops)} <span class="muted">(${esc(b.name)} 운영·매칭·수업)</span></span></div>`}</div></section>`).join('')}</div></div>`; };
 /* 강사 화면의 학교 연락 칸: 학교가 강사 제공에 동의하면 학교 담당자, 아니면 호서대 운영 담당자 */
 function teacherContact(r){
   const c=S.contacts[r.school]||{};
@@ -2249,7 +2252,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.98';
+const LIB_VER='11.99';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -3005,7 +3008,7 @@ function viewSchool(){
      <div class="small" style="margin-top:4px">운영 공지는 <b>단체 카톡방과 이메일</b>로 안내합니다. 꼭 입장해 주세요. ${qt(['일정 변경·강사 배정·서류 제출 공지가 카톡방으로 전달됨','개별 확인 내용은 담당자 이메일로','입장 후 「○○초 입장했습니다」라고 남기기'])}</div></div>
      ${kakaoOf(schIsOut(),ss)?`<div class="row"><a class="btn pri" href="${esc(kakaoOf(schIsOut(),ss))}" target="_blank" rel="noopener">카톡방 입장하기</a><span class="mono small" style="word-break:break-all">${esc(kakaoOf(schIsOut(),ss))}</span><button class="btn sm" data-act="copylink">링크 복사</button></div>`:''}
      <label class="row small"><input type="checkbox" id="c-kakao" data-c="kakao" ${c.kakao?'checked':''}> 단체 카톡방에 입장했습니다</label></div>`:''}
-   ${S.ui.role==='school'?tHelp(false,true):''}
+   ${S.ui.role==='school'?tHelp(false,true,[...new Set(rs.map(orgOfRow))]):''}
   </div>`;
 }
 /* 학교 화면: 제출 후 진행 상황 */
