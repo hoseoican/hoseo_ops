@@ -2263,7 +2263,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.101';
+const LIB_VER='11.102';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4118,6 +4118,8 @@ const EXTRA_COLS=['협의 수정 이력','개인정보 수집 동의','강사 �
 const ST_M=[['cls','학급 수','학급'],['stu','학생 수','명'],['ses','차시 수','차시'],['sch','학교 수','개교']];
 const ST_F=[['year','연도'],['period','시기'],['org','운영기관'],['school','학교명'],['region','지역'],['size','지역규모'],['room','교실명'],['prog','프로그램명'],['field','분야'],['grade','학년'],['exp','예상 인원'],['stu','학생 수(확정)'],['per','일별차시'],['days','운영일수'],['ses','총차시'],['start','시작일'],['end','종료일'],['dow','요일'],['ts','시작시간'],['te','종료시간'],['mc','다문화 인원'],['mcv','다문화(교육청 확인)'],['welfare','교육복지우선지원'],['low','소외계층'],['inst','강사명'],['seq','순번']];
 const ST_SYN={period:['시기','운영시기','학기','운영기간구분'],welfare:['교육복지','교육복지우선지원','교육복지우선지원대상','교육복지우선지원학교','교육복지대상'],year:['연도','년도','사업연도','회계연도'],org:['운영기관','운영대학','대학','기관','기관명','대학명'],school:['학교명','학교'],region:['지역','지역2','시군','시군구','교육지원청'],size:['지역규모','규모'],room:['교실명','교실명/위치','교실','장소'],prog:['프로그램명','프로그램','과정명','강좌명'],field:['분야','영역'],grade:['학년','대상학년','대상'],exp:['예상인원','신청인원'],stu:['확정인원','학생수','참여인원','참여학생수','인원','수강인원'],per:['일별차시','1일차시'],days:['운영일','운영일수','운영일(수식변경x)','수업일수','운영횟수'],ses:['총차시','총차시(수식변경x)','차시','운영차시','차시수'],start:['시작일','운영시작일','개강일'],end:['종료일','운영종료일','종강일'],dow:['요일','운영요일'],ts:['시작시간'],te:['종료시간'],mc:['다문화인원','다문화'],low:['소외계층','취약계층'],inst:['강사명','강사','주강사'],seq:['순번','번호','연번']};
+/* 인원 칸 값: 숫자만. 날짜(2026-03-10 등)·전화번호처럼 보이면 인원으로 안 봄 */
+const stPpl=v=>{ if(typeof v==='number') return isFinite(v)&&v>0&&v<1000?Math.round(v):0; const t=String(v??'').trim(); if(!t||/\d{4}\s*[-./년]|\d{2,3}-\d{3,4}-\d{4}/.test(t)) return 0; const n=stN(t); return n>0&&n<1000?Math.round(n):0; };
 const stN=v=>{ if(typeof v==='number') return isFinite(v)?v:0; const m=String(v??'').replace(/,/g,'').match(/-?\d+(\.\d+)?/); return m?+m[0]:0; };
 const stFmt=n=>Math.round(n||0).toLocaleString('ko-KR');
 const stYearOf=(name,starts)=>{ const m=String(name||'').match(/20\d\d/); if(m) return +m[0]; const ys=starts.filter(Boolean).map(s=>+s.slice(0,4)).filter(Boolean); return ys.length?Math.min(...ys):new Date().getFullYear(); };
@@ -4160,8 +4162,10 @@ function stParseA(src,file){
   src.forEach(({name:sn,A,r0,strike})=>{ A=(A||[]).map(row=>row.map(c=>c==null?'':c)); let hr=-1;
     for(let i=0;i<Math.min(15,A.length);i++) if(A[i].some(c=>hKey(c)==="학교명")){ hr=i; break; }
     if(hr<0) return; const RH=A[hr].map(h=>String(h??'').replace(/\s+/g,' ').trim()), RK=RH.map(hKey); RK.forEach((k,ci)=>{ if(k&&!headSeen[k]){ headSeen[k]=1; heads.push({k,h:RH[ci]}); } }); const H=A[hr].map(hKey), col=(...ks)=>{ for(const k of ks){ const i=H.indexOf(hKey(k)); if(i>=0) return i; } return -1; };
-    const C={seq:col('순번','연번','번호'),memo:col('통화메모','비고'),org:col('운영기관'),sch:col('학교명'),reg:col('지역2','지역'),room:col('교실명/위치','교실명'),prog:col('프로그램명'),field:col('분야'),per:col('일별차시'),days:col('운영일 (수식 변경X)','운영일'),ses:col('총차시 (수식 변경X)','총차시'),grade:col('학년'),exp:(()=>{ const a=col('예상 인원','예상인원'); return a>=0?a:H.findIndex(h=>/예상|신청.*(인원|학생)/.test(h)); })(),cnt:(()=>{ const a=col('확정 인원','확정인원'); return a>=0?a:H.findIndex(h=>/확정.*(인원|학생)|참여.*(인원|학생|수)|수강.*(인원|생)|^(인원|인원수|학생수|학생|수강생|참여자수?)$|인원\(명\)/.test(h)); })(),s:col('시작일'),e:col('종료일'),d:col('요일'),ts:col('시작시간'),te:col('종료시간'),mc:col('다문화 인원','다문화인원'),low:col('소외계층'),size:col('지역규모'),inst:col('강사명'),addr:col('학교주소','학교 주소','주소')};
+    const C={seq:col('순번','연번','번호'),memo:col('통화메모','비고'),org:col('운영기관'),sch:col('학교명'),reg:col('지역2','지역'),room:col('교실명/위치','교실명'),prog:col('프로그램명'),field:col('분야'),per:col('일별차시'),days:col('운영일 (수식 변경X)','운영일'),ses:col('총차시 (수식 변경X)','총차시'),grade:col('학년'),exp:col('예상 인원','예상인원'),cnt:col('확정 인원','확정인원'),s:col('시작일'),e:col('종료일'),d:col('요일'),ts:col('시작시간'),te:col('종료시간'),mc:col('다문화 인원','다문화인원'),low:col('소외계층'),size:col('지역규모'),inst:col('강사명'),addr:col('학교주소','학교 주소','주소')};
     /* 방학집중형(실무자용 운영시트·재단 보고용 목록): 「사업구분」 칸이 있음 → 사업=방학집중형, 운영기관=호서대 */
+    /* 학생 수: ① 확정 인원 칸 값 ② 없거나 비면 예상 인원 ③ 그다음 인원을 뜻하는 다른 칸(인원수·학생수·참여 인원 등) 순서로 */
+    C.ppl=[C.exp,...H.map((h,i)=>/인원|학생수|^학생$|수강생|참여자|인원수/.test(h)&&!/확정|예상|다문화|소외|보조|강사|모니터|담당|학급수|교사|태블릿/.test(h)?i:-1).filter(i=>i>=0)].filter(i=>i>=0);
     const VAC=H.includes('사업구분'); if(VAC){ C.field=col('분야','프로그램분야'); C.ses=col('차시','총운영차시'); C.reg=col('시군구'); C.mok=col('매칭확정'); C.memo=col('메모','비고'); }
     const dayCols=H.map((h,i)=>/^수업일\d+$/.test(h)?i:-1).filter(i=>i>=0), sheetOrgF=orgByName(sn), sheetOrg=stOrgSheet(sn)?sheetOrgF:'';
     A.slice(hr+1).forEach((a,ri)=>{ const g=i=>i>=0?a[i]:'', sch=String(g(C.sch)).trim(), xrow=(r0||0)+hr+2+ri, pn=String(g(C.prog)).split('\n').filter(Boolean).pop()||'', what=`${sch} ${String(g(C.room)).trim()} · ${pn.replace(/->/g,'').trim()}`;
@@ -4171,7 +4175,7 @@ function stParseA(src,file){
       const raw={}; RK.forEach((k,ci)=>{ if(k&&(raw[k]==null||raw[k]==='')) raw[k]=a[ci]; });
       const rec=({_raw:raw,...(VAC?{biz:'vac'}:{}),org:VAC?MY_ORG:(orgByName(rawOrg)||rawOrg||sheetOrgF||''),school:sch,region:String(g(C.reg)).trim(),size:String(g(C.size)).trim(),room:String(g(C.room)).trim(),
         prog:String(g(C.prog)).split('\n').filter(Boolean).pop()?.replace(/->/g,'').trim()||'',field:String(g(C.field)).trim(),grade:String(g(C.grade)).trim(),
-        exp:stN(g(C.exp)),stu:stN(g(C.cnt))||stN(g(C.exp)),per,days,ses,start:xIso(g(C.s))||'',end:xIso(g(C.e))||'',dow:String(g(C.d)).trim(),ts:stTime(g(C.ts)),te:stTime(g(C.te)),mc:stN(g(C.mc)),low:stN(g(C.low)),inst:String(g(C.inst)).trim(),addr:String(g(C.addr)).replace(/\s+/g,' ').trim()});
+        exp:stPpl(g(C.exp)),stu:stPpl(g(C.cnt))||C.ppl.map(i=>stPpl(g(i))).find(v=>v>0)||0,per,days,ses,start:xIso(g(C.s))||'',end:xIso(g(C.e))||'',dow:String(g(C.d)).trim(),ts:stTime(g(C.ts)),te:stTime(g(C.te)),mc:stN(g(C.mc)),low:stN(g(C.low)),inst:String(g(C.inst)).trim(),addr:String(g(C.addr)).replace(/\s+/g,' ').trim()});
       const memo=String(g(C.memo)), mm=memo.match(/운영\s*취소|폐강|수업\s*취소/), at=`${sn} ${xrow}행`;
       /* 연번·순번 칸에 「취소」를 적거나, 어떤 칸에 「취소」「운영 취소」「폐강」만 적어 둔 줄도 취소로 봄 */
       const sq=String(g(C.seq)).trim(), mark=/취소|폐강/.test(sq)?sq:(a.map(v=>String(v??'').trim()).find(v=>/^(운영\s*|수업\s*)?취소(됨)?$|^폐강$/.test(v))||'');
@@ -8020,7 +8024,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.101';
+const APP_VER = '11.102';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
