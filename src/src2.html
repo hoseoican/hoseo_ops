@@ -2291,7 +2291,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.113';
+const LIB_VER='11.114';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6173,9 +6173,13 @@ const csUS = o => orgShort(o).replace(/대$/,'');
 const CS_JL = {g:'Green(정상)',y:'Yellow(주의)',r:'Red(지원)',n:'-'};
 const CS_DEVST = ['','완료','진행 중','예정'];
 /* 운영 보고 3. 프로그램 개발: 7번 탭(프로그램 개발) 그 대학 프로그램에서 자동으로 만듦. 제출하면 그때 내용(devSnap)으로 고정 */
-function csDevAuto(o){ const u=orgShort(o)||o, st=(r,k)=>(r.docs||{})[k]?'완료':r.stage==='미착수'?'예정':'진행 중';
-  return kitDB().dev.filter(r=>(r.biz||'anchor')==='anchor'&&!r.gone&&r.stage!=='삭제'&&r.univ===u).sort((a,b)=>a.name.localeCompare(b.name,'ko'))
-   .map(r=>({name:r.name,kind:r.type||'',plan:st(r,'plan'),lesson:st(r,'lesson'),ppt:st(r,'ppt'),note:[r.term,r.memo].filter(Boolean).join(' · ')})); }
+/* 대학연합 프로그램(우리 고장 탐험놀이·우리 충남 탐험놀이)은 호서대가 관리 → 호서대 운영 보고에 넣음 */
+function csDevAuto(o){ const u=orgShort(o)||o, hs=u===(orgShort(MY_ORG)||'호서대'), st=(r,k)=>(r.docs||{})[k]?'완료':r.stage==='미착수'?'예정':'진행 중';
+  return kitDB().dev.filter(r=>(r.biz||'anchor')==='anchor'&&!r.gone&&r.stage!=='삭제'&&(r.univ===u||(hs&&/^대학\s*연합$/.test(r.univ||'')))).sort((a,b)=>(a.univ===u?0:1)-(b.univ===u?0:1)||a.name.localeCompare(b.name,'ko'))
+   .map(r=>({name:r.name+(r.univ===u?'':' (대학연합)'),kind:r.type||'',plan:st(r,'plan'),lesson:st(r,'lesson'),ppt:st(r,'ppt'),note:[r.term,r.memo].filter(Boolean).join(' · ')})); }
+/* 대학 담당자 검토 완료: 확인한 목록의 지문(sig)을 남기고, 7번 탭이 바뀌면 다시 확인하게 함 */
+const csDevSig = L => { const t=JSON.stringify(L||[]); let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))|0; return String(L.length)+'.'+(h>>>0).toString(36); };
+function csDevOkState(o,q){ const R=((csOrgR(o).rep||{})[q])||{}, k=R.devOk; if(!k||!k.at) return {ok:false}; return {ok:R.subAt&&Array.isArray(R.devSnap)?true:k.sig===csDevSig(csDevAuto(o)),k,changed:!(R.subAt&&Array.isArray(R.devSnap))&&k.sig!==csDevSig(csDevAuto(o))}; }
 function csDevOf(o,q){ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt&&Array.isArray(R.devSnap)?R.devSnap:csDevAuto(o); }
 const kitEnsure = () => new Promise(res=>{ if(kitDB().loaded) return res(); kitLoad(); let n=0; const t=setInterval(()=>{ if(kitDB().loaded||++n>150){ clearInterval(t); res(); } },100); });
 const CS_SIG = {g:['Green 정상','cs-g'],y:['Yellow 주의','cs-y'],r:['Red 지원','cs-r'],n:['판정 전','cs-n']};
@@ -6497,7 +6501,9 @@ function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep|
      ${kitDB().err?`<div class="notice bad small">7번 탭 자료를 불러오지 못했습니다: ${esc(kitDB().err)} · 7번 탭이 공개되어 있는지 호서대에 확인해 주세요.</div>`:''}
      ${!L?'<div class="small muted">7번 탭 자료를 불러오는 중…</div>':!L.length?`<div class="notice small lv-warn">7번 탭에 ${esc(mine)} 프로그램이 아직 없습니다. 7번 탭에서 먼저 입력해 주세요.</div>`:
      `<div class="tw"><table><thead><tr><th>순</th><th>프로그램</th><th>기존/고도화/신규</th><th>기획/차시구성안</th><th>회차별 학습과정안</th><th>PPT/동영상</th><th>비고 (기간·메모)</th></tr></thead><tbody>${L.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.kind||'-')}</td><td>${esc(x.plan||'')}</td><td>${esc(x.lesson||'')}</td><td>${esc(x.ppt||'')}</td><td class="small">${esc(x.note||'')}</td></tr>`).join('')}</tbody></table></div>
-      <div class="small muted">계획서·차시별 지도안·PPT가 7번 탭에 올라와 있으면 「완료」, 없으면 단계에 따라 「진행 중」(개발 중·개발 완료) 또는 「예정」(미착수)</div>`}`; }
+      <div class="small muted">계획서·차시별 지도안·PPT가 7번 탭에 올라와 있으면 「완료」, 없으면 단계에 따라 「진행 중」(개발 중·개발 완료) 또는 「예정」(미착수)</div>
+      ${(()=>{ const K=csDevOkState(o,q); return K.ok?`<div class="notice small" style="border-left-color:var(--ok)"><b class="lv-ok">검토 완료</b> · ${esc(String(K.k.at).slice(5,16).replace('-','.'))} ${esc(K.k.by||'')} 확인 ${snap||D_?'':`<button class="lnk small" data-act="csdevok" data-o="${esc(o)}" data-q="${q}" data-v="">검토 취소</button>`}</div>`
+        :`<div class="notice ${K.changed?'bad':''} stack" style="gap:6px">${K.changed?'<b>검토 후 7번 탭 현황이 바뀌었습니다. 다시 확인해 주세요.</b>':'<b>위 현황을 검토해 주세요.</b>'}<div class="small">7번 탭 현황이 실제와 같은지 확인하고 「검토 완료」를 눌러 주세요. 다르면 7번 탭에서 고친 뒤 다시 확인합니다. 검토를 마쳐야 운영 보고를 제출할 수 있습니다.</div><div><button class="btn sm pri" ${D_} data-act="csdevok" data-o="${esc(o)}" data-q="${q}" data-v="1">이상 없음 · 검토 완료</button></div></div>`; })()}`}`; }
   if(sec==='bud'){ const B=R.bud||{}, b=csBud(o,q);
     body=`<div class="tw"><table><thead><tr><th>사업비 항목</th><th>예산액(천원)</th><th>지출액(천원)</th><th>잔액</th><th>집행률</th><th>비고</th></tr></thead><tbody>${CS_BUD.map(k=>{ const x=B[k]||{}, p=csPct(+x.s||0,+x.b||0); return `<tr><td>${esc(k)}</td><td>${inp(`bud.${k}.b`,x.b,'100px')}</td><td>${inp(`bud.${k}.s`,x.s,'100px')}</td><td class="mono">${x.b?((+x.b||0)-(+x.s||0)).toLocaleString():'-'}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td><td>${inp(`bud.${k}.note`,x.note,'140px','',false)}</td></tr>`; }).join('')}
      <tr class="cs-qh"><td>합계</td><td>${b.b.toLocaleString()}</td><td>${b.s.toLocaleString()}</td><td>${(b.b-b.s).toLocaleString()}</td><td class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</td><td></td></tr></tbody></table></div>
@@ -6652,13 +6658,14 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'csxls-mile': (el.dataset.f==='x'?csXlsMile:csHwpMile)(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
     case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab='mile'; } return true;
     case 'csmopen': { if(csMine()) return false; csSet(`consCfg.mileQ.${csYear()}`,+el.dataset.v); toast(`마일스톤 대학 입력을 ${el.dataset.v}분기까지 열었습니다`); return true; }
+    case 'csdevok': { if(el.disabled) return false; const p=`consOrg.${o}.rep.${el.dataset.q}`; csSet(p+'.devOk',el.dataset.v?{at:kstNow().replace('T',' '),by:S.adminName||orgShort(o),sig:csDevSig(csDevAuto(o))}:''); csStamp(p); toast(el.dataset.v?'프로그램 개발 현황 검토를 완료했습니다':'검토 완료를 취소했습니다'); return true; }
     case 'csgodev': goView('dev'); window.scrollTo({top:0}); return true;
     case 'csmq': { const m=U.csMq||{[csQNow()]:true}; m[el.dataset.v]=!m[el.dataset.v]; U.csMq=m; return true; }
     case 'csox': { if(el.disabled) return false; const p=`consOrg.${o}.mile.${el.dataset.n}`, cur=csGet(p+'.v'); csSet(p+'.v',cur===el.dataset.v?'':el.dataset.v); csStamp(p); return true; }
     case 'csmst': { const p=`consOrg.${o}.mile.${el.dataset.n}`; if(el.dataset.v==='fix'){ const w=prompt('보완 요청 사유',csGet(p+'.fixWhy')||''); if(w===null) return false; csSet(p+'.fixWhy',w.trim()); csSet(p+'.st','fix'); } else { csSet(p+'.st',csGet(p+'.st')==='ok'?'':'ok'); } csStamp(p); return true; }
     case 'csmfin': { const ym=U.csYm||csYm(), p=`consOrg.${o}.sub.${ym}`; if(csMine()&&!el.dataset.v) return false; if(csMine()&&!confirm(`${+ym.slice(5)}월 점검표를 제출할까요?\n제출하면 고칠 수 없습니다(호서대가 보완을 요청한 항목만 수정 가능).`)) return false; csSet(p,el.dataset.v?kstNow().replace('T',' '):''); csStamp(`consOrg.${o}.sub`); toast(el.dataset.v?`${+ym.slice(5)}월 마일스톤 점검표를 제출했습니다`:'제출을 취소했습니다'); return true; }
     case 'csrs': U.csRs=el.dataset.v; return true;
-    case 'csask': U.csAsk={k:el.dataset.k,o:el.dataset.o,q:el.dataset.q?+el.dataset.q:0}; return true;
+    case 'csask': if(el.dataset.k==='rep'&&!csDevOkState(el.dataset.o,+el.dataset.q).ok){ toast('「3. 프로그램 개발」에서 7번 탭 현황을 검토하고 「검토 완료」를 눌러 주세요'); U.csRs='dev'; return true; } U.csAsk={k:el.dataset.k,o:el.dataset.o,q:el.dataset.q?+el.dataset.q:0}; return true;
     case 'csaskno': U.csAsk=null; return true;
     case 'csaskgo': { const A=U.csAsk; if(!A) return false; U.csAsk=null; const st=kstNow().replace('T',' ');
       if(A.k==='mile'){ const ym=U.csYm||csYm(); csSet(`consOrg.${A.o}.sub.${ym}`,st); csStamp(`consOrg.${A.o}.sub`); toast(`${+ym.slice(5)}월 마일스톤 점검표를 제출했습니다`); }
