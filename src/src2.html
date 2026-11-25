@@ -2291,7 +2291,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.112';
+const LIB_VER='11.113';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5949,8 +5949,10 @@ function kitLoad(){ const D=kitDB(); if(D.loaded||D.loading) return;
   if(kitOnGas()){ D.loading=true; run('adminKitLoad',ADMIN_KEY).then(d=>{ S.kitDB={items:(d&&d.items)||[],dev:(d&&d.dev)||[],loaded:true}; render(); }).catch(e=>{ D.loading=false; D.loaded=true; D.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); render(); }); return; }
   D.loaded=true; setTimeout(render,0); }
 const kitItems = () => kitDB().items.filter(x=>x.biz===curBiz());
-const devRecs = () => kitDB().dev.filter(x=>x.biz===curBiz()&&!x.gone);
-const devGone = () => kitDB().dev.filter(x=>x.biz===curBiz()&&x.gone);
+/* 타 대학 계정: 7번 탭에서 우리 대학 프로그램만 보고 고침(대학 칸 고정) */
+const devMine = () => S.adminOrg?(orgShort(S.adminOrg)||S.adminOrg):'';
+const devRecs = () => kitDB().dev.filter(x=>x.biz===curBiz()&&!x.gone&&(!devMine()||x.univ===devMine()));
+const devGone = () => kitDB().dev.filter(x=>x.biz===curBiz()&&x.gone&&(!devMine()||x.univ===devMine()));
 /* 이름을 바꾸거나 합친 프로그램: 예전 이름(aliasKeys)으로 올라온 엑셀 줄도 이 프로그램으로 */
 function devKeyMap(){ const M=new Map(); devRecs().forEach(d=>{ M.set(d.key,d); (d.aliasKeys||[]).forEach(k=>{ if(!M.has(k)) M.set(k,d); }); }); return M; }
 const devProg = r => progInSeason(r.key)||(r.aliasKeys||[]).map(k=>progInSeason(k)).find(Boolean)||null;
@@ -6170,6 +6172,12 @@ function csOpVal(o,q,g,per){ const x=((((csOrgR(o).rep||{})[q])||{}).op2||{})[g+
 const csUS = o => orgShort(o).replace(/대$/,'');
 const CS_JL = {g:'Green(정상)',y:'Yellow(주의)',r:'Red(지원)',n:'-'};
 const CS_DEVST = ['','완료','진행 중','예정'];
+/* 운영 보고 3. 프로그램 개발: 7번 탭(프로그램 개발) 그 대학 프로그램에서 자동으로 만듦. 제출하면 그때 내용(devSnap)으로 고정 */
+function csDevAuto(o){ const u=orgShort(o)||o, st=(r,k)=>(r.docs||{})[k]?'완료':r.stage==='미착수'?'예정':'진행 중';
+  return kitDB().dev.filter(r=>(r.biz||'anchor')==='anchor'&&!r.gone&&r.stage!=='삭제'&&r.univ===u).sort((a,b)=>a.name.localeCompare(b.name,'ko'))
+   .map(r=>({name:r.name,kind:r.type||'',plan:st(r,'plan'),lesson:st(r,'lesson'),ppt:st(r,'ppt'),note:[r.term,r.memo].filter(Boolean).join(' · ')})); }
+function csDevOf(o,q){ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt&&Array.isArray(R.devSnap)?R.devSnap:csDevAuto(o); }
+const kitEnsure = () => new Promise(res=>{ if(kitDB().loaded) return res(); kitLoad(); let n=0; const t=setInterval(()=>{ if(kitDB().loaded||++n>150){ clearInterval(t); res(); } },100); });
 const CS_SIG = {g:['Green 정상','cs-g'],y:['Yellow 주의','cs-y'],r:['Red 지원','cs-r'],n:['판정 전','cs-n']};
 const CS_GKINDS = {univ:[['meet','협의회 참석 요청'],['perf','운영 실적 입력 요청'],['work','업무 진행 협조'],['sub','제출 협조 요청'],['etc','기타']],school:[['op','운영 협조 요청'],['sat','만족도 조사 협조'],['att','출석부 제출 협조'],['etc','기타']]};
 const CS_DEF = () => ({pen:{gong:2,mile:2,meet:1},base:100,cut:85,mileDay:25,mileDue:{},mileFrom:csYm(),sender:'앵커늘봄총괄센터장',docPre:'앵커늘봄총괄센터',tel:'041-423-2420',mail:'',fiscal:''});
@@ -6340,26 +6348,26 @@ function hxParaAfter(x,mark,val){ if(!val) return x; const i=x.indexOf(mark); if
 const hxP = (a,b) => b?(Math.round(a/b*1000)/10).toFixed(1):'';
 const hxN = v => v?Number(v).toLocaleString():'';
 const HX_U = ['호서','상명','유원','단국','연암'];
-async function hxRepOne(q,o){ const T=await hxTpl('rep_one'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const R=((csOrgR(o).rep||{})[q])||{};
+async function hxRepOne(q,o){ await kitEnsure(); const T=await hxTpl('rep_one'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const R=((csOrgR(o).rep||{})[q])||{};
   x=hxCells(x,1,{'0,0':o});
   const V=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)), S2=V.reduce((t,v)=>({cls:t.cls+v.cls,ses:t.ses+v.ses,stu:t.stu+v.stu}),{cls:0,ses:0,stu:0}), c2={};
   V.forEach((v,i)=>{ const r=i+1; c2[r+',2']=hxN(v.cls); c2[r+',3']=hxN(v.ses); c2[r+',4']=hxN(v.stu); c2[r+',5']=v.cls?hxP(v.cls,S2.cls):''; c2[r+',6']=v.ses?hxP(v.ses,S2.ses):''; });
   Object.assign(c2,{'9,2':hxN(S2.cls)||'0','9,3':hxN(S2.ses)||'0','9,4':hxN(S2.stu)||'0','9,5':S2.cls?'100.0':'','9,6':S2.ses?'100.0':''}); x=hxCells(x,2,c2);
   const tr=R.train||{}, g=k=>+(tr[k]||{}).goal||0, t=k=>+(tr[k]||{}).got||0;
   x=hxCells(x,3,{'1,2':hxN(g('in')),'1,3':hxN(t('in')),'1,4':hxP(t('in'),g('in')),'2,2':hxN(g('out')),'2,3':hxN(t('out')),'2,4':hxP(t('out'),g('out')),'3,2':hxN(g('in')+g('out')),'3,3':hxN(t('in')+t('out')),'3,4':hxP(t('in')+t('out'),g('in')+g('out'))});
-  const D=(R.dev||[]).filter(d=>d.name); x=hxAddRows(x,4,D.length-5); const c4={}; D.forEach((d,i)=>{ const r=i+1; c4[r+',0']=String(r); c4[r+',1']=d.name; c4[r+',2']=d.kind; c4[r+',3']=d.plan; c4[r+',4']=d.lesson; c4[r+',5']=d.ppt; c4[r+',6']=d.note; }); x=hxCells(x,4,c4);
+  const D=csDevOf(o,q).filter(d=>d.name); x=hxAddRows(x,4,D.length-5); const c4={}; D.forEach((d,i)=>{ const r=i+1; c4[r+',0']=String(r); c4[r+',1']=d.name; c4[r+',2']=d.kind; c4[r+',3']=d.plan; c4[r+',4']=d.lesson; c4[r+',5']=d.ppt; c4[r+',6']=d.note; }); x=hxCells(x,4,c4);
   const B=R.bud||{}, c5={}; let tb=0,ts=0; CS_BUD.forEach((k,i)=>{ const v=B[k]||{}, b=+v.b||0, sp=+v.s||0; tb+=b; ts+=sp; const r=i+1; c5[r+',1']=hxN(b); c5[r+',2']=hxN(sp); c5[r+',3']=b?hxN(b-sp):''; c5[r+',4']=v.note; }); Object.assign(c5,{'9,1':hxN(tb),'9,2':hxN(ts),'9,3':tb?hxN(tb-ts):'','9,4':R.budAt?'기준일 '+R.budAt:''}); x=hxCells(x,5,c5);
   const E=(R.press||[]).filter(e=>e.t||e.d); x=hxAddRows(x,6,E.length-2); const c6={}; E.forEach((e,i)=>{ const r=i+1; c6[r+',0']=String(r); c6[r+',1']=e.d; c6[r+',2']=e.t; c6[r+',3']=e.by; c6[r+',4']=e.note; }); x=hxCells(x,6,c6);
   x=hxParaAfter(x,'나. 우수사례',R.best); x=hxParaAfter(x,'다. 건의사항',R.ask);
   return hxPack(T,x); }
-async function hxRepAll(q,U){ const T=await hxTpl('rep_all'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const repOf=o=>((csOrgR(o).rep||{})[q])||{}, col=o=>HX_U.indexOf(csUS(o));
+async function hxRepAll(q,U){ await kitEnsure(); const T=await hxTpl('rep_all'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const repOf=o=>((csOrgR(o).rep||{})[q])||{}, col=o=>HX_U.indexOf(csUS(o));
   const V={}; U.forEach(o=>{ V[o]=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)); }); const rt=i=>U.reduce((t,o)=>({cls:t.cls+V[o][i].cls,ses:t.ses+V[o][i].ses}),{cls:0,ses:0}), G=CS_OPROWS.map((_,i)=>rt(i)).reduce((t,v)=>({cls:t.cls+v.cls,ses:t.ses+v.ses}),{cls:0,ses:0}), c2={};
   U.forEach(o=>{ const j=col(o); if(j<0) return; let a={cls:0,ses:0,stu:0}; V[o].forEach((v,i)=>{ const r=i+2; c2[r+','+(2+j)]=hxN(v.cls); c2[r+','+(7+j)]=hxN(v.ses); c2[r+','+(12+j)]=hxN(v.stu); a.cls+=v.cls; a.ses+=v.ses; a.stu+=v.stu; }); c2['10,'+(2+j)]=hxN(a.cls)||'0'; c2['10,'+(7+j)]=hxN(a.ses)||'0'; c2['10,'+(12+j)]=hxN(a.stu)||'0'; });
   CS_OPROWS.forEach((_,i)=>{ const t=rt(i), r=i+2; c2[r+',17']=t.cls?hxP(t.cls,G.cls):''; c2[r+',18']=t.ses?hxP(t.ses,G.ses):''; }); c2['10,17']=G.cls?'100.0':''; c2['10,18']=G.ses?'100.0':''; x=hxCells(x,2,c2);
   const tv=(o,k,f)=>+(((repOf(o).train||{})[k])||{})[f]||0, c3={}; let sg={in:0,out:0}, st={in:0,out:0};
   U.forEach(o=>{ const j=col(o); if(j<0) return; [['in',2],['out',3]].forEach(([k,r])=>{ c3[r+','+(2+j)]=hxN(tv(o,k,'goal')); c3[r+','+(7+j)]=hxN(tv(o,k,'got')); sg[k]+=tv(o,k,'goal'); st[k]+=tv(o,k,'got'); }); c3['4,'+(2+j)]=hxN(tv(o,'in','goal')+tv(o,'out','goal')); c3['4,'+(7+j)]=hxN(tv(o,'in','got')+tv(o,'out','got')); });
   c3['2,12']=hxP(st.in,sg.in); c3['3,12']=hxP(st.out,sg.out); c3['4,12']=hxP(st.in+st.out,sg.in+sg.out); x=hxCells(x,3,c3);
-  const D=[]; U.forEach(o=>(repOf(o).dev||[]).filter(d=>d.name).forEach(d=>D.push({...d,name:'['+csUS(o)+'] '+d.name}))); x=hxAddRows(x,4,D.length-5); const c4={}; D.forEach((d,i)=>{ const r=i+1; c4[r+',0']=String(r); c4[r+',1']=d.name; c4[r+',2']=d.kind; c4[r+',3']=d.plan; c4[r+',4']=d.lesson; c4[r+',5']=d.ppt; c4[r+',6']=d.note; }); x=hxCells(x,4,c4);
+  const D=[]; U.forEach(o=>csDevOf(o,q).filter(d=>d.name).forEach(d=>D.push({...d,name:'['+csUS(o)+'] '+d.name}))); x=hxAddRows(x,4,D.length-5); const c4={}; D.forEach((d,i)=>{ const r=i+1; c4[r+',0']=String(r); c4[r+',1']=d.name; c4[r+',2']=d.kind; c4[r+',3']=d.plan; c4[r+',4']=d.lesson; c4[r+',5']=d.ppt; c4[r+',6']=d.note; }); x=hxCells(x,4,c4);
   const c5={}; let tb=0,ts=0; CS_BUD.forEach((k,i)=>{ let b=0,sp=0; U.forEach(o=>{ const v=((repOf(o).bud||{})[k])||{}; b+=+v.b||0; sp+=+v.s||0; }); tb+=b; ts+=sp; const r=i+1; c5[r+',1']=hxN(b); c5[r+',2']=hxN(sp); c5[r+',3']=b?hxN(b-sp):''; }); Object.assign(c5,{'9,1':hxN(tb),'9,2':hxN(ts),'9,3':tb?hxN(tb-ts):''}); x=hxCells(x,5,c5);
   const E=[]; U.forEach(o=>(repOf(o).press||[]).filter(e=>e.t||e.d).forEach(e=>E.push({...e,note:['['+csUS(o)+']',e.note].filter(Boolean).join(' ')}))); x=hxAddRows(x,6,E.length-2); const c6={}; E.forEach((e,i)=>{ const r=i+1; c6[r+',0']=String(r); c6[r+',1']=e.d; c6[r+',2']=e.t; c6[r+',3']=e.by; c6[r+',4']=e.note; }); x=hxCells(x,6,c6);
   const joinF=f=>U.map(o=>repOf(o)[f]?'['+csUS(o)+'] '+repOf(o)[f]:'').filter(Boolean).join('\n');
@@ -6402,10 +6410,10 @@ function csXlsKit(){ const thin={style:'thin',color:{argb:'FF999999'}}, B={top:t
   const sec=(ws,r,t)=>{ const c=ws.getCell(r,1); c.value=t; c.font={bold:true,size:12}; };
   return {put,box,title,sec}; }
 const csPctN = (a,b) => b?Math.round(a/b*1000)/1000:'';
-async function csXlsRep(q,orgs){ if(typeof ExcelJS==='undefined') throw new Error('엑셀 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+async function csXlsRep(q,orgs){ if(typeof ExcelJS==='undefined') throw new Error('엑셀 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); await kitEnsure();
   const K=csXlsKit(), wb=new ExcelJS.Workbook(), P='0.0%', all=orgs.length>1, U=orgs;
   const repOf=o=>((csOrgR(o).rep||{})[q])||{};
-  const devOf=o=>{ const R=repOf(o); return R.dev&&R.dev.length?R.dev:[]; };
+  const devOf=o=>csDevOf(o,q);
   if(all){ /* 통합 양식 */
     const n=U.length, ws=wb.addWorksheet('통합'); ws.getColumn(1).width=9; ws.getColumn(2).width=11; for(let c=3;c<=4+n*3;c++) ws.getColumn(c).width=9;
     let r=1; K.title(ws,r,`${CS_QN[q]} 운영 보고 (충남 1권역)`,4+n*3); r+=2; K.sec(ws,r,'1. 프로그램 운영 현황표'); r++;
@@ -6483,10 +6491,13 @@ function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep|
   if(sec==='train'){ const T=R.train||{};
     const tg=['in','out'].reduce((a,k)=>a+(+(T[k]||{}).goal||0),0), tt=['in','out'].reduce((a,k)=>a+(+(T[k]||{}).got||0),0), tp=csPct(tt,tg);
     body=`<div class="tw"><table><thead><tr><th>순</th><th>구분</th><th>목표 인원(명)</th><th>참여 인원(명)</th><th>비율</th></tr></thead><tbody>${[['in','내부'],['out','외부']].map(([k,l],i)=>{ const x=T[k]||{}; const p=csPct(+x.got||0,+x.goal||0); return `<tr><td>${i+1}</td><td>${l}</td><td>${inp(`train.${k}.goal`,x.goal)}</td><td>${inp(`train.${k}.got`,x.got)}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td></tr>`; }).join('')}<tr class="cs-qh"><td colspan="2">합계</td><td>${tg}</td><td>${tt}</td><td>${tp==null?'-':tp+'%'}</td></tr></tbody></table></div>`; }
-  if(sec==='dev'){ const L=R.dev&&R.dev.length?R.dev:(S.programs||[]).filter(p=>p.org===o).map(p=>({name:p.name,kind:'',run:'',st:'',pay:'',note:''}));
-    const sel=(f,i,v,opts)=>`<select ${D_} data-cp="${cp}.dev.${i}.${f}" data-cat="${cp}">${opts.map(x=>`<option value="${esc(x)}" ${String(v||'')===x?'selected':''}>${esc(x||'선택')}</option>`).join('')}</select>`;
-    body=`<div class="tw"><table><thead><tr><th>순</th><th>프로그램</th><th>신규/고도화</th><th>기획/차시구성안</th><th>회차별 학습과정안</th><th>PPT/동영상</th><th>비고 (완료 예정일)</th><th></th></tr></thead><tbody>${L.map((x,i)=>`<tr><td>${i+1}</td><td>${inp(`dev.${i}.name`,x.name,'180px','',false)}</td><td>${sel('kind',i,x.kind,['','신규','고도화'])}</td><td>${sel('plan',i,x.plan,CS_DEVST)}</td><td>${sel('lesson',i,x.lesson,CS_DEVST)}</td><td>${sel('ppt',i,x.ppt,CS_DEVST)}</td><td>${inp(`dev.${i}.note`,x.note,'160px','예: 2026.12.20',false)}</td><td><button class="btn sm" ${D_} data-act="csdevdel" data-o="${esc(o)}" data-q="${q}" data-i="${i}">삭제</button></td></tr>`).join('')}</tbody></table></div>
-     <div><button class="btn sm" ${D_} data-act="csdevadd" data-o="${esc(o)}" data-q="${q}">줄 추가</button> <span class="small muted">처음에는 기준정보의 이 대학 프로그램 목록으로 채워 보여 줍니다.</span></div>`; }
+  if(sec==='dev'){ if(!kitDB().loaded) kitLoad();
+    const L=kitDB().loaded?csDevOf(o,q):null, snap=R.subAt&&Array.isArray(R.devSnap), mine=orgShort(o)||o;
+    body=`<div class="notice stack" style="gap:4px"><b>프로그램 개발 현황은 「7. 프로그램 개발」 탭에서 입력합니다.</b><div class="small">그 탭에서 ${esc(mine)} 프로그램마다 <b>유형(기존·고도화·신규) · 단계 · 자료(계획서·차시별 지도안·PPT)</b>를 먼저 입력해 주세요. 입력한 내용이 이 표에 자동으로 채워지며, 여기서는 고칠 수 없습니다.${snap?' 이 보고는 제출할 때의 내용으로 고정되어 있습니다.':' 보고를 제출하면 그때 내용으로 고정됩니다.'}</div><div><button class="btn sm pri" data-act="csgodev">7. 프로그램 개발 탭으로 가기</button></div></div>
+     ${kitDB().err?`<div class="notice bad small">7번 탭 자료를 불러오지 못했습니다: ${esc(kitDB().err)} · 7번 탭이 공개되어 있는지 호서대에 확인해 주세요.</div>`:''}
+     ${!L?'<div class="small muted">7번 탭 자료를 불러오는 중…</div>':!L.length?`<div class="notice small lv-warn">7번 탭에 ${esc(mine)} 프로그램이 아직 없습니다. 7번 탭에서 먼저 입력해 주세요.</div>`:
+     `<div class="tw"><table><thead><tr><th>순</th><th>프로그램</th><th>기존/고도화/신규</th><th>기획/차시구성안</th><th>회차별 학습과정안</th><th>PPT/동영상</th><th>비고 (기간·메모)</th></tr></thead><tbody>${L.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.kind||'-')}</td><td>${esc(x.plan||'')}</td><td>${esc(x.lesson||'')}</td><td>${esc(x.ppt||'')}</td><td class="small">${esc(x.note||'')}</td></tr>`).join('')}</tbody></table></div>
+      <div class="small muted">계획서·차시별 지도안·PPT가 7번 탭에 올라와 있으면 「완료」, 없으면 단계에 따라 「진행 중」(개발 중·개발 완료) 또는 「예정」(미착수)</div>`}`; }
   if(sec==='bud'){ const B=R.bud||{}, b=csBud(o,q);
     body=`<div class="tw"><table><thead><tr><th>사업비 항목</th><th>예산액(천원)</th><th>지출액(천원)</th><th>잔액</th><th>집행률</th><th>비고</th></tr></thead><tbody>${CS_BUD.map(k=>{ const x=B[k]||{}, p=csPct(+x.s||0,+x.b||0); return `<tr><td>${esc(k)}</td><td>${inp(`bud.${k}.b`,x.b,'100px')}</td><td>${inp(`bud.${k}.s`,x.s,'100px')}</td><td class="mono">${x.b?((+x.b||0)-(+x.s||0)).toLocaleString():'-'}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td><td>${inp(`bud.${k}.note`,x.note,'140px','',false)}</td></tr>`; }).join('')}
      <tr class="cs-qh"><td>합계</td><td>${b.b.toLocaleString()}</td><td>${b.s.toLocaleString()}</td><td>${(b.b-b.s).toLocaleString()}</td><td class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</td><td></td></tr></tbody></table></div>
@@ -6641,6 +6652,7 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'csxls-mile': (el.dataset.f==='x'?csXlsMile:csHwpMile)(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
     case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab='mile'; } return true;
     case 'csmopen': { if(csMine()) return false; csSet(`consCfg.mileQ.${csYear()}`,+el.dataset.v); toast(`마일스톤 대학 입력을 ${el.dataset.v}분기까지 열었습니다`); return true; }
+    case 'csgodev': goView('dev'); window.scrollTo({top:0}); return true;
     case 'csmq': { const m=U.csMq||{[csQNow()]:true}; m[el.dataset.v]=!m[el.dataset.v]; U.csMq=m; return true; }
     case 'csox': { if(el.disabled) return false; const p=`consOrg.${o}.mile.${el.dataset.n}`, cur=csGet(p+'.v'); csSet(p+'.v',cur===el.dataset.v?'':el.dataset.v); csStamp(p); return true; }
     case 'csmst': { const p=`consOrg.${o}.mile.${el.dataset.n}`; if(el.dataset.v==='fix'){ const w=prompt('보완 요청 사유',csGet(p+'.fixWhy')||''); if(w===null) return false; csSet(p+'.fixWhy',w.trim()); csSet(p+'.st','fix'); } else { csSet(p+'.st',csGet(p+'.st')==='ok'?'':'ok'); } csStamp(p); return true; }
@@ -6650,7 +6662,7 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'csaskno': U.csAsk=null; return true;
     case 'csaskgo': { const A=U.csAsk; if(!A) return false; U.csAsk=null; const st=kstNow().replace('T',' ');
       if(A.k==='mile'){ const ym=U.csYm||csYm(); csSet(`consOrg.${A.o}.sub.${ym}`,st); csStamp(`consOrg.${A.o}.sub`); toast(`${+ym.slice(5)}월 마일스톤 점검표를 제출했습니다`); }
-      else { const p=`consOrg.${A.o}.rep.${A.q}`; csSet(p+'.subAt',st); csSet(p+'.ok',''); csStamp(p); toast('분기 운영 보고를 제출했습니다'); }
+      else { const p=`consOrg.${A.o}.rep.${A.q}`; csSet(p+'.devSnap',csDevAuto(A.o)); csSet(p+'.subAt',st); csSet(p+'.ok',''); csStamp(p); toast('분기 운영 보고를 제출했습니다'); }
       return true; }
     case 'csmok': { if(csMine()) return false; const ym=U.csYm||csYm(); csSet(`consOrg.${o}.subOk.${ym}`,el.dataset.v?{at:kstNow().replace('T',' '),by:S.adminName||'호서대'}:''); csStamp(`consOrg.${o}.subOk`); toast(el.dataset.v?'제출 완료로 확인했습니다':'확인을 취소했습니다'); return true; }
     case 'csmfix': { if(csMine()) return false; const ym=U.csYm||csYm(), why=prompt(`${orgShort(o)} ${+ym.slice(5)}월 점검표 보완 요청\n대학 화면에 보일 보완 사유를 적어 주세요.`,''); if(why===null) return false; if(!why.trim()){ toast('보완 사유를 적어 주세요'); return false; }
@@ -6721,7 +6733,8 @@ function progInSeason(lk){ return (S.programs||[]).find(p=>progLK(p.name)===lk||
 function viewDev(){ const D=kitDB(); if(!D.loaded){ kitLoad(); return `<div class="panel">프로그램 개발 자료를 불러오는 중…</div>`; }
   return `<div class="stack"><div class="row" style="gap:6px;align-items:center"><h2>프로그램 개발</h2>${qt(['개발 단계와 자료(계획서·지도안·PPT·활동지·완료본) 진행을 한눈에','막대·대학 줄을 누르면 아래 목록이 그 조건으로 걸러짐','시기마다 운영할 프로그램을 골라 기준정보 프로그램 목록과 이어 줌','교구재는 「교구재」 탭'])}</div>
    ${D.err?`<div class="notice bad">자료를 불러오지 못했습니다: ${esc(D.err)} <button class="btn sm" data-act="kitreload">다시 불러오기</button></div>`:''}
-   ${devRecs().length?devDash():''}${devSeasonPanel()}${devPanel()}</div>`; }
+   ${devMine()?`<div class="notice small">${esc(devMine())} 프로그램만 보입니다. 프로그램마다 <b>유형(기존·고도화·신규) · 단계 · 자료(계획서·차시별 지도안·PPT)</b>를 입력하면 「10. 운영 점검 › 운영 보고 › 3. 프로그램 개발」에 그대로 반영됩니다. 목록에 없는 프로그램은 아래 「프로그램 직접 추가」로 넣어 주세요.</div>`:''}
+   ${devRecs().length?devDash():''}${devMine()?'':devSeasonPanel()}${devPanel()}</div>`; }
 function devDash(){ const L=devRecs().filter(r=>r.stage!=='삭제'), N=L.length||1, f=S.ui.devF||{}, pc=n=>Math.round(n*100/N);
   const st=[['개발 완료','ok'],['개발 중','ing'],['미착수','none']].map(([k,c])=>[k,c,L.filter(r=>r.stage===k).length]);
   const UO=['호서대','상명대','유원대','단국대','연암대','대학연합'], univs=[...new Set(L.map(r=>r.univ||'미지정'))].sort((a,b)=>((UO.indexOf(a)+1)||99)-((UO.indexOf(b)+1)||99)||a.localeCompare(b,'ko'));
@@ -6758,7 +6771,7 @@ function devEditForm(r,L){ const DR=S.ui.devDraft||{}, dd=DR.docs||{}, rv=r.revi
    <div class="dvf-g">
     <label class="f dvf-name">프로그램 이름<input data-dd="name" value="${esc(DR.name||'')}" style="font-weight:600"></label>
     <label class="f">유형<select data-dd="type"><option value="">(없음)</option>${['기존','신규','고도화'].map(t=>`<option ${DR.type===t?'selected':''}>${t}</option>`).join('')}</select></label>
-    ${f('univ','대학','예: 호서대')}${f('field','분야','')}${f('grade','대상 학년','예: 1-2학년')}${f('year','개발연도','예: 2026')}
+    ${devMine()?`<label class="f">대학<input value="${esc(devMine())}" disabled></label>`:f('univ','대학','예: 호서대')}${f('field','분야','')}${f('grade','대상 학년','예: 1-2학년')}${f('year','개발연도','예: 2026')}
     ${f('dev','개발자','')}<label class="f dvf-wide">소통 담당자<input data-dd="liaison" value="${esc(DR.liaison||'')}" placeholder="이름 · 연락처"></label>
     <label class="f">단계<select data-dd="stage">${DEV_STAGES.map(x=>`<option ${DR.stage===x?'selected':''}>${x}</option>`).join('')}</select></label>
    </div>
@@ -6791,7 +6804,7 @@ function devPanel(){ const u=S.ui, L=devRecs(), f=u.devF||{}, IT=kitItems();
   const rowCnt=lk=>{ const p=progInSeason(lk); return p?S.rows.filter(r=>r.prog===p.key&&r.status!=='cancel').length:0; };
   const ED=u.devEdit, DR=u.devDraft||{};
   return `<div class="panel stack" id="devlist"><div class="row between" style="flex-wrap:wrap;gap:8px"><div><h3>프로그램 목록</h3><div class="muted small" style="margin-top:2px">${bizName()} 프로그램 ${live.length}개${cnt('삭제')?` (삭제 ${cnt('삭제')}개 제외)`:''} · 자료 업로드: ${docCnt}</div></div>
-    <div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn pri sm" for="devfile">프로그램 현황 엑셀 업로드</label><input id="devfile" type="file" accept=".xlsx,.xls" hidden><button class="btn sm" data-act="devexport" ${L.length?'':'disabled'}>현황 다운로드</button>${qt(['「프로그램 개발 및 운영 현황」 엑셀을 그대로 올리면 됨','통합 목록(개발 상태·삭제 여부) + 검토(자문) 목록(검토 점수·등급) + 개발 목록(계획서·지도안·PPT·활동지·완료본)을 프로그램 이름으로 합침','띄어쓰기·「고도화」 표기가 달라도 같은 프로그램으로 봄','다시 올려도 화면에서 직접 고친 단계·자료 표시·메모는 그대로 둠'],'r')}</div></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap">${devMine()?'':'<label class="btn pri sm" for="devfile">프로그램 현황 엑셀 업로드</label><input id="devfile" type="file" accept=".xlsx,.xls" hidden>'}<button class="btn sm" data-act="devexport" ${L.length?'':'disabled'}>현황 다운로드</button>${qt(['「프로그램 개발 및 운영 현황」 엑셀을 그대로 올리면 됨','통합 목록(개발 상태·삭제 여부) + 검토(자문) 목록(검토 점수·등급) + 개발 목록(계획서·지도안·PPT·활동지·완료본)을 프로그램 이름으로 합침','띄어쓰기·「고도화」 표기가 달라도 같은 프로그램으로 봄','다시 올려도 화면에서 직접 고친 단계·자료 표시·메모는 그대로 둠'],'r')}</div></div>
    ${u.devPend?devPendHtml():''}
    ${L.length?`<div class="row orgf"><span class="tb-l small">단계</span><div class="fchips"><button class="fchip ${!f.stage?'on':''}" data-act="devf" data-k="stage" data-v="">전체 <em>${L.length}</em></button>${DEV_STAGES.map(s=>`<button class="fchip ${f.stage===s?'on':''}" data-act="devf" data-k="stage" data-v="${s}" ${!cnt(s)&&f.stage!==s?'disabled':''}>${s} <em>${cnt(s)}</em></button>`).join('')}</div></div>
    <div class="row orgf"><span class="tb-l small">확인</span><div class="fchips">${flags.map(([k,l,fn])=>{ const n=L.filter(fn).length; return `<button class="fchip ${f.flag===k?'on':''}" data-act="devf" data-k="flag" data-v="${f.flag===k?'':k}" ${!n&&f.flag!==k?'disabled':''}>${l} <em>${n}</em></button>`; }).join('')}</div></div>
@@ -6810,7 +6823,7 @@ function devPanel(){ const u=S.ui, L=devRecs(), f=u.devF||{}, IT=kitItems();
       <td class="nowrap">${ed?`<button class="btn sm pri" data-act="devsave" data-k="${esc(r.key)}">저장</button> <button class="btn sm" data-act="devcancel">취소</button>`:`<button class="btn sm" data-act="devedit" data-k="${esc(r.key)}" ${ED?'disabled title="다른 줄 수정을 먼저 마쳐 주세요"':''}>수정</button>`}</td></tr>${ed?devEditTools(r,L):''}`; }).join('')||'<tr><td colspan="10" class="muted small">조건에 맞는 프로그램이 없습니다.</td></tr>'}
    </tbody></table></div>`:`<div class="notice small">아직 현황 자료가 없습니다.</div>`}
    ${devGone().length?`<details class="small"><summary class="muted">삭제하거나 합친 프로그램 ${devGone().length}개 (엑셀을 다시 올려도 다시 생기지 않음)</summary><div class="ds-list" style="margin-top:6px">${devGone().map(g=>`<span class="ds-it">${esc(g.name)} <span class="muted">${g.mergedInto?'→ '+esc((devByKey(g.mergedInto)||{}).name||'합침'):'삭제'}</span><button class="lnk small" data-act="devrestore" data-k="${esc(g.key)}">되살리기</button></span>`).join('')}</div></details>`:''}
-   <div class="row" style="gap:6px;border-top:1px dashed var(--line);padding-top:10px;flex-wrap:wrap"><input id="dev-new" placeholder="프로그램 직접 추가 (이름)" style="flex:1 1 220px" aria-label="새 프로그램 이름"><input id="dev-new-univ" placeholder="대학 (예: 호서대)" style="width:130px" aria-label="대학"><button class="btn sm" data-act="devadd">추가</button></div></div>`; }
+   <div class="row" style="gap:6px;border-top:1px dashed var(--line);padding-top:10px;flex-wrap:wrap"><input id="dev-new" placeholder="프로그램 직접 추가 (이름)" style="flex:1 1 220px" aria-label="새 프로그램 이름">${devMine()?`<span class="chip">${esc(devMine())}</span>`:'<input id="dev-new-univ" placeholder="대학 (예: 호서대)" style="width:130px" aria-label="대학">'}<button class="btn sm" data-act="devadd">추가</button></div></div>`; }
 function devPendHtml(){ const P=S.ui.devPend, M=devMerge(P), L=M.list, nw=L.filter(r=>!r.exist), cnt=s=>L.filter(r=>r.stage===s).length;
   return `<div class="notice stack" style="gap:6px"><div><b>${esc(P.file)}</b> · 프로그램 ${L.length}개 (새로 ${nw.length} · 바꿈 ${L.length-nw.length})</div>
    <div class="tw"><table><thead><tr><th>반영</th><th>시트</th><th>읽은 줄</th><th>내용</th><th>이 시트에만 있는 프로그램 ${qt(['다른 시트에는 없는 이름','예전 목록이라 이름이 다르면 반영에서 제외'])}</th></tr></thead><tbody>${P.sheets.map((x,i)=>`<tr class="${x.include?'':'muted'}"><td><input type="checkbox" data-dps="${i}" ${x.include?'checked':''} aria-label="반영"></td><td>${esc(x.sn)}</td><td class="mono">${x.n}</td><td class="small">${x.kinds.join(' · ')||'-'}</td><td class="mono">${x.include?(M.only[x.sn]||0):'-'}</td></tr>`).join('')}</tbody></table></div>
@@ -7015,6 +7028,7 @@ function kitClick(a,el){ const u=S.ui;
       if(nm!==r.name){ const nk2=progLK(nm); if(nk2!==r.key){ const dup=devByKey(nk2); if(dup){ toast(`「${dup.name}」이(가) 이미 있습니다. 아래 「합치기」로 정리해 주세요`); return false; } const ok=r.key; r.aliasKeys=[...new Set([...(r.aliasKeys||[]),ok])].filter(k=>k!==nk2); r.key=nk2; kitTouch('dev',ok); } r.name=nm; r.nameEdit=true; ch.push('이름'); }
       const yr=String(d.year||'').trim(); if(yr&&!/^20\d{2}$/.test(yr)){ toast('개발연도는 2026처럼 네 자리로 적어 주세요'); return false; } d.year=yr;
       const INF=[['univ','대학'],['field','분야'],['year','개발연도'],['dev','개발자'],['liaison','소통 담당자'],['grade','대상 학년'],['type','유형']];
+      if(devMine()) d.univ=devMine();
       INF.forEach(([f,l])=>{ const v=String(d[f]||'').trim(); if(v!==(r[f]||'')){ r[f]=v; r.infoEdit=true; r.infoKeys=[...new Set([...(r.infoKeys||[]),f])]; ch.push(l); } });
       if(d.stage!==r.stage){ r.stage=d.stage; r.stageEdit=true; ch.push('단계'); }
       DEV_DOCS.forEach(([k])=>{ const nv=!!d.docs[k]; if(nv!==!!(r.docs||{})[k]){ r.docs={...(r.docs||{}),[k]:nv}; r.docEdit={...(r.docEdit||{}),[k]:nv}; ch.push(k); } });
@@ -7029,7 +7043,7 @@ function kitClick(a,el){ const u=S.ui;
     case 'devapply': { const x=devApplyPend(); toast(`프로그램 ${x.add}개 추가 · ${x.up}개 바꿈${x.skip?` · 삭제한 프로그램 ${x.skip}개 건너뜀`:''}`); return true; }
     case 'devno': u.devPend=null; return true;
     case 'devexport': devExport(); return false;
-    case 'devadd': { const nm=((document.getElementById('dev-new')||{}).value||'').trim(), un=((document.getElementById('dev-new-univ')||{}).value||'').trim(); if(!nm){ toast('프로그램 이름을 적어 주세요'); return false; } const key=progLK(nm); if(devByKey(key)){ toast('이미 있는 프로그램입니다'); return false; } kitDB().dev.push({biz:curBiz(),key,name:nm,univ:un,docs:{},review:{},stage:'미착수',stageEdit:true}); kitTouch('dev',key); toast(`${nm} 추가`); return true; }
+    case 'devadd': { const nm=((document.getElementById('dev-new')||{}).value||'').trim(), un=devMine()||((document.getElementById('dev-new-univ')||{}).value||'').trim(); if(!nm){ toast('프로그램 이름을 적어 주세요'); return false; } const key=progLK(nm); if(devByKey(key)){ const ex=devByKey(key); toast(devMine()&&ex.univ!==devMine()?`같은 이름의 프로그램이 ${ex.univ||'다른 대학'}에 있습니다. 이름을 조금 다르게 적거나 호서대에 문의해 주세요`:'이미 있는 프로그램입니다'); return false; } kitDB().dev.push({biz:curBiz(),key,name:nm,univ:un,docs:{},review:{},stage:'미착수',stageEdit:true}); kitTouch('dev',key); toast(`${nm} 추가`); return true; }
     case 'kitgo': u.kitTab='kits'; u.kitF={p:el.dataset.k}; window.scrollTo({top:0}); return true;
     case 'kitcond': S.ui.view='setup'; u.setTab='prog'; u.condEdit=el.dataset.p; window.scrollTo({top:0}); return true;
     case 'kitflag': u.kitF={...(u.kitF||{}),flag:el.dataset.v}; return true;
