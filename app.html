@@ -1574,6 +1574,16 @@ const rowHrs = r => classDays(r).length*r.perDay;
 const RG_SI=['천안','공주','보령','아산','서산','논산','계룡','당진'], RG_GUN=['금산','부여','서천','청양','홍성','예산','태안'], RG_ALL=[...RG_SI,...RG_GUN,'대전','세종'];
 const rgBase = v => { const t=String(v||'').replace(/\s/g,'').replace(/(특별자치시|광역시|시|군)$/,''); return RG_ALL.includes(t)?t:''; };
 const regionFull = r => { const b=rowRegion(r); return !b?'':RG_GUN.includes(b)?b+'군':b==='대전'?'대전광역시':b==='세종'?'세종특별자치시':b+'시'; };
+/* 내보내기 지역1·지역2: 주소의 시·도 → 지역1 약칭(충남·대전·세종), 시·군(대전은 구) → 지역2
+   순서 ① 학교밖 기관이 고른 주소 ② 학교·기관 주소 글자 ③ 지역 칸·학교 이름으로 찾은 시·군 */
+const DO_SHORT={'충청남도':'충남','대전광역시':'대전','세종특별자치시':'세종'};
+function regionParts(r){
+  const c=(S.contacts||{})[r.school]||{};
+  if(isOut(r)&&DO_SHORT[c.addrDo]&&c.addrSi) return [DO_SHORT[c.addrDo],c.addrSi];
+  for(const a of [isOut(r)?c.addr:'',(S.addr||{})[r.school],r.addr,c.addr]){ if(!a) continue; const g=addrGuess(a); if(DO_SHORT[g.addrDo]&&g.addrSi) return [DO_SHORT[g.addrDo],g.addrSi]; }
+  const b=rowRegion(r); if(!b) return ['충남',''];
+  return [b==='대전'?'대전':b==='세종'?'세종':'충남', regionFull(r)];
+}
 function rowRegion(r){
   const c=(S.contacts||{})[r.school]||{}, cs=rgBase(c.addrSi); if(isOut(r)&&cs) return cs;   /* 학교밖: 기관이 고른 시·군이 우선 */
   const g=rgBase(r.region); if(g) return g;
@@ -2292,7 +2302,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.105';
+const LIB_VER='11.106';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5096,7 +5106,7 @@ function resultAoa(sch){
   const N=Math.max(1,...rs.map(r=>classDays(r).length));
   const head=[...RESULT_HEAD,...Array.from({length:N},(_,k)=>`수업일${k+1}`)];
   const rows=rs.map((r,i)=>{ const p=prog(r.prog), sc=r.sc, days=classDays(r), t=S.instructors.find(x=>x.id===r.inst), cnt=sc.count!==''&&sc.count!=null?sc.count:r.expected;
-    return [i+1,orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),'충남',regionFull(r),r.school,seasonTerm(),sc.room||r.room||'',p.name,p.field||'',days.length*r.perDay,rowGrade(r)||'',cnt===''||cnt==null?'':(isNaN(+cnt)?cnt:+cnt),D(r.start),D(r.end),daysTxt(r.days),r.ts==null?'':hm(r.ts),r.te==null?'':hm(r.te),t?t.name:'',t?t.phone||'':'',t?t.email||'':'',...days.map(D)]; });
+    return [i+1,orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),...regionParts(r),r.school,seasonTerm(),sc.room||r.room||'',p.name,p.field||'',days.length*r.perDay,rowGrade(r)||'',cnt===''||cnt==null?'':(isNaN(+cnt)?cnt:+cnt),D(r.start),D(r.end),daysTxt(r.days),r.ts==null?'':hm(r.ts),r.te==null?'':hm(r.te),t?t.name:'',t?t.phone||'':'',t?t.email||'':'',...days.map(D)]; });
   return {head,rows};
 }
 async function resultXlsxBuf(sch){
@@ -5675,7 +5685,7 @@ function buildExportAoa(rowsArg,opt){
     const tab=cs.list.find(x=>/태블릿/.test(x.c.text));
     const memo=opsMemo(r,opt.school);
     const row=new Array(65).fill('');
-    Object.assign(row,{0:i+1,1:'-',2:'충남RISE센터',3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:'충남',5:regionFull(r),6:r.school,7:'동계',8:memo,
+    Object.assign(row,{0:i+1,1:'-',2:'충남RISE센터',3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:regionParts(r)[0],5:regionParts(r)[1],6:r.school,7:'동계',8:memo,
       9:tab?(tab.a.ans==='yes'?'가능':tab.a.ans==='no'?'불가':'미확인'):'해당 없음',10:tab&&tab.a.ans==='yes'&&tab.a.qty!==''?Number(tab.a.qty):'',11:sc.room||r.room,12:c.name||'',13:cPhones(c,'\n'),14:c.email||'',
       15:p.name,16:p.field,17:days.length,18:r.perDay,19:days.length*r.perDay,20:1,21:rowGrade(r),22:CL[r.id]||'A',23:r.expected,24:sc.count===''?'':Number(sc.count),25:D(r.start),26:D(r.end),27:daysTxt(r.days),
       28:r.ts==null?'':r.ts/1440,29:r.te==null?'':r.te/1440,30:sc.multi===''?'':Number(sc.multi),31:sc.low===''?'':Number(sc.low),32:regionSize(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr||''):S.addr[r.school]),33:(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr):S.addr[r.school])||'',34:t?t.name:'',35:t?t.phone||'':'',36:t?t.email||'':'',37:a?a.name:'-',38:a?a.phone||'':''});
@@ -8090,7 +8100,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.105';
+const APP_VER = '11.106';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
