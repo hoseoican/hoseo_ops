@@ -2249,7 +2249,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.96';
+const LIB_VER='11.97';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6025,6 +6025,15 @@ const CS_MILES = [
 const CS_QN = ['','1분기 (3~5월)','2분기 (6~8월)','3분기 (9~11월)','4분기 (12~2월)'];
 const CS_BUD = ['인건비','장학금','교육·연구 프로그램 개발·운영비','교육·연구 환경개선비','실험·실습 장비 및 기자재 구입·운영비','성과 활용·확산 지원비','그 밖의 사업운영 경비','간접비'];
 const CS_PER = ['1학기','여름방학','2학기','겨울방학','학교밖','한마당','집합형(외부)','집합형(캠퍼스)'];
+/* 운영 보고 양식(1. 프로그램 운영 현황표): 학교·학교밖 × 1학기·여름방학·2학기·겨울방학. 학교밖은 시작 월로 시기를 나눔 */
+const CS_SEAS = ['1학기','여름방학','2학기','겨울방학'];
+const CS_OPROWS = [...CS_SEAS.map(x=>['학교',x]),...CS_SEAS.map(x=>['학교밖',x])];
+const csOutSeason = r => { const m=+String(r.start||'').slice(5,7); return !m?'':m>=3&&m<=6?'1학기':m<=8?'여름방학':m<=11?'2학기':'겨울방학'; };
+function csOpAuto(o,g,per){ const L=csAutoCls(o,null); if(!L) return null; return stSum(L.filter(r=>g==='학교'?r.period===per:(r.period==='학교밖'&&csOutSeason(r)===per))); }
+function csOpVal(o,q,g,per){ const x=((((csOrgR(o).rep||{})[q])||{}).op2||{})[g+'|'+per]||{}, a=csOpAuto(o,g,per)||{cls:0,ses:0,stu:0}, v=k=>x[k]!=null&&x[k]!==''?+x[k]:(+a[k]||0); return {cls:v('cls'),ses:v('ses'),stu:v('stu'),own:['cls','ses','stu'].some(k=>x[k]!=null&&x[k]!=='')}; }
+const csUS = o => orgShort(o).replace(/대$/,'');
+const CS_JL = {g:'Green(정상)',y:'Yellow(주의)',r:'Red(지원)',n:'-'};
+const CS_DEVST = ['','완료','진행 중','예정'];
 const CS_SIG = {g:['Green 정상','cs-g'],y:['Yellow 주의','cs-y'],r:['Red 지원','cs-r'],n:['판정 전','cs-n']};
 const CS_GKINDS = {univ:[['meet','협의회 참석 요청'],['perf','운영 실적 입력 요청'],['work','업무 진행 협조'],['sub','제출 협조 요청'],['etc','기타']],school:[['op','운영 협조 요청'],['sat','만족도 조사 협조'],['att','출석부 제출 협조'],['etc','기타']]};
 const CS_DEF = () => ({pen:{gong:2,mile:2,meet:1},base:100,cut:85,mileDay:25,mileDue:{},mileFrom:csYm(),sender:'앵커늘봄총괄센터장',docPre:'앵커늘봄총괄센터',tel:'041-423-2420',mail:'',fiscal:''});
@@ -6069,9 +6078,9 @@ function csAuto(o,q){ const g=csGoal(o,q).p, p=csProg(o,q).p, b=csBud(o,q).p, P=
   return {k,why,P}; }
 function csFinal(o,q){ const J=((S.consJudge||{})[q]||{})[o]||{}; return J.fin||(q>=1?csAuto(o,q).k:'n'); }
 /* ---------- 화면 ---------- */
-const CS_MENU = [['현황',[['dash','대학별 현황'],['judge','분기 점검 · 판정']]],['대학 제출 자료',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['공문',[['gong','공문 발송 · 회신'],['gtpl','공문 양식']]],['기준',[['rule','평가 기준']]]];
+const CS_MENU = [['현황',[['dash','대학별 현황'],['sum','제출 자료 통합'],['judge','분기 점검 · 판정']]],['대학 제출 자료',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['공문',[['gong','공문 발송 · 회신'],['gtpl','공문 양식']]],['기준',[['rule','평가 기준']]]];
 const CS_MENU_ORG = [['입력',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['확인',[['mygong','받은 공문']]]];
-const CS_IC = {dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',judge:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',mile:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',rep:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',gong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',gtpl:'<path d="M8 3h9l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M10 12h7M10 16h5"/>',mygong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',rule:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
+const CS_IC = {sum:'<path d="M4 4h16v16H4z"/><path d="M4 10h16M10 4v16"/>',dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',judge:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',mile:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',rep:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',gong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',gtpl:'<path d="M8 3h9l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M10 12h7M10 16h5"/>',mygong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',rule:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
 function viewCons(){
   if(!S.consCfg&&!csMine()){ S.consCfg=CS_DEF(); }
   if(!S.ui.stLoaded&&!S.ui.stLoading&&typeof statsLoad==='function') setTimeout(statsLoad,0);
@@ -6079,7 +6088,7 @@ function viewCons(){
   const btn=([k,l])=>`<button type="button" role="tab" aria-selected="${cur===k}" class="${cur===k?'on':''}" data-act="cstab" data-v="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CS_IC[k]||''}</svg>${esc(l)}</button>`;
   const menu=`<nav class="lmenu" aria-label="컨소시엄 관리 메뉴">${M.map(([g,L])=>`<div class="lg">${esc(g)}</div>${L.map(btn).join('')}`).join('')}</nav>`;
   const grp=M.find(g=>g[1].some(x=>x[0]===cur)), lab=all.find(x=>x[0]===cur)[1];
-  const body={dash:csDash,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,gtpl:csGTplV,mygong:csMyGong,rule:csRule}[cur]()+csAskModal();
+  const body={dash:csDash,sum:csSum,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,gtpl:csGTplV,mygong:csMyGong,rule:csRule}[cur]()+csAskModal();
   return `<div class="stack noenh"><div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">${csMine()?esc(orgShort(csMine())):'운영 점검'} › ${esc(grp[0])}</div><h2 style="margin:0">${esc(lab)}</h2>${['dash','rep'].includes(cur)?stSyncBar():''}${body}</div></div></div>`; }
 const csQSeg = (k,q) => `<div class="seg2" role="tablist">${[1,2,3,4].map(i=>`<button class="${q===i?'on':''}" data-act="csq" data-k="${k}" data-v="${i}">${CS_QN[i]}</button>`).join('')}</div>`;
 /* 제출 전 확인 창: 제출하면 고칠 수 없음을 한 번 더 확인 */
@@ -6108,7 +6117,7 @@ function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csY
    <div class="panel stack" style="gap:6px"><div class="row between"><b>할 일</b><span class="small muted">기한 순</span></div>
     ${todo.length?`<div class="tw"><table><thead><tr><th>기한</th><th>대상</th><th>내용</th><th>상태</th></tr></thead><tbody>${todo.map(x=>`<tr><td class="nowrap">${csFmtD(x.d)}${x.late?' <span class="lv-crit small">지남</span>':''}</td><td class="small">${esc(x.who)}</td><td>${x.id?`<button class="lnk" data-act="csgopen" data-id="${x.id}">${esc(x.t)}</button>`:esc(x.t)}</td><td><span class="chip ${x.late?'x':''}">${esc(x.n)}</span></td></tr>`).join('')}</tbody></table></div>`:'<div class="small muted">기한이 남은 일이 없습니다.</div>'}</div>`; }
 /* ---------- 마일스톤 점검표 ---------- */
-function csPickOrg(k){ if(csMine()) return csMine(); const U=CS_UNIVS(); let o=S.ui.csOrg; if(!U.includes(o)) o=U[1]||U[0]; return o; }
+function csPickOrg(k){ if(csMine()) return csMine(); const U=CS_UNIVS(); let o=S.ui.csOrg; if(!U.includes(o)) o=U.includes(MY_ORG)?MY_ORG:U[0]; return o; }
 const csOrgSel = o => csMine()?`<b>${esc(o)}</b>`:`<select id="cs-org" aria-label="대학">${CS_UNIVS().map(x=>`<option ${x===o?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
 function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), ym=S.ui.csYm||csYm(), sub=(D.sub||{})[ym], due=csMileDueOf(ym), adm=!csMine(), lockM=!adm&&!!(sub||(D.sub||{})[csYm()]);
   const okd=(D.subOk||{})[ym], fx=(D.subFix||{})[ym], fixOpen=fx&&!sub, reSub=fx&&sub;
@@ -6122,7 +6131,7 @@ function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), y
     return `<tr><td class="mono muted">${d[0]}</td><td>${esc(d[2])}${auto&&auto.length?`<div class="small lv-ok">운영 목록: ${esc(d[5])} ${auto.length}학급</div>`:''}</td><td class="small muted">예: ${esc(d[3])}${d[4]==='c'?'<div>0건이면 해당 없음</div>':''}</td><td class="nowrap">${inp}</td>
      <td class="nowrap">${stc}${adm?`<div class="row" style="gap:2px;margin-top:3px;flex-wrap:nowrap"><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="ok">확인</button><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="fix">보완</button></div>`:''}${it.st==='fix'&&it.fixWhy?`<div class="small lv-warn">${esc(it.fixWhy)}</div>`:''}</td>
      <td><input ${dis} data-cp="${cp}.note" data-cat="${cp}" value="${esc(it.note||'')}" placeholder="비고" style="width:100%"></td></tr>`; };
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}<span class="small muted">점검 기준월</span><select id="cs-ym">${months.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${m.slice(0,4)}년 ${+m.slice(5)}월</option>`).join('')}</select>
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}<span class="small muted">점검 기준월</span><select id="cs-ym">${months.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${m.slice(0,4)}년 ${+m.slice(5)}월</option>`).join('')}</select><button class="btn sm" data-act="csxls-mile" data-q="${q}" data-o="${esc(o)}" title="마일스톤 점검표 양식(엑셀)으로 받기">양식으로 받기</button>
     ${sub?`<span class="chip ${okd?'ok':'info'}">${+ym.slice(5)}월 ${reSub?'보완 후 재제출':'제출'} ${esc(String(sub).slice(5,16).replace('-','.'))}${okd?' · 확인 완료':' · 확인 대기'}</span>`:fixOpen?`<span class="chip warn">${+ym.slice(5)}월 보완 요청 · 다시 제출 전</span>`:`<span class="chip ${csToday()>due?'x':'warn'}">${+ym.slice(5)}월 제출 전 · 마감 ${csFmtD(due)}</span>`}
     <span style="flex:1"></span>${adm?(sub?(okd?`<span class="small muted">${esc(String(okd.at||'').slice(5,16).replace('-','.'))} 확인 완료</span> <button class="btn sm" data-act="csmok" data-o="${esc(o)}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csmok" data-o="${esc(o)}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csmfix" data-o="${esc(o)}">보완 요청</button>`:''):sub?`<span class="small muted">제출 후에는 고칠 수 없습니다 · 수정이 필요하면 호서대에 요청</span>`:lockM?`<span class="small muted">${+csYm().slice(5)}월 점검표 제출 완료 · 보완 요청 항목만 고칠 수 있습니다</span>`:`<button class="btn sm pri" data-act="csask" data-k="mile" data-o="${esc(o)}">${fixOpen?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
    ${fixOpen?`<div class="notice bad stack" style="gap:4px"><b>호서대에서 ${+ym.slice(5)}월 점검표 보완을 요청했습니다</b><div class="small">${esc(fx.why||'')}</div><div class="small">${adm?'대학이 고친 뒤 다시 제출하면 「보완 후 재제출」로 표시됩니다.':'내용을 고쳐 입력한 뒤 「보완 후 다시 제출하기」를 눌러 주세요.'} <span class="muted">(${esc(String(fx.at||'').slice(5,16).replace('-','.'))} 요청)</span></div></div>`:''}
@@ -6132,34 +6141,126 @@ function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), y
    ${[1,2,3,4].map(qq=>`<tr class="cs-qh" data-act="csmq" data-v="${qq}"><td colspan="6">${open[qq]?'▾':'▸'} ${CS_QN[qq]}${qq===q?' · 이번 분기':''} <span class="muted" style="font-weight:400">· 완료 ${CS_MILES.filter(d=>d[1]===qq&&csMileDone(M[d[0]],d)).length}/${CS_MILES.filter(d=>d[1]===qq).length}</span></td></tr>${open[qq]?CS_MILES.filter(d=>d[1]===qq).map(row).join(''):''}`).join('')}
    </tbody></table></div>
    <div class="small muted">완료 기준: O 표시, 또는 횟수 1회 이상. 민원은 0건(해당 없음)도 완료. 해당하지 않는 마일스톤은 사업관리위원회 승인 후 비고에 대체 과업을 적어 주세요. 매월 마감(기본 ${csCfg().mileDay}일)까지 「점검표 제출」을 눌러야 성실도 감점이 없습니다.</div>`; }
+/* ---------- 제출 자료 통합: 대학별 제출 상태 + 운영 보고 통합 표 + 양식 내려받기 ---------- */
+function csSum(){ const q=S.ui.csSq||csQNow(), U=CS_UNIVS(), ym=csYm(), pc=(a,b)=>b?Math.round(a/b*1000)/10+'%':'-';
+  const stR=o=>{ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt?(R.ok?'<span class="chip ok">확인 완료</span>':'<span class="chip info">제출 · 확인 대기</span>'):R.fix?'<span class="chip warn">보완 요청</span>':'<span class="chip">미제출</span>'; };
+  const stM=o=>{ const D=csOrgR(o), sb=(D.sub||{})[ym]; return sb?((D.subOk||{})[ym]?'<span class="chip ok">확인 완료</span>':'<span class="chip info">제출 · 확인 대기</span>'):(D.subFix||{})[ym]?'<span class="chip warn">보완 요청</span>':'<span class="chip">미제출</span>'; };
+  const done=U.filter(o=>{ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt&&(csOrgR(o).sub||{})[ym]; }).length;
+  const V={}; U.forEach(o=>{ V[o]=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)); });
+  const rowT=i=>U.reduce((t,o)=>({cls:t.cls+V[o][i].cls,ses:t.ses+V[o][i].ses,stu:t.stu+V[o][i].stu}),{cls:0,ses:0,stu:0}), G=CS_OPROWS.map((_,i)=>rowT(i)).reduce((t,x)=>({cls:t.cls+x.cls,ses:t.ses+x.ses,stu:t.stu+x.stu}),{cls:0,ses:0,stu:0});
+  const sumO=(o,k)=>V[o].reduce((a,x)=>a+x[k],0);
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('sum',q)}<span style="flex:1"></span><button class="btn sm pri" data-act="csxls-rep" data-q="${q}">운영 보고 받기 (통합 + 대학별)</button><button class="btn sm pri" data-act="csxls-mile" data-q="${q}">마일스톤 점검표 받기 (통합 + 대학별)</button>${qt(['엑셀 한 파일에 「통합」 시트와 대학별 시트가 들어감','첨부 양식(운영 보고 통합·개별, 마일스톤 점검표)과 같은 표 구성','한글 양식에 붙여 넣으려면 엑셀 표를 복사해 한글 표에 붙여 넣기'])}</div>
+   <div class="panel stack" style="gap:8px"><div class="row" style="gap:8px;align-items:center"><b>제출 현황</b><span class="chip ${done===U.length?'ok':''}">모두 제출 ${done}/${U.length}</span><span class="small muted">마일스톤은 ${+ym.slice(5)}월 점검표, 운영 보고는 ${CS_QN[q]}</span></div>
+    <div class="tw"><table><thead><tr><th>대학</th><th>마일스톤 진행률</th><th>${+ym.slice(5)}월 점검표</th><th>운영 보고</th><th>판정</th><th>대학별 양식</th></tr></thead><tbody>${U.map(o=>{ const pr=csProg(o,q); return `<tr><td><b>${esc(o)}</b></td><td>${pr.done}/${pr.need} · <b class="${csRateC(pr.p)}">${pr.p==null?'-':pr.p+'%'}</b></td><td>${stM(o)}</td><td>${stR(o)}</td><td>${CS_JL[csFinal(o,q)]||'-'}</td><td class="nowrap"><button class="btn sm" data-act="csxls-rep" data-q="${q}" data-o="${esc(o)}">운영 보고</button> <button class="btn sm" data-act="csxls-mile" data-q="${q}" data-o="${esc(o)}">마일스톤</button></td></tr>`; }).join('')}</tbody></table></div></div>
+   <div class="panel stack" style="gap:8px"><b>1. 프로그램 운영 현황 (통합)</b>
+    <div class="tw"><table class="small"><thead><tr><th rowspan="2" colspan="2">운영 시기</th><th colspan="${U.length}">학급수(개)</th><th colspan="${U.length}">차시(차시)</th><th colspan="${U.length}">인원(명)</th><th rowspan="2">비중(학급)</th><th rowspan="2">비중(차시)</th></tr><tr>${[0,1,2].map(()=>U.map(o=>`<th>${esc(csUS(o))}</th>`).join('')).join('')}</tr></thead><tbody>
+     ${CS_OPROWS.map(([g,per],i)=>{ const t=rowT(i); return `<tr>${i%4===0?`<td rowspan="4"><b>${g}</b></td>`:''}<td>${per}</td>${['cls','ses','stu'].map(k=>U.map(o=>`<td class="num">${V[o][i][k]||''}</td>`).join('')).join('')}<td class="num">${pc(t.cls,G.cls)}</td><td class="num">${pc(t.ses,G.ses)}</td></tr>`; }).join('')}
+     <tr class="cs-qh"><td colspan="2">합계</td>${['cls','ses','stu'].map(k=>U.map(o=>`<td class="num">${sumO(o,k).toLocaleString()}</td>`).join('')).join('')}<td class="num">100%</td><td class="num">100%</td></tr></tbody></table></div></div>
+   <div class="panel stack" style="gap:8px"><b>2. 강사연수 · 4. 예산 집행 (통합)</b>
+    <div class="tw"><table class="small"><thead><tr><th>대학</th><th>내부 목표/참여</th><th>외부 목표/참여</th><th>연수 비율</th><th>예산액(천원)</th><th>지출액</th><th>집행률</th></tr></thead><tbody>${U.map(o=>{ const T=((((csOrgR(o).rep||{})[q])||{}).train)||{}, g=k=>+(T[k]||{}).goal||0, t=k=>+(T[k]||{}).got||0, b=csBud(o,q), tp=csPct(t('in')+t('out'),g('in')+g('out')); return `<tr><td>${esc(csUS(o))}</td><td>${g('in')}/${t('in')}</td><td>${g('out')}/${t('out')}</td><td class="${csRateC(tp)}">${tp==null?'-':tp+'%'}</td><td class="num">${b.b.toLocaleString()}</td><td class="num">${b.s.toLocaleString()}</td><td class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</td></tr>`; }).join('')}</tbody></table></div></div>`; }
+/* ---------- 양식 내려받기 (엑셀: 첨부 한글 양식과 같은 표 구성) ---------- */
+function csXlsKit(){ const thin={style:'thin',color:{argb:'FF999999'}}, B={top:thin,left:thin,bottom:thin,right:thin};
+  const put=(ws,r,c,v,o)=>{ const cell=ws.getCell(r,c); cell.value=v==null?'':v; cell.border=B; cell.alignment={vertical:'middle',horizontal:(o&&o.al)||'center',wrapText:true}; if(o&&o.h){ cell.font={bold:true}; cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFF2EDEC'}}; } if(o&&o.b) cell.font={bold:true}; if(o&&o.fmt) cell.numFmt=o.fmt; return cell; };
+  const box=(ws,r1,c1,r2,c2,v,o)=>{ for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){ const cell=ws.getCell(r,c); cell.border=B; } if(r2>r1||c2>c1) ws.mergeCells(r1,c1,r2,c2); put(ws,r1,c1,v,o); };
+  const title=(ws,r,t,n)=>{ ws.mergeCells(r,1,r,n); const c=ws.getCell(r,1); c.value=t; c.font={bold:true,size:14}; c.alignment={horizontal:'center'}; };
+  const sec=(ws,r,t)=>{ const c=ws.getCell(r,1); c.value=t; c.font={bold:true,size:12}; };
+  return {put,box,title,sec}; }
+const csPctN = (a,b) => b?Math.round(a/b*1000)/1000:'';
+async function csXlsRep(q,orgs){ if(typeof ExcelJS==='undefined') throw new Error('엑셀 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  const K=csXlsKit(), wb=new ExcelJS.Workbook(), P='0.0%', all=orgs.length>1, U=orgs;
+  const repOf=o=>((csOrgR(o).rep||{})[q])||{};
+  const devOf=o=>{ const R=repOf(o); return R.dev&&R.dev.length?R.dev:[]; };
+  if(all){ /* 통합 양식 */
+    const n=U.length, ws=wb.addWorksheet('통합'); ws.getColumn(1).width=9; ws.getColumn(2).width=11; for(let c=3;c<=4+n*3;c++) ws.getColumn(c).width=9;
+    let r=1; K.title(ws,r,`${CS_QN[q]} 운영 보고 (충남 1권역)`,4+n*3); r+=2; K.sec(ws,r,'1. 프로그램 운영 현황표'); r++;
+    K.box(ws,r,1,r+1,2,'운영 시기',{h:1}); K.box(ws,r,3,r,2+n,'학급수(개)',{h:1}); K.box(ws,r,3+n,r,2+2*n,'차시(차시)',{h:1}); K.box(ws,r,3+2*n,r,2+3*n,'인원(명)',{h:1}); K.box(ws,r,3+3*n,r+1,3+3*n,'비중(학급)\n%',{h:1}); K.box(ws,r,4+3*n,r+1,4+3*n,'비중(차시)\n%',{h:1});
+    [0,1,2].forEach(b=>U.forEach((o,i)=>K.put(ws,r+1,3+b*n+i,csUS(o),{h:1}))); r+=2;
+    const V={}; U.forEach(o=>{ V[o]=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)); }); const rt=i=>U.reduce((t,o)=>({cls:t.cls+V[o][i].cls,ses:t.ses+V[o][i].ses}),{cls:0,ses:0}); const G=CS_OPROWS.map((_,i)=>rt(i)).reduce((t,x)=>({cls:t.cls+x.cls,ses:t.ses+x.ses}),{cls:0,ses:0});
+    CS_OPROWS.forEach(([g,per],i)=>{ if(i%4===0) K.box(ws,r,1,r+3,1,g,{b:1}); K.put(ws,r,2,per); ['cls','ses','stu'].forEach((k,b)=>U.forEach((o,j)=>K.put(ws,r,3+b*n+j,V[o][i][k]||''))); const t=rt(i); K.put(ws,r,3+3*n,csPctN(t.cls,G.cls),{fmt:P}); K.put(ws,r,4+3*n,csPctN(t.ses,G.ses),{fmt:P}); r++; });
+    K.box(ws,r,1,r,2,'합계',{h:1}); ['cls','ses','stu'].forEach((k,b)=>U.forEach((o,j)=>K.put(ws,r,3+b*n+j,V[o].reduce((a,x)=>a+x[k],0),{b:1}))); K.put(ws,r,3+3*n,1,{fmt:P,b:1}); K.put(ws,r,4+3*n,1,{fmt:P,b:1}); r+=2;
+    K.sec(ws,r,'2. 강사연수'); r++; K.box(ws,r,1,r+1,1,'순',{h:1}); K.box(ws,r,2,r+1,2,'구분',{h:1}); K.box(ws,r,3,r,2+n,'목표 인원(명)',{h:1}); K.box(ws,r,3+n,r,2+2*n,'참여 인원(명)',{h:1}); K.box(ws,r,3+2*n,r+1,3+2*n,'비율\n%',{h:1}); [0,1].forEach(b=>U.forEach((o,i)=>K.put(ws,r+1,3+b*n+i,csUS(o),{h:1}))); r+=2;
+    const tv=(o,k,f)=>+(((repOf(o).train||{})[k])||{})[f]||0; let sg=0,st=0;
+    [['in','내부'],['out','외부']].forEach(([k,l],i)=>{ K.put(ws,r,1,i+1); K.put(ws,r,2,l); let a=0,b=0; U.forEach((o,j)=>{ K.put(ws,r,3+j,tv(o,k,'goal')||''); K.put(ws,r,3+n+j,tv(o,k,'got')||''); a+=tv(o,k,'goal'); b+=tv(o,k,'got'); }); sg+=a; st+=b; K.put(ws,r,3+2*n,csPctN(b,a),{fmt:P}); r++; });
+    K.box(ws,r,1,r,2,'합계',{h:1}); U.forEach((o,j)=>{ K.put(ws,r,3+j,tv(o,'in','goal')+tv(o,'out','goal'),{b:1}); K.put(ws,r,3+n+j,tv(o,'in','got')+tv(o,'out','got'),{b:1}); }); K.put(ws,r,3+2*n,csPctN(st,sg),{fmt:P,b:1}); r+=2;
+    K.sec(ws,r,'3. 프로그램 개발'); r++; ['순','대학','프로그램','신규/고도화','기획/차시구성안','회차별 학습과정안','PPT/동영상','비고(완료 예정일)'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
+    let no=0; U.forEach(o=>devOf(o).forEach(x=>{ no++; [no,csUS(o),x.name,x.kind,x.plan,x.lesson,x.ppt,x.note].forEach((v,i)=>K.put(ws,r,1+i,v||'',i===2?{al:'left'}:null)); r++; })); if(!no){ for(let k=0;k<3;k++){ for(let i=0;i<8;i++) K.put(ws,r,1+i,i===0?k+1:''); r++; } } r++;
+    K.sec(ws,r,'4. 예산집행율'); r++; K.box(ws,r,1,r,3,'사업비 항목',{h:1}); ['예산액','지출액','잔액','집행률'].forEach((h,i)=>K.put(ws,r,4+i,h,{h:1})); r++;
+    let TB=0,TS=0; CS_BUD.forEach(k=>{ let b=0,sp=0; U.forEach(o=>{ const x=((repOf(o).bud||{})[k])||{}; b+=+x.b||0; sp+=+x.s||0; }); TB+=b; TS+=sp; K.box(ws,r,1,r,3,k,{al:'left'}); K.put(ws,r,4,b,{fmt:'#,##0'}); K.put(ws,r,5,sp,{fmt:'#,##0'}); K.put(ws,r,6,b-sp,{fmt:'#,##0'}); K.put(ws,r,7,csPctN(sp,b),{fmt:P}); r++; });
+    K.box(ws,r,1,r,3,'합계',{h:1}); K.put(ws,r,4,TB,{fmt:'#,##0',b:1}); K.put(ws,r,5,TS,{fmt:'#,##0',b:1}); K.put(ws,r,6,TB-TS,{fmt:'#,##0',b:1}); K.put(ws,r,7,csPctN(TS,TB),{fmt:P,b:1}); r+=2;
+    K.sec(ws,r,'5. 기타사항'); r++; ws.getCell(r,1).value='가. 보도자료'; r++; ['순','대학','일자','기사명','','','보도기관','비고'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); ws.mergeCells(r,4,r,6); r++;
+    no=0; U.forEach(o=>(repOf(o).press||[]).forEach(x=>{ no++; K.put(ws,r,1,no); K.put(ws,r,2,csUS(o)); K.put(ws,r,3,x.d||''); K.box(ws,r,4,r,6,x.t||'',{al:'left'}); K.put(ws,r,7,x.by||''); K.put(ws,r,8,x.note||''); r++; })); if(!no){ K.put(ws,r,1,1); K.box(ws,r,4,r,6,''); [2,3,7,8].forEach(c=>K.put(ws,r,c,'')); r++; } r++;
+    [['나. 우수사례','best'],['다. 건의사항','ask']].forEach(([l,f])=>{ ws.getCell(r,1).value=l; r++; const txt=U.map(o=>repOf(o)[f]?`[${csUS(o)}] ${repOf(o)[f]}`:'').filter(Boolean).join('\n'); K.box(ws,r,1,r+3,4+n*3>8?8:4+n*3,txt,{al:'left'}); ws.getCell(r,1).alignment={vertical:'top',horizontal:'left',wrapText:true}; r+=5; });
+  }
+  U.forEach(o=>{ /* 대학별 양식 */
+    const ws=wb.addWorksheet(csUS(o).slice(0,28)), R=repOf(o); [8,12,11,11,11,11,11,14].forEach((w,i)=>ws.getColumn(i+1).width=w);
+    let r=1; K.title(ws,r,`${CS_QN[q]} 운영 보고 · ${o}`,8); r+=2; K.sec(ws,r,'1. 프로그램 운영 현황표'); r++;
+    K.box(ws,r,1,r,2,'운영 시기',{h:1}); ['학급수(개)','차시(차시)','인원(명)','비중(학급) %','비중(차시) %'].forEach((h,i)=>K.put(ws,r,3+i,h,{h:1})); r++;
+    const V=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)), T=V.reduce((t,x)=>({cls:t.cls+x.cls,ses:t.ses+x.ses,stu:t.stu+x.stu}),{cls:0,ses:0,stu:0});
+    CS_OPROWS.forEach(([g,per],i)=>{ if(i%4===0) K.box(ws,r,1,r+3,1,g,{b:1}); K.put(ws,r,2,per); K.put(ws,r,3,V[i].cls||''); K.put(ws,r,4,V[i].ses||''); K.put(ws,r,5,V[i].stu||''); K.put(ws,r,6,csPctN(V[i].cls,T.cls),{fmt:P}); K.put(ws,r,7,csPctN(V[i].ses,T.ses),{fmt:P}); r++; });
+    K.box(ws,r,1,r,2,'합계',{h:1}); K.put(ws,r,3,T.cls,{b:1}); K.put(ws,r,4,T.ses,{b:1}); K.put(ws,r,5,T.stu,{b:1}); K.put(ws,r,6,1,{fmt:P,b:1}); K.put(ws,r,7,1,{fmt:P,b:1}); r+=2;
+    K.sec(ws,r,'2. 강사연수'); r++; ['순','구분','목표 인원(명)','참여 인원(명)','비율 %'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
+    const T2=R.train||{}; let a2=0,b2=0; [['in','내부'],['out','외부']].forEach(([k,l],i)=>{ const x=T2[k]||{}; a2+=+x.goal||0; b2+=+x.got||0; K.put(ws,r,1,i+1); K.put(ws,r,2,l); K.put(ws,r,3,+x.goal||''); K.put(ws,r,4,+x.got||''); K.put(ws,r,5,csPctN(+x.got||0,+x.goal||0),{fmt:P}); r++; });
+    K.box(ws,r,1,r,2,'합계',{h:1}); K.put(ws,r,3,a2,{b:1}); K.put(ws,r,4,b2,{b:1}); K.put(ws,r,5,csPctN(b2,a2),{fmt:P,b:1}); r+=2;
+    K.sec(ws,r,'3. 프로그램 개발'); r++; ['순','프로그램','','신규/고도화','기획/차시구성안','회차별 학습과정안','PPT/동영상','비고(완료 예정일)'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); ws.mergeCells(r,2,r,3); r++;
+    const D=devOf(o); for(let i=0;i<Math.max(5,D.length);i++){ const x=D[i]||{}; K.put(ws,r,1,i+1); K.box(ws,r,2,r,3,x.name||'',{al:'left'}); [x.kind,x.plan,x.lesson,x.ppt,x.note].forEach((v,j)=>K.put(ws,r,4+j,v||'')); r++; } r++;
+    K.sec(ws,r,'4. 예산집행율'); r++; K.box(ws,r,1,r,3,'사업비 항목',{h:1}); ['예산액','지출액','잔액','비고'].forEach((h,i)=>K.put(ws,r,4+i,h,{h:1})); ws.mergeCells(r,7,r,8); r++;
+    let TB=0,TS=0; CS_BUD.forEach(k=>{ const x=((R.bud||{})[k])||{}, b=+x.b||0, sp=+x.s||0; TB+=b; TS+=sp; K.box(ws,r,1,r,3,k,{al:'left'}); K.put(ws,r,4,b||'',{fmt:'#,##0'}); K.put(ws,r,5,sp||'',{fmt:'#,##0'}); K.put(ws,r,6,b?b-sp:'',{fmt:'#,##0'}); K.box(ws,r,7,r,8,x.note||'',{al:'left'}); r++; });
+    K.box(ws,r,1,r,3,'합계',{h:1}); K.put(ws,r,4,TB,{fmt:'#,##0',b:1}); K.put(ws,r,5,TS,{fmt:'#,##0',b:1}); K.put(ws,r,6,TB-TS,{fmt:'#,##0',b:1}); K.box(ws,r,7,r,8,R.budAt?`기준일 ${R.budAt}`:''); r+=2;
+    K.sec(ws,r,'5. 기타사항'); r++; ws.getCell(r,1).value='가. 보도자료'; r++; ['순','일자','기사명','','','보도기관','비고',''].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); ws.mergeCells(r,3,r,5); ws.mergeCells(r,7,r,8); r++;
+    const E=R.press||[]; for(let i=0;i<Math.max(2,E.length);i++){ const x=E[i]||{}; K.put(ws,r,1,i+1); K.put(ws,r,2,x.d||''); K.box(ws,r,3,r,5,x.t||'',{al:'left'}); K.put(ws,r,6,x.by||''); K.box(ws,r,7,r,8,x.note||''); r++; } r++;
+    [['나. 우수사례','best'],['다. 건의사항','ask']].forEach(([l,f])=>{ ws.getCell(r,1).value=l; r++; K.box(ws,r,1,r+3,8,R[f]||'',{al:'left'}); ws.getCell(r,1).alignment={vertical:'top',horizontal:'left',wrapText:true}; r+=5; });
+  });
+  wb.worksheets.forEach(w=>{ w.pageSetup={paperSize:9,orientation:w.name==='통합'?'landscape':'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}}; });
+  const out=await wb.xlsx.writeBuffer(); await saveBinaryBuf(out,`${csYear()} ${CS_QN[q].replace(/ .*/,'')} 운영 보고 ${all?'통합':csUS(U[0])}.xlsx`,'운영 보고 양식을 내려받았습니다'); }
+async function csXlsMile(q,orgs){ if(typeof ExcelJS==='undefined') throw new Error('엑셀 도구를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  const K=csXlsKit(), wb=new ExcelJS.Workbook(), P='0.0%', all=orgs.length>1, U=orgs, ym=csYm();
+  const val=(o,d)=>{ const it=(csOrgR(o).mile||{})[d[0]]||{}; if(it.v==null||it.v==='') return ''; return d[4]==='ox'?it.v:`${it.v}${d[4]==='c'?'건':'회'}`; };
+  const qcum=qq=>CS_MILES.filter(d=>d[1]<=qq).length;
+  if(all){ const n=U.length, ws=wb.addWorksheet('통합'); [8,6,30,22].forEach((w,i)=>ws.getColumn(i+1).width=w); for(let c=5;c<5+n;c++) ws.getColumn(c).width=9;
+    let r=1; K.title(ws,r,`${csYear()}년 늘봄학교 고도화 공통 마일스톤 점검표 (통합 · ${+ym.slice(5)}월 기준)`,4+n); r+=2;
+    ['구분','연번','마일스톤','완료 기준(증빙)',...U.map(csUS)].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
+    [1,2,3,4].forEach(qq=>{ const L=CS_MILES.filter(d=>d[1]===qq); if(!L.length) return; K.box(ws,r,1,r+L.length-1,1,`${qq}분기`,{b:1}); L.forEach(d=>{ K.put(ws,r,2,d[0]); K.put(ws,r,3,d[2],{al:'left'}); K.put(ws,r,4,d[3],{al:'left'}); U.forEach((o,j)=>K.put(ws,r,5+j,val(o,d))); r++; }); });
+    r++; K.sec(ws,r,'사업 진행률 · 판정'); r++; ['분기','누적 예정',...U.map(csUS)].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
+    [1,2,3,4].forEach(qq=>{ K.put(ws,r,1,`${qq}분기`); K.put(ws,r,2,qcum(qq)); U.forEach((o,j)=>{ const p=csProg(o,qq); K.put(ws,r,3+j,qq<=q?`${p.done}개 · ${p.p==null?'-':p.p+'%'} · ${(CS_JL[csFinal(o,qq)]||'-').replace(/\(.*\)/,'')}`:''); }); r++; });
+  }
+  U.forEach(o=>{ const ws=wb.addWorksheet(csUS(o).slice(0,28)); [8,6,32,24,10,22].forEach((w,i)=>ws.getColumn(i+1).width=w);
+    let r=1; K.title(ws,r,`${csYear()}년 늘봄학교 고도화 공통 마일스톤 점검표`,6); r++; ws.mergeCells(r,1,r,6); ws.getCell(r,1).value='충청남도 지역성장 인재양성체계(앵커) 늘봄학교 고도화(1권역) 컨소시엄'; ws.getCell(r,1).alignment={horizontal:'center'}; r+=2;
+    const D=csOrgR(o), sb=(D.sub||{})[ym]; K.put(ws,r,1,'대 학 명',{h:1}); K.box(ws,r,2,r,3,o); K.put(ws,r,4,'점검 기준월',{h:1}); K.box(ws,r,5,r,6,`${ym.slice(0,4)}년 ${+ym.slice(5)}월`); r++;
+    K.put(ws,r,1,'작 성 자',{h:1}); K.box(ws,r,2,r,3,''); K.put(ws,r,4,'작 성 일',{h:1}); K.box(ws,r,5,r,6,sb?String(sb).slice(0,10).replace(/-/g,'.'):''); r+=2;
+    ['구분','연번','마일스톤','완료 기준(증빙)','실적','비고'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
+    [1,2,3,4].forEach(qq=>{ const L=CS_MILES.filter(d=>d[1]===qq); if(!L.length) return; K.box(ws,r,1,r+L.length-1,1,`${qq}분기`,{b:1}); L.forEach(d=>{ const it=(D.mile||{})[d[0]]||{}; K.put(ws,r,2,d[0]); K.put(ws,r,3,d[2],{al:'left'}); K.put(ws,r,4,d[3],{al:'left'}); K.put(ws,r,5,val(o,d)); K.put(ws,r,6,it.note||'',{al:'left'}); r++; }); });
+    r++; K.sec(ws,r,'□ 사업 진행률 산출 및 판정'); r++; ['구분','분기 마일스톤','누적 예정','누적 완료','사업 진행률','판정'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); r++;
+    [1,2,3,4].forEach(qq=>{ const p=csProg(o,qq), on=qq<=q; K.put(ws,r,1,`${qq}분기`); K.put(ws,r,2,CS_MILES.filter(d=>d[1]===qq).length); K.put(ws,r,3,qcum(qq)); K.put(ws,r,4,on?p.done:''); K.put(ws,r,5,on&&p.need?p.done/p.need:'',{fmt:P}); K.put(ws,r,6,on?CS_JL[csFinal(o,qq)]||'-':''); r++; });
+  });
+  wb.worksheets.forEach(w=>{ w.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}}; });
+  const out=await wb.xlsx.writeBuffer(); await saveBinaryBuf(out,`${csYear()} 마일스톤 점검표 ${all?'통합':csUS(U[0])} (${+ym.slice(5)}월).xlsx`,'마일스톤 점검표를 내려받았습니다'); }
 /* ---------- 운영 보고 ---------- */
 function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep||{})[q])||{}, cp=`consOrg.${o}.rep.${q}`, sec=S.ui.csRs||'op', adm=!csMine(), lk=!adm&&!!R.subAt, D_=lk?'disabled':'', rFix=R.fix&&!R.subAt;
   const inp=(path,v,w,ph,num)=>`<input ${D_} ${num===false?'':'type="number"'} data-cp="${cp}.${path}" data-cat="${cp}" value="${esc(v??'')}" style="width:${w||'80px'}" placeholder="${esc(ph||'')}">`;
   const segs=[['op','1. 프로그램 운영'],['train','2. 강사연수'],['dev','3. 프로그램 개발'],['bud','4. 예산 집행'],['etc','5. 기타']];
   let body='';
-  if(sec==='op'){ const g=csGoal(o,q), P=R.per||{};
-    body=`<div class="tw"><table><thead><tr><th>운영 시기</th><th>학급수</th><th>차시</th><th>인원</th><th>출처</th></tr></thead><tbody>${CS_PER.map(per=>{ const L=ST_PER.includes(per)?csAutoCls(o,per):null, a=L?stSum(L):null, x=P[per]||{};
-        return `<tr><td>${esc(per)}</td>${['cls','ses','stu'].map(k=>`<td>${inp(`per.${per}.${k}`,x[k],'90px',a?String(a[k]):'')}</td>`).join('')}<td class="small muted">${['cls','ses','stu'].some(k=>x[k]!=null&&x[k]!=='')?'대학 입력':a?'운영 목록 자동':'-'}</td></tr>`; }).join('')}
-      ${(()=>{ const tot={cls:0,ses:0,stu:0}; CS_PER.forEach(per=>{ const L=ST_PER.includes(per)?csAutoCls(o,per):null, a=L?stSum(L):{cls:0,ses:0,stu:0}, x=P[per]||{}; ['cls','ses','stu'].forEach(k=>{ tot[k]+=x[k]!=null&&x[k]!==''?+x[k]:a[k]; }); });
-        return `<tr class="cs-qh"><td>합계</td><td>${tot.cls}</td><td>${tot.ses.toLocaleString()}</td><td>${tot.stu.toLocaleString()}</td><td></td></tr>`; })()}</tbody></table></div>
+  if(sec==='op'){ const g=csGoal(o,q), V=CS_OPROWS.map(([gg,per])=>({gg,per,...csOpVal(o,q,gg,per),a:csOpAuto(o,gg,per)})), T=V.reduce((t,x)=>({cls:t.cls+x.cls,ses:t.ses+x.ses,stu:t.stu+x.stu}),{cls:0,ses:0,stu:0}), pc=(a,b)=>b?Math.round(a/b*1000)/10+'%':'-';
+    body=`<div class="tw"><table><thead><tr><th colspan="2">운영 시기</th><th>학급수(개)</th><th>차시(차시)</th><th>인원(명)</th><th>비중(학급)</th><th>비중(차시)</th><th>출처</th></tr></thead><tbody>${V.map((x,i)=>`<tr>${i%4===0?`<td rowspan="4"><b>${x.gg}</b></td>`:''}<td>${esc(x.per)}</td>${['cls','ses','stu'].map(k=>`<td>${inp(`op2.${x.gg}|${x.per}.${k}`,(((R.op2||{})[x.gg+'|'+x.per])||{})[k],'90px',x.a?String(x.a[k]):'')}</td>`).join('')}<td class="small">${pc(x.cls,T.cls)}</td><td class="small">${pc(x.ses,T.ses)}</td><td class="small muted">${x.own?'대학 입력':x.a&&(x.a.cls||x.a.ses)?'운영 목록 자동':'-'}</td></tr>`).join('')}
+      <tr class="cs-qh"><td colspan="2">합계</td><td>${T.cls}</td><td>${T.ses.toLocaleString()}</td><td>${T.stu.toLocaleString()}</td><td>100%</td><td>100%</td><td></td></tr></tbody></table></div>
      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center"><b>목표 달성률 (학급수)</b><span>연간 KPI <b>${g.kpi||'-'}</b>학급 · 운영 ${g.n??'-'}학급 → 자동 <b class="${csRateC(g.auto)}">${g.auto==null?'-':g.auto+'%'}</b></span><label class="row small" style="gap:4px">직접 입력 ${inp('goal',R.goal,'80px','%')} %</label>${qt(['자동: 운영 통계의 연간 학급수 KPI 대비 운영 학급 수','칸을 비우면 자동 값을 씀','연간 KPI는 6 운영 통계 「KPI 목표」에서 정함'])}</div>
-     <div class="small muted">운영 시기 칸을 비우면 운영 목록(운영 통계) 값을 씁니다. 숫자를 넣으면 그 값으로 바뀝니다.</div>`; }
+     <div class="small muted">칸을 비우면 운영 목록(운영 통계) 값을 씁니다(흐린 숫자). 숫자를 넣으면 그 값으로 바뀝니다. 학교밖은 수업 시작 월로 시기를 나눕니다.</div>`; }
   if(sec==='train'){ const T=R.train||{};
-    body=`<b>가. 연수 일정</b><div class="tw"><table><thead><tr><th>구분</th><th>총 횟수</th><th>총 시수</th><th>인원</th><th>내부</th><th>외부</th><th>비고</th></tr></thead><tbody>${['공통과정','프로그램'].map((k,i)=>`<tr><td>${k}</td>${['n','h','p','pin','pout'].map(f=>`<td>${inp(`train.r${i}.${f}`,(T['r'+i]||{})[f],'70px')}</td>`).join('')}<td>${inp(`train.r${i}.note`,(T['r'+i]||{}).note,'160px','',false)}</td></tr>`).join('')}</tbody></table></div>
-     <b>나. 참여자 수 (성과지표)</b><div class="tw"><table><thead><tr><th>구분</th><th>목표 인원</th><th>수강 인원</th><th>비율</th></tr></thead><tbody>${[['in','내부'],['out','외부']].map(([k,l])=>{ const x=T[k]||{}; const p=csPct(+x.got||0,+x.goal||0); return `<tr><td>${l}</td><td>${inp(`train.${k}.goal`,x.goal)}</td><td>${inp(`train.${k}.got`,x.got)}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td></tr>`; }).join('')}</tbody></table></div>`; }
+    const tg=['in','out'].reduce((a,k)=>a+(+(T[k]||{}).goal||0),0), tt=['in','out'].reduce((a,k)=>a+(+(T[k]||{}).got||0),0), tp=csPct(tt,tg);
+    body=`<div class="tw"><table><thead><tr><th>순</th><th>구분</th><th>목표 인원(명)</th><th>참여 인원(명)</th><th>비율</th></tr></thead><tbody>${[['in','내부'],['out','외부']].map(([k,l],i)=>{ const x=T[k]||{}; const p=csPct(+x.got||0,+x.goal||0); return `<tr><td>${i+1}</td><td>${l}</td><td>${inp(`train.${k}.goal`,x.goal)}</td><td>${inp(`train.${k}.got`,x.got)}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td></tr>`; }).join('')}<tr class="cs-qh"><td colspan="2">합계</td><td>${tg}</td><td>${tt}</td><td>${tp==null?'-':tp+'%'}</td></tr></tbody></table></div>`; }
   if(sec==='dev'){ const L=R.dev&&R.dev.length?R.dev:(S.programs||[]).filter(p=>p.org===o).map(p=>({name:p.name,kind:'',run:'',st:'',pay:'',note:''}));
-    body=`<div class="tw"><table><thead><tr><th>프로그램</th><th>신규/고도화</th><th>운영 여부</th><th>진행 여부</th><th>지출</th><th>비고</th><th></th></tr></thead><tbody>${L.map((x,i)=>`<tr>${['name','kind','run','st','pay','note'].map(f=>`<td>${inp(`dev.${i}.${f}`,x[f],f==='name'?'180px':f==='note'?'160px':'100px','',false)}</td>`).join('')}<td><button class="btn sm" ${D_} data-act="csdevdel" data-o="${esc(o)}" data-q="${q}" data-i="${i}">삭제</button></td></tr>`).join('')}</tbody></table></div>
+    const sel=(f,i,v,opts)=>`<select ${D_} data-cp="${cp}.dev.${i}.${f}" data-cat="${cp}">${opts.map(x=>`<option value="${esc(x)}" ${String(v||'')===x?'selected':''}>${esc(x||'선택')}</option>`).join('')}</select>`;
+    body=`<div class="tw"><table><thead><tr><th>순</th><th>프로그램</th><th>신규/고도화</th><th>기획/차시구성안</th><th>회차별 학습과정안</th><th>PPT/동영상</th><th>비고 (완료 예정일)</th><th></th></tr></thead><tbody>${L.map((x,i)=>`<tr><td>${i+1}</td><td>${inp(`dev.${i}.name`,x.name,'180px','',false)}</td><td>${sel('kind',i,x.kind,['','신규','고도화'])}</td><td>${sel('plan',i,x.plan,CS_DEVST)}</td><td>${sel('lesson',i,x.lesson,CS_DEVST)}</td><td>${sel('ppt',i,x.ppt,CS_DEVST)}</td><td>${inp(`dev.${i}.note`,x.note,'160px','예: 2026.12.20',false)}</td><td><button class="btn sm" ${D_} data-act="csdevdel" data-o="${esc(o)}" data-q="${q}" data-i="${i}">삭제</button></td></tr>`).join('')}</tbody></table></div>
      <div><button class="btn sm" ${D_} data-act="csdevadd" data-o="${esc(o)}" data-q="${q}">줄 추가</button> <span class="small muted">처음에는 기준정보의 이 대학 프로그램 목록으로 채워 보여 줍니다.</span></div>`; }
   if(sec==='bud'){ const B=R.bud||{}, b=csBud(o,q);
-    body=`<div class="tw"><table><thead><tr><th>사업비 항목</th><th>예산액(천원)</th><th>지출액</th><th>남은 금액</th><th>이월 예정</th><th>집행률</th><th>비고</th></tr></thead><tbody>${CS_BUD.map(k=>{ const x=B[k]||{}, p=csPct(+x.s||0,+x.b||0); return `<tr><td>${esc(k)}</td><td>${inp(`bud.${k}.b`,x.b,'100px')}</td><td>${inp(`bud.${k}.s`,x.s,'100px')}</td><td class="mono">${x.b?((+x.b||0)-(+x.s||0)).toLocaleString():'-'}</td><td>${inp(`bud.${k}.c`,x.c,'90px')}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td><td>${inp(`bud.${k}.note`,x.note,'140px','',false)}</td></tr>`; }).join('')}
-     <tr class="cs-qh"><td>합계</td><td>${b.b.toLocaleString()}</td><td>${b.s.toLocaleString()}</td><td>${(b.b-b.s).toLocaleString()}</td><td></td><td class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</td><td></td></tr></tbody></table></div>
+    body=`<div class="tw"><table><thead><tr><th>사업비 항목</th><th>예산액(천원)</th><th>지출액(천원)</th><th>잔액</th><th>집행률</th><th>비고</th></tr></thead><tbody>${CS_BUD.map(k=>{ const x=B[k]||{}, p=csPct(+x.s||0,+x.b||0); return `<tr><td>${esc(k)}</td><td>${inp(`bud.${k}.b`,x.b,'100px')}</td><td>${inp(`bud.${k}.s`,x.s,'100px')}</td><td class="mono">${x.b?((+x.b||0)-(+x.s||0)).toLocaleString():'-'}</td><td class="${csRateC(p)}">${p==null?'-':p+'%'}</td><td>${inp(`bud.${k}.note`,x.note,'140px','',false)}</td></tr>`; }).join('')}
+     <tr class="cs-qh"><td>합계</td><td>${b.b.toLocaleString()}</td><td>${b.s.toLocaleString()}</td><td>${(b.b-b.s).toLocaleString()}</td><td class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</td><td></td></tr></tbody></table></div>
      <div class="row small" style="gap:6px">기준일 ${inp('budAt',R.budAt,'130px','예: 2026.11.24',false)}</div>`; }
   if(sec==='etc'){ const E=R.press||[];
     body=`<b>가. 보도자료</b><div class="tw"><table><thead><tr><th>일자</th><th>기사명</th><th>보도기관</th><th>비고</th><th></th></tr></thead><tbody>${E.map((x,i)=>`<tr>${['d','t','by','note'].map(f=>`<td>${inp(`press.${i}.${f}`,x[f],f==='t'?'260px':'110px','',false)}</td>`).join('')}<td><button class="btn sm" ${D_} data-act="cspdel" data-o="${esc(o)}" data-q="${q}" data-i="${i}">삭제</button></td></tr>`).join('')||'<tr><td colspan="5" class="small muted">아직 없음</td></tr>'}</tbody></table></div>
      <div><button class="btn sm" ${D_} data-act="cspadd" data-o="${esc(o)}" data-q="${q}">보도자료 추가</button></div>
      <label class="stack" style="gap:4px"><b>나. 우수사례</b><textarea ${D_} data-cp="${cp}.best" data-cat="${cp}" rows="3">${esc(R.best||'')}</textarea></label>
      <label class="stack" style="gap:4px"><b>다. 건의사항</b><textarea ${D_} data-cp="${cp}.ask" data-cat="${cp}" rows="3">${esc(R.ask||'')}</textarea></label>`; }
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}${csQSeg('rep',q)}<span style="flex:1"></span>${R.subAt?`<span class="chip ${R.ok?'ok':'info'}">${R.fix?'보완 후 재제출':'제출'} ${esc(String(R.subAt).slice(5,16).replace('-','.'))}${R.ok?' · 확인 완료':' · 확인 대기'}</span>`:rFix?'<span class="chip warn">보완 요청 · 다시 제출 전</span>':''}${R.subAt?(adm?(R.ok?`<button class="btn sm" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csrfix" data-o="${esc(o)}" data-q="${q}">보완 요청</button>`:''):adm?'<span class="small muted">대학 제출 전</span>':`<button class="btn sm pri" data-act="csask" data-k="rep" data-o="${esc(o)}" data-q="${q}">${rFix?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}${csQSeg('rep',q)}<button class="btn sm" data-act="csxls-rep" data-q="${q}" data-o="${esc(o)}" title="운영 보고 양식(엑셀)으로 받기">양식으로 받기</button><span style="flex:1"></span>${R.subAt?`<span class="chip ${R.ok?'ok':'info'}">${R.fix?'보완 후 재제출':'제출'} ${esc(String(R.subAt).slice(5,16).replace('-','.'))}${R.ok?' · 확인 완료':' · 확인 대기'}</span>`:rFix?'<span class="chip warn">보완 요청 · 다시 제출 전</span>':''}${R.subAt?(adm?(R.ok?`<button class="btn sm" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csrok" data-o="${esc(o)}" data-q="${q}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csrfix" data-o="${esc(o)}" data-q="${q}">보완 요청</button>`:''):adm?'<span class="small muted">대학 제출 전</span>':`<button class="btn sm pri" data-act="csask" data-k="rep" data-o="${esc(o)}" data-q="${q}">${rFix?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
    ${rFix?`<div class="notice bad stack" style="gap:4px"><b>호서대에서 ${CS_QN[q]} 운영 보고 보완을 요청했습니다</b><div class="small">${esc(R.fix.why||'')}</div><div class="small">${adm?'대학이 고친 뒤 다시 제출하면 「보완 후 재제출」로 표시됩니다.':'내용을 고쳐 입력한 뒤 「보완 후 다시 제출하기」를 눌러 주세요.'} <span class="muted">(${esc(String(R.fix.at||'').slice(5,16).replace('-','.'))} 요청)</span></div></div>`:''}
    ${lk?`<div class="iss lv-info small">제출한 보고는 고칠 수 없습니다. 수정이 필요하면 호서대에 요청해 주세요.</div>`:''}
    <div class="seg2" role="tablist">${segs.map(([k,l])=>`<button class="${sec===k?'on':''}" data-act="csrs" data-v="${k}">${l}</button>`).join('')}</div>
@@ -6299,7 +6400,9 @@ document.addEventListener('change',e=>{ const t=e.target; if(!t||!t.dataset) ret
 function csAct(a,el){ const o=el.dataset.o, U=S.ui;
   switch(a){
     case 'cstab': if(U.csTab!==el.dataset.v){ subNavPush({csTab:el.dataset.v}); } U.csTab=el.dataset.v; return true;
-    case 'csq': { const k=el.dataset.k, v=+el.dataset.v; if(k==='rep') U.csRq=v; else if(k==='judge') U.csJq=v; else U.csQ=v; return true; }
+    case 'csq': { const k=el.dataset.k, v=+el.dataset.v; if(k==='rep') U.csRq=v; else if(k==='judge') U.csJq=v; else if(k==='sum') U.csSq=v; else U.csQ=v; return true; }
+    case 'csxls-rep': csXlsRep(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
+    case 'csxls-mile': csXlsMile(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
     case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab='mile'; } return true;
     case 'csmq': { const m=U.csMq||{[csQNow()]:true}; m[el.dataset.v]=!m[el.dataset.v]; U.csMq=m; return true; }
     case 'csox': { if(el.disabled) return false; const p=`consOrg.${o}.mile.${el.dataset.n}`, cur=csGet(p+'.v'); csSet(p+'.v',cur===el.dataset.v?'':el.dataset.v); csStamp(p); return true; }
