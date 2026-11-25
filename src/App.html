@@ -329,7 +329,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.103';
+const APP_VER = '11.104';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -782,6 +782,7 @@ if (MODE === 'admin') bizGo = function (b) {
   };
   go();
 };
+if (MODE === 'school') schoolFillCall = function (list) { return run('schoolFill', TOKEN, list); };
 if (MODE === 'admin') univJoinCall = function (org, regen) { return run('adminUnivJoin', ADMIN_KEY, org || '', !!regen); };
 if (MODE === 'admin') adminAcc = function (op, d) { return run('adminAccounts', ADMIN_KEY, op, d).then(L => { S.admins = L || []; render(); return L; }).catch(e => { toast(errMsg(e)); throw e; }); };
 /* 운영 화면 시기 바꾸기: 저장할 것이 있으면 먼저 저장한 뒤 서버에서 그 시기 자료를 불러옴 */
