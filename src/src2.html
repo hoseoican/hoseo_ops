@@ -834,10 +834,15 @@ table.mtt td{vertical-align:top}
 .dvdoc.ro{cursor:default}.dvck{display:inline-flex;align-items:center;gap:3px}.dvck input{margin:0;width:13px;height:13px}
 tr.dv-ed>td{background:var(--tint)!important}
 .dvfbar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}.dvfbar .dvq{flex:1 1 240px;min-width:200px}
-.dvfl{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden;font-size:13px}
-.dvfl>span{padding:0 4px 0 12px;color:var(--muted);white-space:nowrap}.dvfl select{border:0;background:transparent;padding:8px 26px 8px 4px;min-width:84px;max-width:170px;font-weight:600}
-.dvfl.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--card))}.dvfl.on>span{color:var(--accent)}
-.dvchip{display:inline-flex;align-items:center;gap:4px}.dvchip .lnk{font-size:14px;line-height:1;padding:0 2px}
+.fsel,.dvfl{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden;font-size:13px;flex:0 1 auto}
+.fsel>span,.dvfl>span{padding:0 4px 0 12px;color:var(--muted);white-space:nowrap}.fsel select,.dvfl select{border:0;background:transparent;padding:8px 26px 8px 4px;min-width:84px;max-width:200px;font-weight:600;box-shadow:none}
+.fsel.on,.dvfl.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 7%,var(--card))}.fsel.on>span,.dvfl.on>span{color:var(--accent)}
+.fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}.fbar>input[type=search],.fbar>.fq{flex:1 1 240px;min-width:200px}.fbar .ftog{display:flex;align-items:center;gap:6px;font-size:13px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);white-space:nowrap}
+.factive{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;min-height:26px}
+.dvchip,.fchipx{display:inline-flex;align-items:center;gap:4px}.dvchip .lnk,.fchipx .lnk{font-size:14px;line-height:1;padding:0 2px}
+.seg2,.st-seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;background:var(--sunk);padding:2px;gap:2px;overflow:hidden}
+.seg2 button,.st-seg button{font:inherit;font-size:12.5px;border:0;border-radius:7px;background:transparent;color:var(--muted);padding:6px 11px;cursor:pointer}
+.seg2 button.on,.st-seg button.on{background:var(--accent);color:var(--on-accent);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .dvst{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}.dvst-0{background:var(--sunk);color:var(--muted)}.dvst-1{background:var(--wait-bg);color:var(--wait-fg)}.dvst-2{background:var(--fin-bg);color:var(--fin-fg)}.dvst-3{background:var(--can-bg);color:var(--can-fg);text-decoration:line-through}
 .hovtip{position:relative;border-bottom:1px dotted var(--muted);cursor:help}
 .hovtip::after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 6px);white-space:pre-line;width:max-content;max-width:260px;background:#262626;color:#fff;padding:7px 10px;border-radius:8px;font-size:12.5px;line-height:1.5;z-index:60;box-shadow:0 6px 20px rgba(0,0,0,.18);opacity:0;visibility:hidden;transition:opacity .12s;pointer-events:none}
@@ -2296,7 +2301,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.115';
+const LIB_VER='11.116';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2430,6 +2435,11 @@ function outRulesPanel(){ const R=outRules(), ed=S.ui.orEdit, rows=myRows().filt
    <label class="f">기관이 준비해야 할 것 (한 줄에 하나)<textarea id="or-items" rows="3">${esc((R.items||[]).join('\n'))}</textarea></label>
    <label class="f">기관에게 보일 안내(선택)<input id="or-note" value="${esc(R.note||'')}" placeholder="예: 운영 중 조건을 지키지 않으면 수업이 중단될 수 있습니다"></label>
    <div class="row"><button class="btn sm pri" data-act="orsave">저장</button><button class="btn sm" data-act="oredit">취소</button><button class="btn sm" data-act="ordef">처음 값으로</button></div></div>`; }
+/* ===== 공통 필터 막대: 검색 + 「이름 | 값」 드롭다운(개수 표시) + 적용 조건 칩. 모든 목록 화면이 같은 모양 =====
+   opts: [[값, 표시, 개수]] (개수 null이면 표시 안 함). 값 ''는 전체 */
+function fSel(id,label,cur,opts,allLab){ cur=cur==null?'':String(cur); return `<label class="fsel ${cur?'on':''}"><span>${esc(label)}</span><select id="${id}" aria-label="${esc(label)}"><option value="">${esc(allLab||'전체')}</option>${opts.map(([v,l,n])=>`<option value="${esc(v)}" ${cur===String(v)?'selected':''} ${n===0&&cur!==String(v)?'disabled':''}>${esc(l)}${n!=null?` (${n})`:''}</option>`).join('')}</select></label>`; }
+/* 적용 조건 줄: items = [[이름, 값 표시, 지우기 data-act, data-k]] */
+function fActive(total,shown,items,resetAct,unit){ unit=unit||'개'; return `<div class="factive">${shown===total?`<span class="muted">전체 ${total.toLocaleString()}${unit}</span>`:`<span><b>${shown.toLocaleString()}</b> / ${total.toLocaleString()}${unit}</span>`}${items.map(([l,v,a,k])=>`<span class="chip sm fchipx">${esc(l)}: ${esc(v)} <button class="lnk" data-act="${a}" data-k="${esc(k||'')}" aria-label="${esc(l)} 조건 지우기">×</button></span>`).join('')}${items.length&&resetAct?`<button class="lnk small" data-act="${resetAct}">모두 지우기</button>`:''}</div>`; }
 function viewBoard(){
   const SR=S.rows.filter(inScope), rows=myRows(), others=SR.length-rows.length, u=S.ui, O=scopeOut();
   const cnt=Object.fromEntries(ST_ORDER.map(s=>[s,rows.filter(r=>r.status===s).length]));
@@ -2483,16 +2493,16 @@ function viewBoard(){
   ${kakaoOf(scopeOut())?'':`<div class="notice">${esc(season().name)} ${scopeOut()?'학교밖(기관)':'학교'} 단체 카톡방 링크가 없습니다. ${qt('학교 화면과 확인 요청 문구에 입장 안내로 들어감')} <a href="#setup">기준정보로 가기</a></div>`}
   ${overCap().length?`<div class="notice bad">공급 학급수를 넘은 프로그램: ${overCap().map(x=>`${esc(x.p.name)} ${x.n}/${x.p.cap}`).join(', ')}. 기준정보에서 공급 학급수를 조정하거나 일부 학급의 프로그램을 바꿔 주세요.</div>`:''}
   <div class="row between"><div class="seg" role="tablist" aria-label="보기 방식"><button class="${u.bview==='school'?'':'on'}" data-act="bview" data-v="class">학급별 보기</button><button class="${u.bview==='school'?'on':''}" data-act="bview" data-v="school">학교별 진행 현황</button></div></div>
-  ${u.bview==='school'?schoolProgressHtml():`<div class="row orgf" role="group" aria-label="운영 대학"><span class="tb-l small">운영 대학</span><div class="fchips"><button class="fchip ${!uorgs.length?'on':''}" data-act="borg" data-v="*" aria-pressed="${!uorgs.length}">전체 <em>${SR.length}</em></button>${orgList.sort((a,b)=>tOrgIdx(a)-tOrgIdx(b)).map(o=>`<button class="fchip org og${tOrgIdx(o)} ${uorgs.includes(o)?'on':''}" data-act="borg" data-v="${esc(o)}" aria-pressed="${uorgs.includes(o)}"><i class="odot"></i>${esc(orgShort(o))} <em>${orgCnt(o)}</em></button>`).join('')}<span class="tb-hint">여러 대학을 함께 고를 수 있습니다</span></div></div>
-  <div class="filters">
-    <input id="q" placeholder="학교·프로그램·강사 검색" value="${esc(u.q)}" style="flex:1 1 200px" aria-label="검색">
-    <select id="fbprog" aria-label="프로그램"><option value="">전체 프로그램</option>${[...new Set(base.map(r=>r.prog))].filter(k=>prog(k)).sort((a,b)=>prog(a).name.localeCompare(prog(b).name,'ko')).map(k=>`<option value="${esc(k)}" ${u.bprog===k?'selected':''}>${esc(prog(k).name)} (${base.filter(r=>r.prog===k).length})</option>`).join('')}</select>
-    <select id="fregion" aria-label="지역"><option value="">전체 지역</option>${[...new Set(base.map(r=>r.region))].filter(Boolean).map(x=>`<option ${u.region===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
-    <label class="row small"><input type="checkbox" id="fprob" ${u.probOnly?'checked':''}> 확인 필요한 학급만</label>
-    <label class="row small">정렬 <select id="fsort" aria-label="정렬 기준">${BSORT.map(([k,l])=>`<option value="${k}" ${bsort===k?'selected':''}>${l}</option>`).join('')}</select><button class="btn sm" data-act="bdir" aria-label="정렬 방향 바꾸기" title="오름차순/내림차순 바꾸기">${bdir<0?'내림차순 ▼':'오름차순 ▲'}</button></label>
-    <span class="small muted">${list.length}학급 · 합계 <b>${hrsSum.toLocaleString()}차시</b></span>
-    ${u.st?`<button class="btn sm" data-act="fst" data-v="">상태 필터 해제</button>`:''}
+  ${u.bview==='school'?schoolProgressHtml():`
+  <div class="fbar">
+    <input id="q" class="fq" placeholder="학교·프로그램·강사 검색" value="${esc(u.q)}" aria-label="검색">
+    ${orgList.length>1?fSel('fborg','운영 대학',uorgs[0]||'',orgList.sort((a,b)=>tOrgIdx(a)-tOrgIdx(b)).map(o=>[o,orgShort(o),orgCnt(o)])):''}
+    ${fSel('fbprog','프로그램',u.bprog||'',[...new Set(base.map(r=>r.prog))].filter(k=>prog(k)).sort((a,b)=>prog(a).name.localeCompare(prog(b).name,'ko')).map(k=>[k,prog(k).name,base.filter(r=>r.prog===k).length]))}
+    ${fSel('fregion','지역',u.region||'',[...new Set(base.map(r=>r.region))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'ko')).map(x=>[x,x,base.filter(r=>r.region===x).length]))}
+    ${fSel('fbprob','확인',u.probOnly?'prob':'',[['prob','확인 필요한 학급만',null]])}
+    <label class="fsel"><span>정렬</span><select id="fsort" aria-label="정렬 기준">${BSORT.map(([k,l])=>`<option value="${k}" ${bsort===k?'selected':''}>${l}</option>`).join('')}</select></label><button class="btn sm" data-act="bdir" aria-label="정렬 방향 바꾸기" title="오름차순/내림차순 바꾸기">${bdir<0?'내림차순 ▼':'오름차순 ▲'}</button>
   </div>
+  ${fActive(base===SR?SR.length:SR.length,list.length,[...(uorgs.length?[['운영 대학',uorgs.map(orgShort).join('·'),'bfclr','org']]:[]),...(u.bprog&&prog(u.bprog)?[['프로그램',prog(u.bprog).name,'bfclr','prog']]:[]),...(u.region?[['지역',u.region,'bfclr','region']]:[]),...(u.probOnly?[['확인','확인 필요한 학급만','bfclr','prob']]:[]),...(u.st?[['상태',(ST[u.st]||[u.st])[0],'bfclr','st']]:[])],'bfclrall','학급')}<span class="small muted" style="display:block;margin-top:-2px">합계 <b>${hrsSum.toLocaleString()}차시</b></span>
   <div class="tw mcards"><table class="btbl">
    <thead><tr>${[['no','순','순번'],['org','운영 대학'],['school','학급','학교명'],['prog','프로그램'],['hrs','차시'],['start','기간'],['time','요일 · 시간'],['inst','강사'],['status','상태'],['iss','확인할 점']].map(([k,l,tl])=>`<th aria-sort="${bsort===k?(bdir<0?'descending':'ascending'):'none'}"><button class="thsort ${bsort===k?'on':''}" data-act="bsortk" data-v="${k}" title="눌러서 ${tl||l} 순으로 정렬 (다시 누르면 반대 방향)">${l} <span class="thsort-i">${bsort===k?(bdir<0?'▼':'▲'):'↕'}</span></button></th>`).join('')}</tr></thead>
    <tbody>${(flat?[['',list]]:Object.entries(groups)).map(([sch,rs])=>(flat?'':`<tr class="sch"><td colspan="10">${esc(sch)} <span class="muted small" style="font-weight:400">${esc((needArea()&&(S.contacts[sch]||{}).area)||rs[0].region)} · ${rs.length}학급 ${S.contacts[sch]?'· 담당 '+esc(S.contacts[sch].name||'대표번호')+((S.contacts[sch]).kakao?' · 카톡방 입장':''):''}</span>${rs.some(r=>r.sc.at)?` <button class="btn sm" style="margin-left:6px" data-act="xschool-go" data-s="${esc(sch)}">이 학교 엑셀</button>`:''}</td></tr>`)+rs.map(r=>{
@@ -2865,10 +2875,9 @@ function matchTable(all){
   const NO=new Map([...list].sort((a,b)=>srcIdx(a)-srcIdx(b)||rowNoN(a)-rowNoN(b)).map((r,i)=>[r.id,i+1]));
   const hrsSum=list.reduce((a,r)=>a+rowHrs(r),0), ix=asgIndex();
   return `<div class="panel stack mtbl">
-   ${orgs.length>1?`<div class="row orgf" role="group" aria-label="운영 대학"><span class="tb-l small">운영 대학</span><div class="fchips"><button class="fchip ${!mo.length?'on':''}" data-act="morg" data-v="*">전체 <em>${all.length}</em></button>${orgs.map(o=>`<button class="fchip org og${tOrgIdx(o)} ${mo.includes(o)?'on':''}" data-act="morg" data-v="${esc(o)}" aria-pressed="${mo.includes(o)}"><i class="odot"></i>${esc(orgShort(o))} <em>${all.filter(r=>orgOfRow(r)===o).length}</em></button>`).join('')}</div></div>`:''}
-   <div class="row orgf" role="group" aria-label="진행 단계"><span class="tb-l small">단계</span><div class="fchips">${MST.map(([k,l,fn])=>{ const n=base.filter(fn).length; return k&&!n&&(u.mst||'')!==k?'':`<button class="fchip ${(u.mst||'')===k?'on':''}" data-act="mst" data-v="${k}">${l} <em>${n}</em></button>`; }).join('')}</div></div>
    <div class="row" style="gap:8px"><div class="seg2" role="tablist">${[['class','학급별 신청 · 배치'],['teacher','강사별 신청 현황']].map(([k,l])=>`<button class="${(u.mview||'class')===k?'on':''}" data-act="mview" data-v="${k}" role="tab" aria-selected="${(u.mview||'class')===k}">${l}</button>`).join('')}</div><span class="small muted"><span class="achip s-tent" style="cursor:default">✓ 가배치</span> <span class="achip s-fin" style="cursor:default">✓ 확정</span> <span class="achip s-other" style="cursor:default">다른 강사 배정됨</span> <span class="achip nf" style="cursor:default">점선 = 분야 외</span></span></div>
-   <div class="filters"><input id="mq" placeholder="학교·학급·프로그램·강사 검색" value="${esc(u.mq||'')}" style="flex:1 1 220px" aria-label="검색"><label class="row small"><input type="checkbox" id="showWait" ${u.showWait?'checked':''}> 학교 확인 대기 학급도 보기</label><span class="small muted">${list.length}학급 · 합계 <b>${hrsSum.toLocaleString()}차시</b></span></div>
+   <div class="fbar"><input id="mq" class="fq" placeholder="학교·학급·프로그램·강사 검색" value="${esc(u.mq||'')}" aria-label="검색">${orgs.length>1?fSel('fmorg','운영 대학',mo[0]||'',orgs.map(o=>[o,orgShort(o),all.filter(r=>orgOfRow(r)===o).length])):''}${fSel('fmst','단계',u.mst||'',MST.filter(x=>x[0]).map(([k,l,fn])=>[k,l,base.filter(fn).length]))}<label class="ftog"><input type="checkbox" id="showWait" ${u.showWait?'checked':''}> 학교 확인 대기 학급도 보기</label></div>
+   ${fActive(all.length,list.length,[...(mo.length?[['운영 대학',mo.map(orgShort).join('·'),'mfclr','org']]:[]),...(u.mst?[['단계',(MST.find(x=>x[0]===u.mst)||[0,u.mst])[1],'mfclr','st']]:[])],'mfclrall','학급')}<span class="small muted" style="display:block;margin-top:-2px">합계 <b>${hrsSum.toLocaleString()}차시</b></span>
    ${(u.mview||'class')==='teacher'?matchByTeacher(list,ix):`   <div class="tw mcards"><table class="mt"><thead><tr>${th('no','순')}${th('org','운영 대학')}${th('school','학급')}${th('prog','프로그램')}${th('hrs','차시')}${th('start','기간')}${th('time','요일 · 시간')}${th('apps','신청 강사 (눌러서 가배치)')}${th('inst','주강사 · 보조')}${th('status','상태')}</tr></thead><tbody>
    ${(()=>{ const out=[], seen=new Set(); list.forEach(r=>{ if(seen.has(r.id)) return; const g=r.bundle?list.filter(x=>x.bundle&&x.bundle.id===r.bundle.id):[]; if(g.length>1){ g.forEach(x=>seen.add(x.id)); out.push({h:g}); g.forEach((x,i)=>out.push({r:x,b:i,bl:g.length})); out.push({e:1}); } else { seen.add(r.id); out.push({r}); } }); return out; })().map(o=>{
      if(o.e) return '<tr class="mt-bunend"><td colspan="10"></td></tr>';
@@ -3982,14 +3991,14 @@ function loginFailsHtml(){ const L=S.ui.lfails; if(!L) return '';
    <div class="muted">강사가 로그인할 때 「신청 대상이 아닙니다」가 나온 기록입니다. 원인을 보고 명단을 고치면 강사가 다시 로그인할 수 있습니다.</div>
    ${L.length?`<div class="tw"><table><thead><tr><th>시각</th><th>입력한 이름</th><th>입력한 연락처</th><th>원인 추정</th><th>명단의 비슷한 강사</th></tr></thead><tbody>${L.map(x=>`<tr class="${x.solved?'muted':''}"><td class="nowrap">${esc(x.at)}</td><td>${esc(x.name)}</td><td class="mono">${esc(prettyPhone(x.phone))}</td><td class="${x.solved?'lv-ok':'lv-warn'}">${esc(x.hint)}</td><td>${(x.cands||[]).map(c=>`<div>${esc(c.name)} <span class="mono">${esc(c.phone)}</span> <button class="btn sm" data-act="ieopen" data-t="${c.id}">수정</button></div>`).join('')||'<span class="muted">-</span>'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">기록이 없습니다.</div>'}</div></div>`; }
 function instFilterBar(){ const f=S.ui.if||{}, T=S.instructors, regions=[...new Set(T.map(t=>t.region).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko')), fields=[...new Set(T.flatMap(fieldsOf))].sort((a,b)=>a.localeCompare(b,'ko'));
-  const sel=(id,cur,opts,all)=>`<select id="${id}" aria-label="${all}"><option value="">${all}</option>${opts.map(([v,l])=>`<option value="${esc(v)}" ${cur===v?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
-  const flags=IFLAGS.filter(x=>x[0]!=='man'||manualUrl());
-  return `<div class="stack" style="gap:8px;margin-top:8px">
-   <div class="filters"><input id="iq" placeholder="이름·연락처·이메일·비고 검색" value="${esc(f.q||'')}" style="flex:1 1 220px" aria-label="강사 검색">
-    ${sel('if-region',f.region||'',regions.map(v=>[v,v]),'전체 지역')}${sel('if-field',f.field||'',fields.map(v=>[v,v]),'전체 분야')}${sel('if-kind',f.kind||'',[...T_KINDS.map(v=>[v,v]),['-','유형 미입력']],'전체 유형')}${sel('if-pin',f.pin||'',[['y','비밀번호 설정'],['n','비밀번호 미설정']],'비밀번호 전체')}
-    <label class="row small">정렬 ${sel('if-sort',S.ui.isort||'name',[['score','평가 점수'],['name','이름'],['region','지역'],['field','분야'],['kind','강사 유형'],['years','교육 경력'],['apps','이번 차수 신청 수'],['pin','비밀번호'],['type','구분']],'').replace('<option value="">','<option value="" hidden>')}<button class="btn sm" data-act="idir">${S.ui.idir==='desc'?'내림차순 ▼':'오름차순 ▲'}</button></label></div>
-   <div class="row orgf"><span class="tb-l small">상태</span><div class="fchips"><button class="fchip ${!f.flag?'on':''}" data-act="iflag" data-v="">전체 <em>${T.length}</em></button>${flags.map(([k,l,fn])=>{ const n=T.filter(fn).length; return `<button class="fchip ${f.flag===k?'on':''}" data-act="iflag" data-v="${k}" ${!n&&f.flag!==k?'disabled':''}>${l} <em>${n}</em></button>`; }).join('')}</div>
-    ${Object.values(f).some(Boolean)?'<button class="btn sm" data-act="ifreset">조건 초기화</button>':''}<span class="small muted" style="margin-left:auto">${instView().length}명 표시</span></div></div>`; }
+  const flags=IFLAGS.filter(x=>x[0]!=='man'||manualUrl()), nOf=fn=>T.filter(fn).length;
+  const SORTS=[['score','평가 점수'],['name','이름'],['region','지역'],['field','분야'],['kind','강사 유형'],['years','교육 경력'],['apps','이번 차수 신청 수'],['pin','비밀번호'],['type','구분']];
+  const lab={region:'지역',field:'분야',kind:'유형',pin:'비밀번호',flag:'상태'}, show=(k,v)=>k==='flag'?((flags.find(x=>x[0]===v)||[])[1]||v):k==='pin'?(v==='y'?'설정':'미설정'):k==='kind'&&v==='-'?'유형 미입력':v;
+  return `<div class="stack" style="gap:6px;margin-top:8px">
+   <div class="fbar"><input id="iq" class="fq" placeholder="이름·연락처·이메일·비고 검색" value="${esc(f.q||'')}" aria-label="강사 검색">
+    ${fSel('fiflag','상태',f.flag||'',flags.map(([k,l,fn])=>[k,l,nOf(fn)]))}${fSel('if-region','지역',f.region||'',regions.map(v=>[v,v,nOf(t=>t.region===v)]))}${fSel('if-field','분야',f.field||'',fields.map(v=>[v,v,nOf(t=>fieldsOf(t).includes(v))]))}${fSel('if-kind','유형',f.kind||'',[...T_KINDS.map(v=>[v,v,nOf(t=>tKind(t)===v)]),['-','유형 미입력',nOf(t=>!T_KINDS.includes(tKind(t)))]])}${fSel('if-pin','비밀번호',f.pin||'',[['y','설정',null],['n','미설정',null]])}
+    <label class="fsel"><span>정렬</span><select id="if-sort" aria-label="정렬 기준">${SORTS.map(([v,l])=>`<option value="${v}" ${(S.ui.isort||'name')===v?'selected':''}>${l}</option>`).join('')}</select></label><button class="btn sm" data-act="idir">${S.ui.idir==='desc'?'내림차순 ▼':'오름차순 ▲'}</button></div>
+   ${fActive(T.length,instView().length,Object.keys(lab).filter(k=>f[k]).map(k=>[lab[k],show(k,f[k]),'ifclr',k]),'ifreset','명')}</div>`; }
 function setupLinksPanel(){ return ''; }
 /* 기준정보 가로 메뉴: 칸이 많아 한 번에 한 칸씩 (「전체 보기」로 예전처럼) */
 const SET_TABS=[['cycle','차수 · 카톡방'],['univ','대학별 관리'],['prog','프로그램 · 조건'],['hol','공휴일'],['inst','강사 명단'],['eval','강사 평가 · 연수'],['ops','운영 담당자'],['form','담당자 화면 항목'],['acc','관리자 계정'],['ext','타대학 수업 올리기'],['links','웹앱 주소 · 링크'],['all','전체 보기']];
@@ -6866,10 +6875,10 @@ function kitPanel(){ const u=S.ui, IT=kitItems(), cands=kitProgCands(), f=u.kitF
     <div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn pri sm" for="kitfile">교구재 목록 엑셀 업로드</label><input id="kitfile" type="file" accept=".xlsx,.xls" hidden><button class="btn sm" data-act="kittpl">표준 양식 다운로드</button><button class="btn sm" data-act="kitexport" ${IT.length?'':'disabled'}>교구재 목록 다운로드</button>${qt(['기존 「교구재 목록」(프로그램마다 시트 하나) 파일을 그대로 올려도 됨','시트마다 프로그램을 골라 반영 (사본·양식·예시 시트는 기본 제외)','「구성」 문장(1인 1개 · 4인 1세트 · 학급당 2세트 · 강사당 1개 · +교사용 1개)을 산정 기준으로 바꿈','엑셀이 날짜로 바꾼 사용차시(1월 2일)는 1-2차시로 되돌림','해석이 애매한 줄은 「확인 필요」 → 산정 기준을 고치거나 「확인」을 누르면 풀림','표준 양식: 한 시트에 모든 프로그램, 한 줄 = 품목 하나'],'r')}</div></div>
    ${u.kitPend?kitPendHtml():''}
    <div class="notice small">반납 품목 ${qt(['관리자가 품목마다 「반납」을 체크해 지정','반납 품목: 수업 뒤 센터로 회수 → 재고로 다시 쓰고, 견적에서 강사별로 한 번만 셈','반납 아닌 품목: 소모(배부 후 끝), 견적에서 학급마다 셈 + 예비율 5%','「제안」 표시: 원래 목록에 다회용·재활용이라고 적혀 있어 미리 체크해 둔 것'])} : 「반납」을 체크한 품목만 수업 뒤 회수합니다. 나머지는 소모품으로 봅니다.</div>
-   <div class="filters"><select id="kitf-p" aria-label="프로그램" style="max-width:340px"><option value="*" ${curP==='*'?'selected':''}>전체 프로그램 (${IT.length})</option>${progs.filter(c=>byP[c.k]).map(opt).join('')}${progs.some(c=>!byP[c.k])?`<optgroup label="교구재 없음">${progs.filter(c=>!byP[c.k]).map(opt).join('')}</optgroup>`:''}</select>
-    <input id="kitq" placeholder="품명·규격·비고 검색" value="${esc(f.q||'')}" style="flex:1 1 180px" aria-label="품목 검색">
-    <div class="fchips">${flags.map(([k,l,fn])=>{ const L=(curP==='*'?IT:IT.filter(x=>x.pk===curP)), n=L.filter(fn).length; return `<button class="fchip ${f.flag===k?'on':''}" data-act="kitflag" data-v="${f.flag===k?'':k}" ${!n&&f.flag!==k?'disabled':''}>${l} <em>${n}</em></button>`; }).join('')}</div>
-    <label class="row small" style="gap:4px">예시 학급 <input id="kitstu" type="number" min="1" value="${stu}" style="width:56px" aria-label="예시 학생 수">명</label></div>
+   <div class="fbar"><input id="kitq" class="fq" placeholder="품명·규격·비고 검색" value="${esc(f.q||'')}" aria-label="품목 검색">
+    <label class="fsel ${curP&&curP!=='*'?'on':''}"><span>프로그램</span><select id="kitf-p" aria-label="프로그램"><option value="*" ${curP==='*'?'selected':''}>전체 프로그램 (${IT.length})</option>${progs.filter(c=>byP[c.k]).map(opt).join('')}${progs.some(c=>!byP[c.k])?`<optgroup label="교구재 없음">${progs.filter(c=>!byP[c.k]).map(opt).join('')}</optgroup>`:''}</select></label>
+    ${fSel('fkitflag','확인',f.flag||'',flags.map(([k,l,fn])=>[k,l,(curP==='*'?IT:IT.filter(x=>x.pk===curP)).filter(fn).length]))}
+    <label class="ftog">예시 학급 <input id="kitstu" type="number" min="1" value="${stu}" style="width:56px" aria-label="예시 학생 수">명</label></div>
    ${curP&&curP!=='*'?`<div class="row between small" style="flex-wrap:wrap"><span><b>${esc(cName)}</b> · ${V.length}개 품목 · 예시 학급(${stu}명) 1개 기준 약 <b>${sumP(V).toLocaleString()}원</b> ${qt(['단가 × 구매 수량(학급 1개, 예비율 없음)','실제 견적은 다음 단계에서 매칭 학급 수 · 강사 수 · 재고로 계산'])}</span>${V.length?`<span>${u.kitDelAll===curP?`<button class="btn sm danger" data-act="kitdelall" data-k="${esc(curP)}">이 프로그램 품목 전체 삭제 확인</button> <button class="btn sm" data-act="kitdelall0">취소</button>`:`<button class="btn sm" data-act="kitdelall0" data-k="${esc(curP)}">이 프로그램 품목 전체 삭제</button>`}</span>`:''}</div>`:''}
    ${curP&&curP!=='*'?kitSesHtml(curP,IT.filter(x=>x.pk===curP)):''}
    ${kitTableHtml(V,curP,stu,IT)}
@@ -7245,6 +7254,8 @@ document.addEventListener('click',async e=>{
       r.thread.push({who:'호서대',text:'학교와 확인한 내용으로 운영 조건을 체크하고 운영을 확정했습니다.',at:now()});
       toast('운영 확정으로 바꿨습니다. 「검토 · 매칭」에서 강사 화면에 공개하세요'); break; }
     case 'kakaoset': { const sch=el.dataset.s, c=contactOf(sch), on=el.dataset.v==='1'; c.kakao=on; c.kakaoAt=on?now():''; if(on) c.kakaoBy='운영기관'; else delete c.kakaoBy; delete c.example; toast(on?`${shortSch(sch)} 카톡방 입장으로 바꿨습니다`:`${shortSch(sch)} 카톡방 입장을 취소했습니다`); break; }
+    case 'bfclr': { const k=el.dataset.k; if(k==='org') S.ui.orgs=[]; else if(k==='prog') S.ui.bprog=''; else if(k==='region') S.ui.region=''; else if(k==='prob') S.ui.probOnly=false; else if(k==='st') S.ui.st=''; break; }
+    case 'bfclrall': S.ui.orgs=[]; S.ui.bprog=''; S.ui.region=''; S.ui.probOnly=false; S.ui.st=''; S.ui.q=''; break;
     case 'borg': { const v=el.dataset.v; if(v==='*') S.ui.orgs=[]; else { const a=Array.isArray(S.ui.orgs)?S.ui.orgs.slice():[MY_ORG], i=a.indexOf(v); if(i>=0) a.splice(i,1); else a.push(v); S.ui.orgs=a; } S.ui.bprog=''; break; }
     case 'bsortk': { const k=el.dataset.v; if(S.ui.bsort===k) S.ui.bdir=S.ui.bdir==='desc'?'asc':'desc'; else { S.ui.bsort=k; S.ui.bdir=BSORT_DESC0.includes(k)?'desc':'asc'; } break; }
     case 'bdir': S.ui.bdir=S.ui.bdir==='desc'?'asc':'desc'; break;
@@ -7314,6 +7325,8 @@ document.addEventListener('click',async e=>{
       if(r.inst===tid){ r.inst=''; const bn=bunSync(r); toast(`${instName(tid)} 가배치를 해제했습니다${bn?` (묶음 ${bn+1}학급)`:''}`); break; }
       if(asgIndex().clash(r,tid)==='fin'){ toast('같은 시간에 배치 확정된 다른 수업이 있어 배치할 수 없습니다'); return; }
       const prev=r.inst; r.inst=tid; if(r.asst===tid) r.asst=''; const bn=bunSync(r); toast(`${shortSch(r.school)} ${clsName(r)}: ${instName(tid)} 가배치${prev?` (${instName(prev)} → 변경)`:''}${bn?` · 묶음 ${bn+1}학급`:''}`); break; }
+    case 'mfclr': { if(el.dataset.k==='org') S.ui.morgs=[]; else S.ui.mst=''; break; }
+    case 'mfclrall': S.ui.morgs=[]; S.ui.mst=''; S.ui.mq=''; break;
     case 'morg': { const v=el.dataset.v; if(v==='*') S.ui.morgs=[]; else { const a=(S.ui.morgs||[]).slice(), i=a.indexOf(v); if(i>=0) a.splice(i,1); else a.push(v); S.ui.morgs=a; } break; }
     case 'mst': S.ui.mst=el.dataset.v; break;
     case 'msortk': { const k=el.dataset.v; if(S.ui.msort===k) S.ui.mdir=S.ui.mdir==='desc'?'asc':'desc'; else { S.ui.msort=k; S.ui.mdir=['hrs','apps'].includes(k)?'desc':'asc'; } break; }
@@ -7508,6 +7521,7 @@ document.addEventListener('click',async e=>{
     case 'lfload': loginFailsLoad(); return;
     case 'lfclose': S.ui.lfails=null; break;
     case 'phfix': { let n=0; S.instructors.forEach(t=>{ const ps=phonesOf(t.phone); if(ps.length===1&&digits(t.phone)!==ps[0]){ t.phone=prettyPhone(ps[0]); n++; } }); toast(`연락처 ${n}건의 앞자리 0을 붙였습니다`); break; }
+    case 'ifclr': S.ui.if={...(S.ui.if||{}),[el.dataset.k]:''}; break;
     case 'iflag': S.ui.if={...(S.ui.if||{}),flag:el.dataset.v}; break;
     case 'ifreset': S.ui.if={}; break;
     case 'idir': S.ui.idir=S.ui.idir==='desc'?'asc':'desc'; break;
@@ -7883,7 +7897,7 @@ document.addEventListener('change',e=>{
     S.orgTabs=c; toast('타대학 공개 탭을 바꿨습니다'); render(); return; }
   if(t.id==='as-ts'){ S.ui.asTs=t.value; render(); return; }
   if(t.id==='if-sort'){ S.ui.isort=t.value; S.ui.idir=['years','apps','score'].includes(t.value)?'desc':'asc'; render(); return; }
-  if(t.id==='fbprog') u.bprog=t.value; else if(t.id==='fsort'){ u.bsort=t.value; u.bdir=BSORT_DESC0.includes(t.value)?'desc':'asc'; } else if(t.id==='fregion') u.region=t.value; else if(t.id==='fprob') u.probOnly=t.checked; else if(t.id==='showWait') u.showWait=t.checked; else if(t.id==='onlyApps') u.onlyApps=t.checked; else if(t.id==='allCands') u.allCands=t.checked;
+  if(t.id==='fborg'){ u.orgs=t.value?[t.value]:[]; u.bprog=''; } else if(t.id==='fbprob') u.probOnly=!!t.value; else if(t.id==='fmorg') u.morgs=t.value?[t.value]:[]; else if(t.id==='fmst') u.mst=t.value; else if(t.id==='fiflag') u.if={...(u.if||{}),flag:t.value}; else if(t.id==='fkitflag') u.kitF={...(u.kitF||{}),flag:t.value}; else if(t.id==='fbprog') u.bprog=t.value; else if(t.id==='fsort'){ u.bsort=t.value; u.bdir=BSORT_DESC0.includes(t.value)?'desc':'asc'; } else if(t.id==='fregion') u.region=t.value; else if(t.id==='fprob') u.probOnly=t.checked; else if(t.id==='showWait') u.showWait=t.checked; else if(t.id==='onlyApps') u.onlyApps=t.checked; else if(t.id==='allCands') u.allCands=t.checked;
   else if(t.dataset.c&&(t.type==='radio'||t.type==='checkbox')){ const c=contactOf(u.school), k=t.dataset.c;
     if(k==='kakao'){ c.kakao=t.checked; c.kakaoAt=t.checked?now():''; delete c.kakaoBy; }
     else if(k==='orAgree'){ c.orAgree=t.checked?now():''; }
