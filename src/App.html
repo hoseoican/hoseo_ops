@@ -182,9 +182,11 @@ function flush() {
   });
 }
 function aUse(d, keepUi) {
+  const prevS = keepUi && S ? S : null;   /* 자동 새로고침: 서버가 보내지 않는 화면 쪽 자료(통계·프로그램 개발·대학 링크 등)는 그대로 둠 → 보던 화면이 「불러오는 중」으로 되돌아가지 않게 */
   const ui = keepUi && S ? S.ui : { role: 'admin', view: 'board', st: '', q: '', region: '', probOnly: false, sel: '', showWait: false, onlyApps: false, condEdit: '' };
   const set = d.settings || {};
   S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined };
+  if (prevS) Object.keys(prevS).forEach(k => { if (k !== 'ui' && !(k in S) && prevS[k] != null) S[k] = prevS[k]; });
   S.serverVer = d.serverVer || '';
   MY_ORG = S.adminOrg || '호서대학교';
   if (S.adminOrg) { const sc = new Set(S.rows.filter(r => mine(r)).map(r => r.school)); S.joinReqs = S.joinReqs.filter(q => sc.has(q.school)); }
@@ -329,7 +331,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.118';
+const APP_VER = '11.119';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -414,7 +416,8 @@ function adminBoot() {
       if (!shown) { use(d); return; }
       const keep = saving || dirtyPayload() || typing() || S.ui.drawer;
       if (keep) { admCachePut(d); tick(); setSave('지난 내용 표시 중 · 곧 최신 내용으로 바뀝니다'); return; }
-      const ui = S.ui; use(d); Object.assign(S.ui, { view: ui.view, scope: ui.scope }); render();
+      /* 지난 자료를 보는 동안 옮겨 간 메뉴·하위 탭·필터를 그대로 두고 자료만 바꿈 */
+      aUse(d, true); S.ui.loadH = d.h || ''; render(); setSave('불러옴 · ' + now()); showMissing(d.missing); admCachePut(d); tick();
     }).catch(e => {
       if (/만료/.test(errMsg(e))) { try { sessionStorage.removeItem(ADM_SS); sessionStorage.removeItem(ADM_CACHE); } catch (_) {} ADMIN_KEY = ''; S = null; document.getElementById('app').innerHTML = ''; adminAskLogin(adminBoot); return; }
       if (shown) { setSave('최신 내용을 불러오지 못했습니다', true); toast(errMsg(e)); return; }
