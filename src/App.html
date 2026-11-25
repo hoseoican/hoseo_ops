@@ -329,7 +329,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.107';
+const APP_VER = '11.108';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -783,7 +783,7 @@ if (MODE === 'admin') bizGo = function (b) {
   go();
 };
 if (MODE === 'admin') {
-  allBizCall = function () { return run('adminAllBiz', ADMIN_KEY).then(L => (L || []).map(x => x.biz === (S.biz || 'anchor') ? { ...x, cur: true } : x)); };
+  allBizCall = function (opt) { return run('adminAllBiz', ADMIN_KEY, opt || {}); };
   bizSwap = function (it, fn) { const keep = S; try { S = { ...keep, ...base(it.settings || {}), rows: it.rows || [], contacts: it.contacts || {}, instructors: it.instructors || [], biz: it.biz, season: it.season || (it.settings || {}).season, ui: keep.ui }; return fn(); } finally { S = keep; } };
 }
 if (MODE === 'school') schoolFillCall = function (list) { return run('schoolFill', TOKEN, list); };

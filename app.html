@@ -2302,7 +2302,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.107';
+const LIB_VER='11.108';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5076,6 +5076,7 @@ const PLAN_EXT = /\.(hwp|hwpx|pdf|docx?)$/i;
 const resultMailTpl = () => { const m=S.resultMail||{}; return {subject:m.subject!=null?m.subject:RESULT_MAIL_DEFAULT.subject, body:m.body!=null?m.body:RESULT_MAIL_DEFAULT.body}; };
 const resultSentMap = () => (S.resultSent = S.resultSent || {});
 const seasonTerm = () => { const n=season().name||''; return /여름|하계/.test(n)?'하계':/겨울|동계/.test(n)?'동계':n; };
+const seasonTermOf = r => { const n=((S.seasons||[]).find(x=>x.k===rowSeason(r))||{}).name||season().name||''; return /여름|하계/.test(n)?'하계':/겨울|동계/.test(n)?'동계':n; };
 const fmtSize = n => n==null?'':n>=1048576?`${(n/1048576).toFixed(1)}MB`:`${Math.max(1,Math.round(n/1024))}KB`;
 function resultRowsOf(sch){ return myRows().filter(r=>r.school===sch&&r.status!=='cancel').sort((a,b)=>String(a.start).localeCompare(String(b.start))||(a.ts||0)-(b.ts||0)||clsName(a).localeCompare(clsName(b),'ko')); }
 function resultSchools(){
@@ -5676,27 +5677,51 @@ function opsMemo(r,forSchool){
 }
 /* 늘봄센터 칸: 방학집중형 = 한국과학창의재단, 앵커늘봄 = 충남앵커센터(구 충남RISE센터) */
 const nbCenter = r => rowBiz(r)==='vac'?'한국과학창의재단':'충남앵커센터';
-/* ===== 전체 사업 운영현황(총괄관리자): 사업마다 현재 운영 시기 학급을 같은 양식으로 한 파일에 ===== */
-let allBizCall = () => Promise.resolve([{biz:curBiz(),name:(ST_BIZ||{})[curBiz()]||curBiz(),cur:true}]);
+/* ===== 전체 운영현황(총괄관리자): 사업·시기·대학을 골라 시스템에 등록된 학급(또는 운영 확정 학급)을 한 파일로 ===== */
+let allBizCall = opt => opt&&opt.list ? Promise.resolve([{biz:curBiz(),name:(ST_BIZ||{})[curBiz()]||curBiz(),pub:S.season,seasons:(S.seasons||[]).map(x=>({k:x.k,name:x.name}))}])
+  : Promise.resolve((opt.sel||[]).flatMap(q=>(q.seasons||[S.season]).map(k=>({biz:q.biz,name:(ST_BIZ||{})[q.biz]||q.biz,season:k,seasonName:((S.seasons||[]).find(x=>x.k===k)||{}).name||k,cur:true}))));
 let bizSwap = (it,fn) => fn();
+const XAB_FIX = ['fixed','recruit','final'];
 const allBizOk = () => S.ui.role==='admin'&&!S.adminOrg&&(S.isMaster||typeof persist!=='function');
-const allBizBar = () => !allBizOk()?'':`<div class="panel row between" style="gap:8px;flex-wrap:wrap;align-items:center"><div><b>전체 사업 운영현황</b> <span class="small muted">앵커늘봄 + 방학집중형 · 사업마다 현재 운영 시기</span>${qt(['총괄관리자만 보임','시트: 전체(모든 사업) + 사업별','늘봄센터 칸: 앵커늘봄 = 충남앵커센터, 방학집중형 = 한국과학창의재단','운영 취소 학급 제외'])}</div><div class="row" style="gap:6px;align-items:center"><span class="small muted" id="xamsg"></span><button class="btn sm pri" data-act="export-allbiz">전체 사업 운영현황 받기</button></div></div>`;
+function allBizBar(){
+  if(!allBizOk()) return ''; const X=S.ui.xab=S.ui.xab||{open:false,biz:{},seas:{},orgs:[],mode:'all'}, M=S.ui.xabMeta;
+  const head=`<div class="row between" style="gap:8px;flex-wrap:wrap;align-items:center"><div><b>전체 운영현황</b> <span class="small muted">총괄관리자 · 사업·시기·대학을 골라 한 파일로</span>${qt(['총괄관리자만 보임','시트: 전체 + 사업·시기별','늘봄센터 칸: 앵커늘봄 = 충남앵커센터, 방학집중형 = 한국과학창의재단','운영 취소 학급은 늘 제외'])}</div><button class="btn sm ${X.open?'':'pri'}" data-act="xab-open">${X.open?'닫기':'조건 골라 받기'}</button></div>`;
+  if(!X.open) return `<div class="panel">${head}</div>`;
+  if(!M) return `<div class="panel stack">${head}<div class="small muted">사업·시기 목록을 불러오는 중…</div></div>`;
+  if(M.err) return `<div class="panel stack">${head}<div class="small lv-crit">${esc(M.err)}</div></div>`;
+  const chip=(on,act,attrs,lab)=>`<button class="fchip ${on?'on':''}" data-act="${act}" ${attrs}>${lab}</button>`;
+  const orgsAll=ORGS.filter(o=>o!=='미지정'), selN=M.list.reduce((n,b)=>n+(X.biz[b.biz]?(X.seas[b.biz]||[]).length:0),0);
+  return `<div class="panel stack" style="gap:10px">${head}
+   <div class="stack" style="gap:6px"><div class="small"><b>① 사업 · 시기</b> <span class="muted">(여러 개 고를 수 있음)</span></div>
+    ${M.list.map(b=>`<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><label class="row small" style="gap:4px;min-width:170px"><input type="checkbox" data-xab-biz="${esc(b.biz)}" ${X.biz[b.biz]?'checked':''}> <b>${esc(b.name)}</b></label>
+     ${X.biz[b.biz]?b.seasons.slice().reverse().map(x=>chip((X.seas[b.biz]||[]).includes(x.k),'xab-sea',`data-b="${esc(b.biz)}" data-k="${esc(x.k)}"`,esc(x.name)+(x.k===b.pub?' · 현재':''))).join('')+`<button class="lnk small" data-act="xab-seaall" data-b="${esc(b.biz)}">${(X.seas[b.biz]||[]).length===b.seasons.length?'현재 시기만':'모든 시기'}</button>`:'<span class="small muted">받지 않음</span>'}</div>`).join('')}</div>
+   <div class="stack" style="gap:6px"><div class="small"><b>② 운영 대학</b></div><div class="row" style="gap:6px;flex-wrap:wrap">${chip(!X.orgs.length,'xab-org','data-v=""','전체')}${orgsAll.map(o=>chip(X.orgs.includes(o),'xab-org',`data-v="${esc(o)}"`,uDot(o)+esc(orgShort(o)||o))).join('')}</div></div>
+   <div class="stack" style="gap:6px"><div class="small"><b>③ 학급 범위</b></div><div class="yn">${[['all','시스템에 등록된 모든 학급 (운영 취소 제외)'],['fixed','운영 확정 학급만 (운영 확정 · 강사 모집 중 · 강사 배치 완료)']].map(([k,t])=>`<label><input type="radio" name="xab-mode" data-xab-mode="${k}" ${X.mode===k?'checked':''}>${t}</label>`).join('')}</div></div>
+   <div class="row" style="gap:8px;align-items:center"><button class="btn pri sm" data-act="export-allbiz" ${selN?'':'disabled'}>전체 운영현황 받기 (${selN}개 사업·시기)</button><span class="small muted" id="xamsg"></span></div></div>`;
+}
+function xabMetaLoad(){ if(S.ui.xabMeta||S.ui.xabBusy) return; S.ui.xabBusy=1;
+  allBizCall({list:true}).then(L=>{ S.ui.xabMeta={list:L||[]}; const X=S.ui.xab; (L||[]).forEach(b=>{ if(X.biz[b.biz]==null){ X.biz[b.biz]=true; X.seas[b.biz]=b.pub?[b.pub]:[]; } }); })
+   .catch(e=>{ S.ui.xabMeta={err:e&&e.message||String(e)}; }).finally(()=>{ S.ui.xabBusy=0; render(); }); }
 async function doAllBizExport(btn){
-  const msg=document.getElementById('xamsg'); if(btn) btn.disabled=true; if(msg) msg.textContent='자료를 모으는 중…';
+  const msg=document.getElementById('xamsg'), X=S.ui.xab||{}, M=(S.ui.xabMeta||{}).list||[]; if(btn) btn.disabled=true; if(msg) msg.textContent='자료를 모으는 중…';
   try{
-    const L=await allBizCall(), parts=[];
-    L.forEach(it=>{ const B=it.cur?buildExportAoa(S.rows.filter(r=>rowSeason(r)===S.season&&rowBiz(r)===curBiz())):bizSwap(it,()=>buildExportAoa(S.rows.filter(r=>rowSeason(r)===S.season).map(r=>r.biz?r:{...r,biz:it.biz})));
-      parts.push({name:it.name||it.biz,season:it.cur?season().name:(it.seasonName||''),B}); });
-    const has=parts.filter(x=>x.B); if(!has.length){ if(msg) msg.textContent='저장할 학급이 없습니다.'; return; }
+    const sel=M.filter(b=>X.biz[b.biz]&&(X.seas[b.biz]||[]).length).map(b=>({biz:b.biz,seasons:X.seas[b.biz]}));
+    if(!sel.length){ if(msg) msg.textContent='사업과 시기를 골라 주세요.'; return; }
+    const L=await allBizCall({sel}), parts=[], O=X.orgs||[];
+    const pick=rs=>rs.filter(r=>r.status!=='cancel'&&(X.mode!=='fixed'||XAB_FIX.includes(r.status))&&(!O.length||O.includes(orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r))));
+    L.forEach(it=>{ const B=it.cur?buildExportAoa(pick(S.rows.filter(r=>rowSeason(r)===it.season&&rowBiz(r)===it.biz))):bizSwap(it,()=>buildExportAoa(pick(S.rows.filter(r=>rowSeason(r)===it.season).map(r=>r.biz?r:{...r,biz:it.biz}))));
+      parts.push({name:it.name||it.biz,season:it.seasonName||'',B}); });
+    const has=parts.filter(x=>x.B); if(!has.length){ if(msg) msg.textContent='고른 조건에 맞는 학급이 없습니다.'; return; }
     const head=has[0].B.head, all=[head]; let n=0; has.forEach(x=>x.B.aoa.slice(1).forEach(r=>{ const y=r.slice(); y[0]=++n; all.push(y); }));
     const sheet=aoa=>{ const ws=XLSX.utils.aoa_to_sheet(aoa,{cellDates:true}), rng=XLSX.utils.decode_range(ws['!ref']);
       for(let R=1;R<=rng.e.r;R++) for(let C=0;C<=rng.e.c;C++){ const cell=ws[XLSX.utils.encode_cell({r:R,c:C})]; if(!cell) continue; if(cell.t==='d') cell.z='yyyy-mm-dd'; if((C===28||C===29)&&cell.t==='n') cell.z='hh:mm'; }
       ws['!cols']=head.map((h,i)=>({wch:i===8||i===33?28:i===6||i===15?18:i>=39&&i<59?11:10})); return ws; };
-    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,sheet(all),'전체');
-    has.forEach(x=>XLSX.utils.book_append_sheet(wb,sheet(x.B.aoa),String(x.name).replace(/[\\/?*\[\]:]/g,'').slice(0,28)||x.name));
+    const wb=XLSX.utils.book_new(), used={}; XLSX.utils.book_append_sheet(wb,sheet(all),'전체');
+    has.forEach(x=>{ let nm=`${String(x.name).replace(/초등방과후|\(|\)/g,'')} ${x.season}`.replace(/[\\/?*\[\]:]/g,'').replace(/\s+/g,' ').trim().slice(0,28)||'자료'; while(used[nm]) nm=nm.slice(0,26)+'_'+(++used[nm]); used[nm]=1; XLSX.utils.book_append_sheet(wb,sheet(x.B.aoa),nm); });
     const d=new Date(), ymd=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-    await saveXlsx(wb,`전체 사업 운영현황 (${has.map(x=>`${x.name} ${x.season}`.trim()).join(' · ')}) ${ymd}.xlsx`,msg||{});
-    if(msg&&/저장했습니다/.test(msg.textContent)) msg.textContent=`저장했습니다 · ${has.map(x=>`${x.name} ${x.B.aoa.length-1}학급`).join(', ')}`;
+    const tag=[O.length?O.map(o=>orgShort(o)||o).join('·'):'전체 대학',X.mode==='fixed'?'운영 확정':''].filter(Boolean).join(' · ');
+    await saveXlsx(wb,`전체 운영현황 (${tag}) ${ymd}.xlsx`,msg||{});
+    if(msg&&/저장했습니다/.test(msg.textContent)) msg.textContent=`저장했습니다 · ${has.map(x=>`${x.name} ${x.season} ${x.B.aoa.length-1}학급`).join(', ')}`;
   }catch(e){ if(msg) msg.textContent=e&&e.message||String(e); }
   finally{ if(btn) btn.disabled=false; }
 }
@@ -5711,7 +5736,7 @@ function buildExportAoa(rowsArg,opt){
     const tab=cs.list.find(x=>/태블릿/.test(x.c.text));
     const memo=opsMemo(r,opt.school);
     const row=new Array(65).fill('');
-    Object.assign(row,{0:i+1,1:'-',2:nbCenter(r),3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:regionParts(r)[0],5:regionParts(r)[1],6:r.school,7:seasonTerm(),8:memo,
+    Object.assign(row,{0:i+1,1:'-',2:nbCenter(r),3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:regionParts(r)[0],5:regionParts(r)[1],6:r.school,7:seasonTermOf(r),8:memo,
       9:tab?(tab.a.ans==='yes'?'가능':tab.a.ans==='no'?'불가':'미확인'):'해당 없음',10:tab&&tab.a.ans==='yes'&&tab.a.qty!==''?Number(tab.a.qty):'',11:sc.room||r.room,12:c.name||'',13:cPhones(c,'\n'),14:c.email||'',
       15:p.name,16:p.field,17:days.length,18:r.perDay,19:days.length*r.perDay,20:1,21:rowGrade(r),22:CL[r.id]||'A',23:r.expected,24:sc.count===''?'':Number(sc.count),25:D(r.start),26:D(r.end),27:daysTxt(r.days),
       28:r.ts==null?'':r.ts/1440,29:r.te==null?'':r.te/1440,30:sc.multi===''?'':Number(sc.multi),31:sc.low===''?'':Number(sc.low),32:regionSize(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr||''):S.addr[r.school]),33:(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr):S.addr[r.school])||'',34:t?t.name:'',35:t?t.phone||'':'',36:t?t.email||'':'',37:a?a.name:'-',38:a?a.phone||'':''});
@@ -7566,6 +7591,10 @@ document.addEventListener('click',async e=>{
       S.instructors.push({id:'t'+Date.now().toString(36),name,phone,email:document.getElementById('ni-email').value.trim(),region:document.getElementById('ni-region').value,fields,progs,senior:false,note:document.getElementById('ni-note').value.trim()}); toast(name+' 강사를 추가했습니다'); break; }
     case 'export': doExport(); return;
     case 'export-allbiz': doAllBizExport(el); return;
+    case 'xab-open': { const X=S.ui.xab=S.ui.xab||{open:false,biz:{},seas:{},orgs:[],mode:'all'}; X.open=!X.open; if(X.open) xabMetaLoad(); break; }
+    case 'xab-sea': { const X=S.ui.xab, b=el.dataset.b, k=el.dataset.k, L=X.seas[b]=X.seas[b]||[]; X.seas[b]=L.includes(k)?L.filter(x=>x!==k):[...L,k]; break; }
+    case 'xab-seaall': { const X=S.ui.xab, b=el.dataset.b, m=((S.ui.xabMeta||{}).list||[]).find(x=>x.biz===b); if(!m) break; X.seas[b]=(X.seas[b]||[]).length===m.seasons.length?(m.pub?[m.pub]:[]):m.seasons.map(x=>x.k); break; }
+    case 'xab-org': { const X=S.ui.xab, v=el.dataset.v; X.orgs=!v?[]:X.orgs.includes(v)?X.orgs.filter(x=>x!==v):[...X.orgs,v]; break; }
     case 'x-fmt': { S.ui.xfmt=el.dataset.v; const E=S.ui.edu=S.ui.edu||{}; if(el.dataset.v==='edu'&&!E.tpl&&!E.tried){ E.tried=true; const o=eduTplRecall(); if(o) eduReadTpl(o.buf,o.file).then(T=>{ E.tpl=T; render(); }).catch(()=>{}); } E.sys=null; break; }
     case 'edu-tclear': { const E=S.ui.edu||{}; E.tpl=null; E.map={}; try{ localStorage.removeItem('eduTpl'); }catch(e){} break; }
     case 'edu-sh': { const E=S.ui.edu||{}, f=E.file; if(!f||!f.stat) return; const p=f.stat, pick={...p.pick,[el.dataset.s]:!p.pick[el.dataset.s]}; E.file=eduFromStat(stParsePick(p._src,p.file,p.cand,pick,p)); break; }
@@ -7811,6 +7840,8 @@ document.addEventListener('change',e=>{
   else if(t.id==='pickSchool'){ u.school=t.value; u.ask=''; u.justSubmitted=''; u.offAsk=null; }
   else if(t.id==='pickTeacher') u.teacher=t.value;
   else if(t.id==='xextra') u.extra=t.checked;
+  else if(t.dataset.xabBiz!=null){ const X=S.ui.xab; X.biz[t.dataset.xabBiz]=t.checked; }
+  else if(t.dataset.xabMode){ S.ui.xab.mode=t.dataset.xabMode; }
   else if(t.dataset.xscope){ u.xscope=t.dataset.xscope; if(u.xscope==='school'&&!u.xschool) u.xschool=[...new Set(myRows().map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko'))[0]; }
   else if(t.id==='xschool') u.xschool=t.value;
   else if(r&&t.dataset.cx!=null){ r.sc.cx={...(r.sc.cx||{}),[t.dataset.cx]:t.value}; }
@@ -8127,7 +8158,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.107';
+const APP_VER = '11.108';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -8581,7 +8612,7 @@ if (MODE === 'admin') bizGo = function (b) {
   go();
 };
 if (MODE === 'admin') {
-  allBizCall = function () { return run('adminAllBiz', ADMIN_KEY).then(L => (L || []).map(x => x.biz === (S.biz || 'anchor') ? { ...x, cur: true } : x)); };
+  allBizCall = function (opt) { return run('adminAllBiz', ADMIN_KEY, opt || {}); };
   bizSwap = function (it, fn) { const keep = S; try { S = { ...keep, ...base(it.settings || {}), rows: it.rows || [], contacts: it.contacts || {}, instructors: it.instructors || [], biz: it.biz, season: it.season || (it.settings || {}).season, ui: keep.ui }; return fn(); } finally { S = keep; } };
 }
 if (MODE === 'school') schoolFillCall = function (list) { return run('schoolFill', TOKEN, list); };
