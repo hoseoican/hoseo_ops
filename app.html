@@ -2302,7 +2302,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.109';
+const LIB_VER='11.110';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6270,7 +6270,7 @@ function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), y
     const inp=d[4]==='ox'?`<span class="cs-ox">${['O','X'].map(v=>`<button type="button" ${dis} class="${it.v===v?'on':''}" data-act="csox" data-o="${esc(o)}" data-n="${d[0]}" data-v="${v}">${v}</button>`).join('')}</span>`
       :`<input type="number" min="0" ${dis} style="width:64px" data-cp="${cp}.v" data-cat="${cp}" value="${esc(it.v??'')}" ${d[4]==='cls'&&auto?`placeholder="${auto.length}"`:''} aria-label="${d[4]==='c'?'건수':d[4]==='cls'?'학급 수':'횟수'}"> <span class="small muted">${csMUnit(d)}</span>`;
     const stc=it.st==='ok'?'<span class="chip ok">확인 완료</span>':it.st==='fix'?`<span class="chip warn" title="${esc(it.fixWhy||'')}">보완 요청</span>`:done?'<span class="chip">확인 전</span>':'<span class="chip">입력 전</span>';
-    return `<tr class="${ex?'muted':''}"><td class="mono muted">${CS_MNO[d[0]]}</td><td>${esc(d[2])}${ex?` <span class="chip sm" title="${d[6].ex}년에 새로 넣은 항목 · 진행률·감점에 넣지 않음">${d[6].ex}년 점수 미반영</span>`:''}${auto&&auto.length?`<div class="small lv-ok">운영 목록: ${d[5]==='학교밖'?`학교밖 ${CS_QN[d[1]].replace(/^\d분기 /,'')} 운영`:esc(d[5])} ${auto.length}학급${d[4]==='cls'&&(it.v==null||it.v==='')?' · 실적에 자동 반영':''}</div>`:''}</td><td class="small muted">예: ${esc(d[3])}${d[4]==='c'?'<div>0건이면 해당 없음</div>':''}</td><td class="nowrap">${inp}</td>
+    return `<tr class="${ex?'muted':''}"><td class="mono muted">${CS_MNO[d[0]]}</td><td>${esc(d[2])}${ex?` <span class="chip sm" title="${d[6].ex}년에 새로 넣은 항목 · 진행률·감점에 넣지 않음">${d[6].ex}년 점수 미반영</span>`:''}${auto&&(auto.length||d[4]==='cls')?`<div class="small ${auto.length?'lv-ok':'muted'}">운영 목록: ${d[5]==='학교밖'?`학교밖 ${CS_QN[d[1]].replace(/^\d분기 /,'')} 운영`:esc(d[5])} ${auto.length}학급${d[4]==='cls'&&(it.v==null||it.v==='')?' · 실적에 자동 반영':''}</div>`:''}</td><td class="small muted">예: ${esc(d[3])}${d[4]==='c'?'<div>0건이면 해당 없음</div>':''}</td><td class="nowrap">${inp}</td>
      <td class="nowrap">${stc}${adm?`<div class="row" style="gap:2px;margin-top:3px;flex-wrap:nowrap"><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="ok">확인</button><button class="btn sm" data-act="csmst" data-o="${esc(o)}" data-n="${d[0]}" data-v="fix">보완</button></div>`:''}${it.st==='fix'&&it.fixWhy?`<div class="small lv-warn">${esc(it.fixWhy)}</div>`:''}</td>
      <td><input ${dis} data-cp="${cp}.note" data-cat="${cp}" value="${esc(it.note||'')}" placeholder="비고" style="width:100%"></td></tr>`; };
   return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">대학</span>${csOrgSel(o)}<span class="small muted">점검 기준월</span><select id="cs-ym">${months.map(m=>`<option value="${m}" ${m===ym?'selected':''}>${m.slice(0,4)}년 ${+m.slice(5)}월</option>`).join('')}</select><button class="btn sm" data-act="csxls-mile" data-q="${q}" data-o="${esc(o)}" title="마일스톤 점검표 양식(엑셀)으로 받기">양식으로 받기</button>
@@ -8182,7 +8182,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.109';
+const APP_VER = '11.110';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
