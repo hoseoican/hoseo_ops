@@ -1470,11 +1470,11 @@ const nameInScope = n => { if(noScope()) return true; const o=outNameSet().has(n
 const SCOPED_VIEWS = ['board','joinadm','match','export'];
 /* 학교밖 화면 용어: 「학교」를 「기관」으로(조사도 맞춤). 「초등학교」 같은 이름과 「학교밖」은 그대로 */
 /* ===== 담당자 화면 항목 설정 (학교 / 학교밖 따로, 설정 키 formCfg) ===== */
-const FORM_FIELDS=[['label','학급 이름'],['room','교실명/위치'],['count','확정 인원'],['multi','다문화 인원'],['sp','특수학생 여부'],['reqEtc','그 밖의 요청'],['changeReq','그 밖의 변경 요청']];
+const FORM_FIELDS=[['label','학급 이름'],['room','교실명/위치'],['grade','학년'],['count','확정 인원'],['multi','다문화 인원'],['sp','특수학생 여부'],['reqEtc','그 밖의 요청'],['changeReq','그 밖의 변경 요청']];
 const FORM_DEF={
-  school:{fields:{sp:{req:true}},reqOpts:[{k:'exp',l:'경력 강사',on:true},{k:'assist',l:'보조강사',on:true},{k:'same',l:'모든 요일 같은 강사',on:true}],reqNote:'',custom:[],kakao:true,
+  school:{fields:{sp:{req:true},grade:{req:true}},reqOpts:[{k:'exp',l:'경력 강사',on:true},{k:'assist',l:'보조강사',on:true},{k:'same',l:'모든 요일 같은 강사',on:true}],reqNote:'',custom:[],kakao:true,
     texts:{submitTitle:'확인 완료 제출',submitHelp:'담당자 정보 + 모든 학급 운영 조건 답변 후 제출',agree:'',warn:''}},
-  out:{fields:{sp:{req:true}},reqOpts:[{k:'exp',l:'경력 강사',on:true},{k:'assist',l:'보조강사',on:true},{k:'same',l:'모든 요일 같은 강사',on:true}],reqNote:'',custom:[],kakao:false,
+  out:{fields:{sp:{req:true},grade:{req:true}},reqOpts:[{k:'exp',l:'경력 강사',on:true},{k:'assist',l:'보조강사',on:true},{k:'same',l:'모든 요일 같은 강사',on:true}],reqNote:'',custom:[],kakao:false,
     texts:{submitTitle:'확인 완료 제출',submitHelp:'담당자 정보 + 모든 학급 운영 조건 답변 후 제출',agree:'운영 조건을 모두 확인했습니다. 운영 중 조건(운영 시간·주 1회·기자재 등)이 지켜지지 않으면 수업이 중단되거나 취소될 수 있음을 확인합니다.',warn:'운영 조건을 충족하지 못한 수업이 {n}개 있습니다: {목록}. 제출은 할 수 있지만, 조건을 맞추지 못하면 운영이 어려울 수 있습니다.'}}};
 function formCfg(kind){ const d=FORM_DEF[kind], o=((typeof S!=='undefined'&&S&&S.formCfg)||{})[kind]||{};
   const fields={}; FORM_FIELDS.forEach(([k,l])=>{ fields[k]={l,on:true,req:false,help:'',...(d.fields[k]||{}),...((o.fields||{})[k]||{})}; });
@@ -1536,6 +1536,15 @@ const orgShort = o => String(o||'미지정').replace(/학교$/,'');
 /* 원본 목록 순서. 「학급 나누기」로 만든 학급은 원래 학급 바로 뒤(+0.5) — 예전에 나눈 학급(srcIdx 없음)도 같은 규칙 */
 /* 운영 목록 표(목록 업로드 · 검토·매칭)의 보조강사 줄: 배치(가배치/확정) 또는 모집 중 · 신청 수 */
 /* 특수학생 여부·인원 (학교 입력, 사업 공통) */
+/* 학년: 학교·기관이 고른 값(sc.gk = '1'~'6' 또는 'mix', 혼합이면 ga~gb) → 「3학년」「1~3학년」 */
+const GR_NUM=v=>{ const n=parseInt(String(v??'').replace(/\D/g,''),10); return n>=1&&n<=6?n:0; };
+const gradeTxt = sc => { if(!sc||!sc.gk) return ''; if(sc.gk==='mix'){ const a=GR_NUM(sc.ga), b=GR_NUM(sc.gb); return a&&b&&a<b?`${a}~${b}학년`:''; } const n=GR_NUM(sc.gk); return n?`${n}학년`:''; };
+const gradeMiss = sc => !gradeTxt(sc);
+/* 내보내기용 학년 표기: 한 학년 「O학년」, 여러 학년 「O~O학년」 */
+function gradeFmt(v){ const t=String(v??'').trim(); if(!t) return ''; const rg=t.match(/([1-6])\s*[~\-–]\s*([1-6])/); if(rg){ const a=Math.min(+rg[1],+rg[2]), b=Math.max(+rg[1],+rg[2]); return a===b?`${a}학년`:`${a}~${b}학년`; }
+  const d=[...new Set((t.match(/[1-6]/g)||[]).map(Number))].sort(); if(d.length===1&&!/\d{2}/.test(t)) return `${d[0]}학년`; if(d.length>1&&!/\d{2}/.test(t)) return `${d[0]}~${d[d.length-1]}학년`; return t; }
+const rowGrade = r => gradeTxt(r&&r.sc)||gradeFmt(r&&r.grade);
+const gradeApply = r => { const g=gradeTxt(r.sc); if(!g) return; if(r.gradeSrc==null) r.gradeSrc=r.grade||''; r.grade=g; };
 const spTxt = sc => !sc||!sc.spYn?'':sc.spYn==='yes'?`있음 ${+sc.sp||0}명`:'없음';
 const spMiss = sc => !sc||(sc.spYn!=='yes'&&sc.spYn!=='no')||(sc.spYn==='yes'&&!(+sc.sp>=1));
 const asstCell = r => r.asst?`<div class="small asc-line">보조 <b>${esc(instName(r.asst))}</b>${r.asstPend?' <span class="chip warn">가배치</span>':' <span class="chip ok">확정</span>'}${aDaysPart(r)?` <span class="muted">${aDaysOf(r).length}회</span>`:''}</div>`
@@ -2096,7 +2105,7 @@ function bunNext(sch){ const used=new Set(S.rows.filter(x=>x.school===sch&&x.bun
 /* 묶음 수업 나란히 보기 + 묶음 전체 수업일 달력 (학급별 색·글자로 구분) */
 const BL = i => 'ABCDEFGH'[i]||String(i+1);
 function bunCompareHtml(rs,forTeacher){
-  const F=[['학급',(r,i)=>`<span class="bcl bc${i%6}">${BL(i)}</span> <b>${esc(clsName(r))}</b>`],['프로그램',r=>esc(prog(r.prog).name)],['대상 · 인원',r=>`${esc(r.grade||'-')} · ${esc(r.sc.count||r.expected||'-')}명`],['기간',r=>`${md(r.start)}(${DOWS[dowOf(r.start)]}) ~ ${md(r.end)}(${DOWS[dowOf(r.end)]})`],['요일 · 시간',r=>`${daysTxt(r.days)} <span class="mono">${hm(r.ts)}~${hm(r.te)}</span>`],['수업 횟수',r=>`${classDays(r).length}회 · ${classDays(r).length*r.perDay}차시`],['교실',r=>esc(r.sc.room||r.room||'-')],['학교 요청',r=>{ const q=[...reqList(r),...tEtc(r)]; return q.length?q.map(esc).join(' · '):'<span class="muted">-</span>'; }]];
+  const F=[['학급',(r,i)=>`<span class="bcl bc${i%6}">${BL(i)}</span> <b>${esc(clsName(r))}</b>`],['프로그램',r=>esc(prog(r.prog).name)],['대상 · 인원',r=>`${esc(rowGrade(r)||'-')} · ${esc(r.sc.count||r.expected||'-')}명`],['기간',r=>`${md(r.start)}(${DOWS[dowOf(r.start)]}) ~ ${md(r.end)}(${DOWS[dowOf(r.end)]})`],['요일 · 시간',r=>`${daysTxt(r.days)} <span class="mono">${hm(r.ts)}~${hm(r.te)}</span>`],['수업 횟수',r=>`${classDays(r).length}회 · ${classDays(r).length*r.perDay}차시`],['교실',r=>esc(r.sc.room||r.room||'-')],['학교 요청',r=>{ const q=[...reqList(r),...tEtc(r)]; return q.length?q.map(esc).join(' · '):'<span class="muted">-</span>'; }]];
   if(!forTeacher) F.push(['신청 강사',r=>r.apps.length?r.apps.map(a=>esc(instName(a.tid))).join(', '):'<span class="muted">-</span>'],['주강사',r=>r.inst?`${esc(instName(r.inst))}${r.status!=='final'?' <span class="chip warn">가배치</span>':''}`:'<span class="muted">미정</span>']);
   return `<div class="tw"><table class="bcmp"><tbody>${F.map(([k,fn])=>`<tr><th scope="row">${k}</th>${rs.map((r,i)=>`<td>${fn(r,i)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
 function bunCalHtml(rs){
@@ -2453,7 +2462,7 @@ function viewBoard(){
    <thead><tr>${[['no','순','순번'],['org','운영 대학'],['school','학급','학교명'],['prog','프로그램'],['hrs','차시'],['start','기간'],['time','요일 · 시간'],['inst','강사'],['status','상태'],['iss','확인할 점']].map(([k,l,tl])=>`<th aria-sort="${bsort===k?(bdir<0?'descending':'ascending'):'none'}"><button class="thsort ${bsort===k?'on':''}" data-act="bsortk" data-v="${k}" title="눌러서 ${tl||l} 순으로 정렬 (다시 누르면 반대 방향)">${l} <span class="thsort-i">${bsort===k?(bdir<0?'▼':'▲'):'↕'}</span></button></th>`).join('')}</tr></thead>
    <tbody>${(flat?[['',list]]:Object.entries(groups)).map(([sch,rs])=>(flat?'':`<tr class="sch"><td colspan="10">${esc(sch)} <span class="muted small" style="font-weight:400">${esc((needArea()&&(S.contacts[sch]||{}).area)||rs[0].region)} · ${rs.length}학급 ${S.contacts[sch]?'· 담당 '+esc(S.contacts[sch].name||'대표번호')+((S.contacts[sch]).kakao?' · 카톡방 입장':''):''}</span>${rs.some(r=>r.sc.at)?` <button class="btn sm" style="margin-left:6px" data-act="xschool-go" data-s="${esc(sch)}">이 학교 엑셀</button>`:''}</td></tr>`)+rs.map(r=>{
       const p=prog(r.prog), n=classDays(r).length, is=issues(r);
-      return `<tr class="click" data-act="open" data-id="${r.id}"><td class="mono muted nowrap c-no" data-l="순">${NO.get(r.id)||''}</td>${orgCell(r)}<td>${flat?`<div class="c-sch">${esc(r.school)}</div>`:''}${esc(r.sc.room||r.room)} ${r.label?`<span class="cls">${esc(r.label)}</span>`:''}${r.splitFrom?' <span class="chip">나눈 학급</span>':''}${r.addedAt?` <span class="chip mg-add" title="${esc(r.addedAt)} 목록 다시 업로드로 추가">추가</span>`:''}${r.srcChg?' <span class="chip mg-chg">원본 변경</span>':''}${r.srcGone&&r.status!=='cancel'?' <span class="chip mg-gone">목록에서 빠짐</span>':''}${r.bundle?` <span class="chip bun">묶음 ${esc(r.bundle.name||'')}</span>`:''}<div class="muted small">${esc(r.grade)} · ${esc(r.sc.count||r.expected)}명</div></td>
+      return `<tr class="click" data-act="open" data-id="${r.id}"><td class="mono muted nowrap c-no" data-l="순">${NO.get(r.id)||''}</td>${orgCell(r)}<td>${flat?`<div class="c-sch">${esc(r.school)}</div>`:''}${esc(r.sc.room||r.room)} ${r.label?`<span class="cls">${esc(r.label)}</span>`:''}${r.splitFrom?' <span class="chip">나눈 학급</span>':''}${r.addedAt?` <span class="chip mg-add" title="${esc(r.addedAt)} 목록 다시 업로드로 추가">추가</span>`:''}${r.srcChg?' <span class="chip mg-chg">원본 변경</span>':''}${r.srcGone&&r.status!=='cancel'?' <span class="chip mg-gone">목록에서 빠짐</span>':''}${r.bundle?` <span class="chip bun">묶음 ${esc(r.bundle.name||'')}</span>`:''}<div class="muted small">${esc(rowGrade(r))} · ${esc(r.sc.count||r.expected)}명</div></td>
        <td class="c-prog">${esc(p.name)}${r.prog!==r.origProg?`<div class="small lv-info">변경: ${esc(prog(r.origProg).name)}에서</div>`:''}${p.conds.length?`<div class="small muted">운영 조건 ${p.conds.length}개</div>`:''}</td>
        ${hrsCell(r)}<td class="mono nowrap" data-l="기간">${md(r.start)} ~ ${md(r.end)}</td><td class="nowrap" data-l="요일·시간">${daysTxt(r.days)}${r.edited.days||r.edited.time||r.edited.date?' <span class="chip">학교 수정</span>':''}<div class="mono muted">${hm(r.ts)}~${hm(r.te)}</div></td>
        <td class="nowrap" data-l="강사">${r.inst?esc(instName(r.inst)):r.apps.length?`<span class="chip app">신청 ${r.apps.length}명</span>`:'<span class="muted">-</span>'}${asstCell(r)}</td>
@@ -2626,7 +2635,7 @@ function uClashHtml(c){ if(!c) return '<span class="muted">-</span>'; const L=[]
 function univData(org){
   const rs=extRows().filter(r=>orgOfRow(r)===org&&['fixed','recruit','final'].includes(r.status)).sort((a,b)=>a.school.localeCompare(b.school,'ko')||String(a.start).localeCompare(String(b.start)));
   return {org, season:season().name, ops:S.ops, rows:rs.map(r=>{ const p=prog(r.prog);
-    return {id:r.id,school:r.school,room:r.sc.room||r.room,grade:r.grade,count:r.sc.count||r.expected,prog:p.name,field:p.field||'',start:r.start,end:r.end,days:r.days,ts:r.ts,te:r.te,n:classDays(r).length,perDay:r.perDay,status:r.status,
+    return {id:r.id,school:r.school,room:r.sc.room||r.room,grade:rowGrade(r),count:r.sc.count||r.expected,prog:p.name,field:p.field||'',start:r.start,end:r.end,days:r.days,ts:r.ts,te:r.te,n:classDays(r).length,perDay:r.perDay,status:r.status,
       sibs:sibRows(r).filter(x=>x.ext&&x.extOrg===r.extOrg&&!['final','cancel'].includes(x.status)).map(x=>({id:x.id,label:clsName(x),wish:x.wish&&x.wish.tid||''})),
       apps:r.apps.map(a=>{ const t=S.instructors.find(y=>y.id===a.tid)||{}; return {tid:a.tid,clash:uClash(r,a.tid),name:t.name||'',kind:tKind(t),years:t.years,region:t.region||'',inField:tFits(t,r),note:a.note||''}; }),
       wish:r.wish||null, finalName:r.status==='final'&&r.inst?instName(r.inst):'', finalPhone:r.status==='final'&&r.inst?((S.instructors.find(y=>y.id===r.inst)||{}).phone||''):'', finalEmail:r.status==='final'&&r.inst?((S.instructors.find(y=>y.id===r.inst)||{}).email||''):''}; })};
@@ -2645,13 +2654,13 @@ function viewUniv(){
     const t=`${tip(a)}${fin?`\n확정 수업과 겹침: ${c.fin.join(', ')}`:''}${warn?`\n가배치·희망 겹침: ${[...c.tent,...c.wish].join(', ')}`:''}${c.app?`\n같은 시간 다른 수업에도 신청 ${c.app}건`:''}\n${on?'누르면 희망 해제':fin?'선택할 수 없습니다':'누르면 희망 강사로 선택'}`;
     const mv=(r.sibs||[]).map(x=>{ const here=x.wish===a.tid; return `<button class="amove ${here?'on':''}" data-act="uwish" data-id="${x.id}" data-t="${here?'':a.tid}" ${fin&&!here?'disabled':''} title="${here?`${esc(x.label)} 희망 해제`:`같은 시간 분반 ${esc(x.label)}에 이 강사로 희망 선택`}">${here?'✓':'→'}${esc(x.label)}</button>`; }).join('');
     return `<span class="achip-g"><button class="achip ${on?'s-tent':''} ${fin?'c-fin':warn?'c-tent':''} ${a.inField?'':'nf'}" data-act="uwish" data-id="${r.id}" data-t="${on?'':a.tid}" ${fin&&!on?'disabled':''} title="${esc(t)}">${on?'✓ ':''}${esc(a.name)}${fin?'<i>확정 겹침</i>':warn?'<i>겹침</i>':''}</button>${mv}</span>`; };
-  const detail=r=>{ const info=`<div class="udet-info"><b>${esc(r.school)} ${esc(r.room||'')}</b> · ${esc(r.grade||'')} ${esc(r.count||'')}명 · ${esc(r.prog)}${r.field?` (${esc(r.field)})`:''} · ${md(r.start)}~${md(r.end)} ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)} · ${r.n}회</div>`;
+  const detail=r=>{ const info=`<div class="udet-info"><b>${esc(r.school)} ${esc(r.room||'')}</b> · ${esc(rowGrade(r)||'')} ${esc(r.count||'')}명 · ${esc(r.prog)}${r.field?` (${esc(r.field)})`:''} · ${md(r.start)}~${md(r.end)} ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)} · ${r.n}회</div>`;
     const body=r.status==='final'?`<div class="small">배치 확정: <b>${esc(r.finalName||'')}</b></div>`:!r.apps.length?'<div class="small muted">아직 이 학급에 신청한 강사가 없습니다.</div>':`<div class="tw"><table><thead><tr><th>신청 강사 <span class="muted" style="font-weight:400">(눌러서 희망 선택)</span></th><th>유형 · 경력</th><th>지역</th><th>분야</th><th>다른 수업과 겹침</th><th>신청 메모</th></tr></thead><tbody>${r.apps.map(a=>`<tr class="${r.wish&&r.wish.tid===a.tid?'uwish-on':''}"><td class="nowrap">${chip(r,a)}</td><td class="small nowrap">${esc([a.kind,a.years!==''&&a.years!=null?`경력 ${a.years}년`:''].filter(Boolean).join(' · ')||'-')}</td><td class="small nowrap">${esc(a.region||'-')}</td><td class="small">${a.inField?'분야 일치':'<span class="muted">분야 외</span>'}</td><td class="small uclash">${uClashHtml(a.clash)}</td><td class="small">${esc(a.note||'')}</td></tr>`).join('')}</tbody></table></div>`;
     return `<tr class="udet"><td colspan="5">${info}${body}</td></tr>`; };
   const row=r=>{ const st=r.status==='final'?`<span class="pill st-final">배치 확정</span><div class="small"><b>${esc(r.finalName)}</b></div>`:r.status==='fixed'?'<span class="small muted">모집 전</span>':r.wish?`<span class="chip warn">희망 ${esc(r.wish.name||'')}</span>`:r.apps.length?'<span class="small lv-warn">희망 미선택</span>':'<span class="small muted">신청 없음</span>';
     const open=u.uExp===r.id;
     const tg=`data-act="uexp" data-id="${r.id}" title="${open?'눌러서 접기':'눌러서 신청 강사 정보 보기'}"`;
-    return `<tr class="ucls ${open?'open':''} ${r.wish&&r.status!=='final'?'u-wished':''}"><td class="ucls-n" ${tg}><span class="ucls-ar">${open?'▾':'▸'}</span><b>${esc(r.room||'-')}</b><div class="small muted">${esc(r.grade||'')} · ${esc(r.count||'')}명</div></td><td class="c-prog" ${tg}>${esc(r.prog)}<div class="small muted">${esc(r.field||'')}</div></td>
+    return `<tr class="ucls ${open?'open':''} ${r.wish&&r.status!=='final'?'u-wished':''}"><td class="ucls-n" ${tg}><span class="ucls-ar">${open?'▾':'▸'}</span><b>${esc(r.room||'-')}</b><div class="small muted">${esc(rowGrade(r)||'')} · ${esc(r.count||'')}명</div></td><td class="c-prog" ${tg}>${esc(r.prog)}<div class="small muted">${esc(r.field||'')}</div></td>
      <td class="nowrap small" ${tg}>${md(r.start)}~${md(r.end)}<div>${daysTxt(r.days)} <span class="mono">${hm(r.ts)}~${hm(r.te)}</span> · ${r.n}회</div></td>
      <td class="c-apps">${r.status==='final'?'<span class="muted small">-</span>':r.status==='fixed'?'<span class="muted small">강사 모집 전</span>':r.apps.length?`<div class="achips">${r.apps.map(a=>chip(r,a)).join('')}</div>`:'<span class="muted small">신청 없음</span>'}</td>
      <td class="nowrap">${st}</td></tr>${open?detail(r):''}`; };
@@ -2832,7 +2841,7 @@ function matchTable(all){
        return `<tr class="mt-bun" data-act="mopen" data-id="${r0.id}"><td colspan="10"><div class="bun-h"><span class="bun-badge">한 강사 묶음 ${esc(r0.bundle.name||'')}</span><b>${esc(r0.school)} · ${g.length}학급</b><span class="small">${esc(r0.bundle.why||'')} · 전체 ${n}회 · ${h}차시 · 묶음 전체 신청 ${all}명</span><span class="bun-act">${insts.size>1?'<span class="chip bun bad">주강사 서로 다름</span>':r0.inst?`<span class="small">주강사 <b>${esc(instName(r0.inst))}</b></span>`:''}<button class="btn sm" data-act="mopen" data-id="${r0.id}">나란히 보기 ›</button></span></div></td></tr>`; }
      const r=o.r, g=gate(r), an=r.apps.map(a=>instName(a.tid));
      return `<tr class="click ${o.bl?'inbun':''} ${u.mDrawer===r.id?'on':''}" data-act="mopen" data-id="${r.id}">
-      <td class="mono muted nowrap c-no" data-l="순">${NO.get(r.id)||''}</td><td class="nowrap" data-l="운영 대학">${tOrgTag(r)}</td><td><div class="c-sch">${esc(r.school)}</div><div class="small">${o.bl?`<span class="bcl bc${o.b%6}">${BL(o.b)}</span> `:''}${esc(clsName(r))} <span class="muted">· ${esc(r.grade)} · ${esc(r.sc.count||r.expected)}명</span></div></td>
+      <td class="mono muted nowrap c-no" data-l="순">${NO.get(r.id)||''}</td><td class="nowrap" data-l="운영 대학">${tOrgTag(r)}</td><td><div class="c-sch">${esc(r.school)}</div><div class="small">${o.bl?`<span class="bcl bc${o.b%6}">${BL(o.b)}</span> `:''}${esc(clsName(r))} <span class="muted">· ${esc(rowGrade(r))} · ${esc(r.sc.count||r.expected)}명</span></div></td>
       <td class="c-prog" data-l="프로그램">${esc(prog(r.prog).name)}</td>
       <td class="nowrap c-hrs" data-l="차시"><b class="hrs">${rowHrs(r)}차시</b><div class="mono muted small">${classDays(r).length}회 × ${r.perDay}</div></td>
       <td class="mono nowrap" data-l="기간">${md(r.start)} ~ ${md(r.end)}</td>
@@ -2923,7 +2932,7 @@ function matchDetail(r){
   const tags=[...reqLabels(r),...customAnswers(r).map(([l,v])=>`${l}: ${v}`)];
   return `<div class="panel stack">
    <div class="row between"><div><h3>${esc(r.school)} · ${esc(clsName(r))}</h3>
-    <div class="muted small">${esc(p.name)} · ${esc(r.grade)} · ${esc(r.sc.count||r.expected)}명 · ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)} · ${md(r.start)}~${md(r.end)} (${d.length}일)</div></div>${stPill(r.status)}</div>
+    <div class="muted small">${esc(p.name)} · ${esc(rowGrade(r))} · ${esc(r.sc.count||r.expected)}명 · ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)} · ${md(r.start)}~${md(r.end)} (${d.length}일)</div></div>${stPill(r.status)}</div>
    ${why?`<div class="notice bad"><b>진행할 수 없습니다.</b> ${esc(why)} <button class="btn sm" data-act="open" data-id="${r.id}">조건 확인하기</button></div>`:''}
    ${!why&&!g?`<div class="notice"><b>검토 단계입니다.</b> ${r.status==='confirmed'?'학교가 확인 제출을 마쳤습니다. 검토하고 이상이 없으면 강사 배치로 넘기세요.':r.status==='fixed'?'검토를 마쳤고 강사 화면 공개 전입니다.':r.status==='proposed'?'학교가 운영안을 검토하고 있습니다.':r.status==='change'?'학교가 운영안 조정을 요청했습니다. 학급 상세에서 협의 내용을 반영한 뒤 다시 보내 주세요.':''} 검토 완료 뒤 강사를 배정할 수 있습니다.
      <div class="row" style="margin-top:8px">${['confirmed','fixed','proposed','change'].includes(r.status)?`<button class="btn sm pri" data-act="open" data-id="${r.id}">검토하기</button>`:''}${r.status==='change'&&!r.reopen?`<button class="btn sm pri" data-act="republish" data-id="${r.id}">조정 반영해서 다시 보내기</button>`:''}<button class="btn sm" data-act="open" data-id="${r.id}">학급 상세</button></div></div>`:''}
@@ -3120,7 +3129,7 @@ function schoolCard(r,idx,tot){
    <div class="card-b">
     <div><div class="small muted" style="margin-bottom:8px">${isOut(r)?'신청 내용':'교육청 신청 내용'}</div>
      <dl class="kv"><dt>프로그램</dt><dd>${esc(op.name)}${r.prog!==r.origProg?`<div class="small lv-info">→ ${esc(p.name)} (${esc(r.changeReason)})</div>`:''}</dd>
-      <dt>학년</dt><dd>${esc(r.grade)}</dd>
+      <dt>학년</dt><dd>${esc(r.gradeSrc!=null?r.gradeSrc:r.grade)||'<span class="muted">신청 내용에 없음</span>'}</dd>
       <dt>기간</dt><dd>${(()=>{const fs=r.fix.some(f=>f.lv==='info'&&f.t.startsWith('시작일')), fe=r.fix.some(f=>f.lv==='info'&&f.t.startsWith('종료일')), w=(v,bad)=>bad?`<span class="wrongval">${ymd(v)}</span>`:ymd(v);
         return (fs||fe) ? `<span class="mono">${ymd(r.start)} ~ ${ymd(r.end)}</span><div class="small lv-info">연도가 잘못 적혀 ${ymd(r.start)} ~ ${ymd(r.end)}로 바로잡았습니다. 맞는지 확인해 주세요.</div><div class="small srcbox">교육청 발송 목록 원본: <span class="mono">${w(r.src.start,fs)} ~ ${w(r.src.end,fe)}</span></div>`
           : `<span class="mono">${ymd(r.src.start)} ~ ${ymd(r.src.end)}</span>`;})()}</dd>
@@ -3132,6 +3141,8 @@ function schoolCard(r,idx,tot){
      ${(()=>{ const FF=F.fields, L=(k,txt)=>`${esc(FF[k].l)}${FF[k].req?' *':''}${FF[k].help?' '+qt([FF[k].help]):''}`; return `<div class="fgrid">
       ${FF.label.on?`<label class="f">${L('label')}<input id="${id('label')}" data-r="${r.id}" data-top="label" value="${esc(r.label)}" placeholder="예: 돌봄1반" ${lock?'disabled':''}></label>`:''}
       ${FF.room.on?`<label class="f">${L('room')}<input id="${id('room')}" data-r="${r.id}" data-f="room" value="${esc(sc.room)}" placeholder="${esc(r.room)}" ${lock?'disabled':''}></label>`:''}
+      ${FF.grade&&FF.grade.on?`<label class="f">${L('grade')}<select id="${id('gk')}" data-r="${r.id}" data-g="gk" ${lock?'disabled':''}><option value="">골라 주세요</option>${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${String(sc.gk)===String(n)?'selected':''}>${n}학년</option>`).join('')}<option value="mix" ${sc.gk==='mix'?'selected':''}>혼합학년</option></select></label>
+      ${sc.gk==='mix'?`<label class="f">혼합학년 범위${FF.grade.req?' *':''}<span class="row" style="gap:6px;align-items:center;flex-wrap:nowrap;white-space:nowrap"><input id="${id('ga')}" data-r="${r.id}" data-g="ga" type="number" inputmode="numeric" min="1" max="5" step="1" value="${esc(sc.ga??'')}" placeholder="1" style="width:64px" aria-label="시작 학년" ${lock?'disabled':''}><span style="white-space:nowrap">학년 ~</span><input id="${id('gb')}" data-r="${r.id}" data-g="gb" type="number" inputmode="numeric" min="2" max="6" step="1" value="${esc(sc.gb??'')}" placeholder="3" style="width:64px" aria-label="끝 학년" ${lock?'disabled':''}><span>학년</span></span>${sc.ga&&sc.gb&&gradeMiss(sc)?'<span class="small lv-warn">1~6 사이 숫자로, 앞 학년이 뒤 학년보다 작게 입력해 주세요</span>':''}</label>`:''}`:''}
       ${FF.count.on?`<label class="f">${L('count')}<input id="${id('count')}" data-r="${r.id}" data-f="count" type="number" min="0" value="${esc(sc.count)}" placeholder="${r.expected}" ${lock?'disabled':''}></label>`:''}
       ${FF.multi.on?`<label class="f">${L('multi')}<input id="${id('multi')}" data-r="${r.id}" data-f="multi" type="number" min="0" value="${esc(sc.multi)}" ${lock?'disabled':''}></label>`:''}
       ${FF.sp.on?`<label class="f">${L('sp')}<select id="${id('spYn')}" data-r="${r.id}" data-f="spYn" ${lock?'disabled':''}><option value="">골라 주세요</option><option value="no" ${sc.spYn==='no'?'selected':''}>없음</option><option value="yes" ${sc.spYn==='yes'?'selected':''}>있음</option></select></label>
@@ -3626,7 +3637,7 @@ function tAsstPanel(t){
   return `<div class="panel stack tasp" style="gap:8px"><h3>보조강사 모집 <span class="muted small" style="font-weight:400">${L.length}개 수업</span></h3>
    ${(()=>{ const {st,w}=asstState(); return st==='open'?`<div class="awb open"><b>${w.round?esc(w.round)+' ':''}보조강사 신청 기간</b> <span>${esc(asstRange(w))}</span>${w.to?` <em>${awLeft(w.to)}</em>`:''}</div>`:st==='before'?`<div class="awb"><b>보조강사 신청은 ${esc(awTxt(w.from))}부터 받습니다.</b><div class="small">신청 기간: ${esc(asstRange(w))} · 지금은 수업 정보만 볼 수 있습니다.</div></div>`:`<div class="awb"><b>${st==='closed'?'보조강사 신청이 마감되었습니다.':'보조강사 신청 기간이 아직 정해지지 않았습니다.'}</b>${st==='closed'?`<div class="small">신청 기간: ${esc(asstRange(w))}</div>`:''}</div>`; })()}
    <div class="small muted">주강사가 정해진 수업의 보조강사 모집 ${qt(['신청하면 운영기관이 검토해 배치','확정되면 「내 신청 · 일정」에 보임'])}</div>
-   <div class="tw"><table><thead><tr><th>학교 · 학급</th><th>프로그램</th><th>일정</th><th></th></tr></thead><tbody>${L.map(r=>{ const p=prog(r.prog), ap=(r.aApps||[]).some(a=>a.tid===t.id); return `<tr class="${ap?'applied':''}"><td>${tOrgTag(r)} <button class="lnk" data-act="tdetail" data-id="${r.id}">${esc(shortSch(r.school))}</button> <span class="muted small">${esc(r.grade||'')} ${esc(clsName(r))}</span></td><td class="small">${esc(p.name)}<div class="muted">${esc(p.field||'')}</div></td><td class="small nowrap">${daysTxt(r.days)} <span class="mono">${hm(r.ts)}~${hm(r.te)}</span><div class="muted">${asRng(r)} · ${aDaysOf(r).length}회</div></td><td>${tAsstBox(r,t,true)}</td></tr>`; }).join('')}</tbody></table></div></div>`;
+   <div class="tw"><table><thead><tr><th>학교 · 학급</th><th>프로그램</th><th>일정</th><th></th></tr></thead><tbody>${L.map(r=>{ const p=prog(r.prog), ap=(r.aApps||[]).some(a=>a.tid===t.id); return `<tr class="${ap?'applied':''}"><td>${tOrgTag(r)} <button class="lnk" data-act="tdetail" data-id="${r.id}">${esc(shortSch(r.school))}</button> <span class="muted small">${esc(rowGrade(r)||'')} ${esc(clsName(r))}</span></td><td class="small">${esc(p.name)}<div class="muted">${esc(p.field||'')}</div></td><td class="small nowrap">${daysTxt(r.days)} <span class="mono">${hm(r.ts)}~${hm(r.te)}</span><div class="muted">${asRng(r)} · ${aDaysOf(r).length}회</div></td><td>${tAsstBox(r,t,true)}</td></tr>`; }).join('')}</tbody></table></div></div>`;
 }
 function viewTeacher(){
   const g=tGuard(); if(g) return g;
@@ -3703,7 +3714,7 @@ function tList(js,rg,f){
     const inb=r.bundle&&bunRows(r).length>1;
     return `<tr class="tj ${inb?'inbun':''} ${j.ap?'applied':''} ${j.cl.length&&!j.ap?'clash':''}" data-act="tdetail" data-id="${r.id}">
      <td class="tj-star"><button class="star ${on?'on':''}" data-act="tstar" data-id="${r.id}" aria-pressed="${on}" aria-label="관심 수업" title="관심 수업">${on?'담음':'담기'}</button></td>
-     <td class="tj-cls"><b>${esc(r.grade||'-')}</b> <span class="muted small">${esc(r.sc.count||r.expected||'-')}명</span>${letter(r)?` <span class="chip" title="같은 시간에 같은 프로그램이 함께 운영되는 반 구분">${letter(r)}반</span>`:''}</td>
+     <td class="tj-cls"><b>${esc(rowGrade(r)||'-')}</b> <span class="muted small">${esc(r.sc.count||r.expected||'-')}명</span>${letter(r)?` <span class="chip" title="같은 시간에 같은 프로그램이 함께 운영되는 반 구분">${letter(r)}반</span>`:''}</td>
      <td class="tj-prog"><button class="lnk" data-act="tdetail" data-id="${r.id}" ${progCard(p)&&(progCard(p).acts||[]).length?`title="${esc(progCard(p).acts.join(' / '))}"`:''}>${esc(p.name)}</button>${newTag(p)}</td>
      <td class="tj-f" data-l="분야">${esc(p.field||'-')}</td>
      <td class="mono nowrap" data-l="시작일">${dd(r.start)}</td>
@@ -3814,7 +3825,7 @@ function teacherLayer(){
    ${progCardHtml(p)}
    ${(()=>{ const etcs=tEtc(r), etc=etcs.join(' · '), room=r.sc.room||r.room;
      return `<div class="panel"><dl class="kv tkv">
-    <dt>대상</dt><dd>${esc(r.grade||'-')} · ${esc(r.sc.count||r.expected||'-')}명</dd>
+    <dt>대상</dt><dd>${esc(rowGrade(r)||'-')} · ${esc(r.sc.count||r.expected||'-')}명</dd>
     ${room?`<dt>수업 교실</dt><dd>${esc(room)}</dd>`:''}
     ${tAsView(r,t)?(()=>{ const a=aDaysOf(r), f=a[0]||r.start, l=a[a.length-1]||r.end; return `<dt>보조 참여 기간</dt><dd>${md(f)}(${DOWS[dowOf(f)]}) ~ ${md(l)}(${DOWS[dowOf(l)]}) · 총 ${a.length}회 ${a.length*r.perDay}차시</dd><dt>보조 참여일</dt><dd class="small">${byMonth(a)}</dd>`; })():`<dt>운영 기간</dt><dd>${md(r.start)}(${DOWS[dowOf(r.start)]}) ~ ${md(r.end)}(${DOWS[dowOf(r.end)]}) · 총 ${j.n}회 ${j.n*r.perDay}차시</dd>`}
     <dt>요일 · 시간</dt><dd>${dowDots(r.days)} <span class="mono">${hm(r.ts)}~${hm(r.te)}</span></dd>
@@ -3831,7 +3842,7 @@ function tCompareHtml(t){
   const ids=tStars(), js=ids.map(id=>tLive().find(r=>r.id===id&&r.status!=='cancel')).filter(Boolean).map(r=>tJob(r,t));
   const ov=(a,b)=>a.r.ts<b.r.te&&b.r.ts<a.r.te&&a.d.some(d=>b.d.includes(d));
   const F=[['학교',j=>`<b>${esc(j.r.school)}</b><div class="muted small">${esc(j.r.region)}</div>`],
-    ['학급',j=>`${esc(clsName(j.r))}<div class="muted small">${esc(j.r.grade)} ${esc(j.r.sc.count||j.r.expected)}명</div>`],
+    ['학급',j=>`${esc(clsName(j.r))}<div class="muted small">${esc(rowGrade(j.r))} ${esc(j.r.sc.count||j.r.expected)}명</div>`],
     ['프로그램',j=>esc(prog(j.r.prog).name)],
     ['운영 기간',j=>`${md(j.r.start)} ~ ${md(j.r.end)}`],
     ['요일',j=>`${dowDots(j.r.days)}`],
@@ -4204,7 +4215,7 @@ function stParseA(src,file){
 function stLiveRows(){
   const y=+String(S.season||'').slice(0,4)||new Date().getFullYear();
   return matchRows().filter(r=>r.status!=='cancel').map(r=>{ const p=prog(r.prog)||{}, sc=r.sc||{}, cd=classDays(r), per=+r.perDay||0, st=sc.count!==''&&sc.count!=null?Number(sc.count):+r.expected||0;
-    return {year:y,org:orgOfRow(r),school:r.school,region:r.region||'',size:regionSize(S.addr[r.school]),room:sc.room||r.room||'',prog:p.name||'',field:p.field||'',grade:r.grade||'',exp:+r.expected||0,stu:st,per,days:cd.length,ses:per*cd.length,start:r.start||'',end:r.end||'',dow:daysTxt(r.days),ts:r.ts==null?'':hm(r.ts),te:r.te==null?'':hm(r.te),mc:+sc.multi||0,low:+sc.low||0,out:isOut(r),inst:r.status==='final'?instName(r.inst):''}; });
+    return {year:y,org:orgOfRow(r),school:r.school,region:r.region||'',size:regionSize(S.addr[r.school]),room:sc.room||r.room||'',prog:p.name||'',field:p.field||'',grade:rowGrade(r)||'',exp:+r.expected||0,stu:st,per,days:cd.length,ses:per*cd.length,start:r.start||'',end:r.end||'',dow:daysTxt(r.days),ts:r.ts==null?'':hm(r.ts),te:r.te==null?'':hm(r.te),mc:+sc.multi||0,low:+sc.low||0,out:isOut(r),inst:r.status==='final'?instName(r.inst):''}; });
 }
 const stIsMc=d=>String(d.id).startsWith('mc_');
 /* 운영 시기: 연도마다 5개 */
@@ -4672,7 +4683,7 @@ function opsVals(r,i){ const p=prog(r.prog)||{}, c=S.contacts[r.school]||{}, h=r
   const semS=semOf(season())?semStart(curSK()):'', nSem=semS&&d.length?d.filter(x=>String(x)>=semS).length*(r.perDay||1):0, nVac=ses-nSem;
   const size=h.island?'도서벽지':regionSize(S.addr[r.school]||r.addr||'');
   const v=[i+1,dt(h.appAt),r.memo||'',opsConfirmed(r),false,r.school,c.name||'',c.phone||'',c.mobile||'',c.email||'','방학집중',h.center||'한국과학창의재단',h.org||'호서대학교 산학협력단',p.field||'',p.name||'',sido2,sgg,r.srcSchool||r.school,
-    (String(r.grade||'').match(/\d/g)||[]).join(', ')||r.grade||'',1,(r.sc&&r.sc.count!==''&&r.sc.count!=null)?Number(r.sc.count)||r.expected:r.expected,ses,sk==='w'?nVac:'',sk==='1'?ses:(sk==='w'&&nSem?nSem:''),sk==='s'?nVac:'',h.type||'',r.days.slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(x=>DOWS[x]).join(', '),D(r.start),D(r.end),[r.note||'',sk==='s'&&nSem?`2학기 ${nSem}차시`:'',r.sc&&r.sc.spYn==='yes'?`특수학생 ${+r.sc.sp||''}${+r.sc.sp?'명':'있음'}`:''].filter(Boolean).join(' / '),'O',T(r.ts),T(r.te),opsPerMin(r),
+    (()=>{ const g=rowGrade(r)||'', m=g.match(/([1-6])~([1-6])/); return m?Array.from({length:+m[2]-+m[1]+1},(_,k)=>+m[1]+k).join(', '):(g.match(/\d/g)||[]).join(', ')||g; })(),1,(r.sc&&r.sc.count!==''&&r.sc.count!=null)?Number(r.sc.count)||r.expected:r.expected,ses,sk==='w'?nVac:'',sk==='1'?ses:(sk==='w'&&nSem?nSem:''),sk==='s'?nVac:'',h.type||'',r.days.slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(x=>DOWS[x]).join(', '),D(r.start),D(r.end),[r.note||'',sk==='s'&&nSem?`2학기 ${nSem}차시`:'',r.sc&&r.sc.spYn==='yes'?`특수학생 ${+r.sc.sp||''}${+r.sc.sp?'명':'있음'}`:''].filter(Boolean).join(' / '),'O',T(r.ts),T(r.te),opsPerMin(r),
     (r.sc&&Number(r.sc.low))?Number(r.sc.low):'해당없음',size||'',t.kind||'',t.name||'',t.phone||'',false,false];
   return v.concat(d.map(D)); }
 function opsSheetPanel(){ const all=exportList(opsBase()), L=opsRows(), wait=all.filter(r=>!opsConfirmed(r)).length;
@@ -4885,7 +4896,7 @@ function renderLayer0(){
   const line=(k,a,b)=>`<div class="k">${k}</div><div>${esc(a)}</div><div class="${b!==''&&String(b)!==String(a)?'chg':''}">${esc(b===''?'-':b)}</div>`;
   const alts=S.programs.filter(x=>x.org===MY_ORG);
   L.innerHTML=`<div class="ov" data-act="close"><div class="drawer" role="dialog" aria-label="학급 상세"><div class="stack">
-   <div class="row between"><div><h2>${esc(r.school)}</h2><div class="muted small">${esc(clsName(r))} · ${esc(r.grade)} · ${isOut(r)?'목록':'교육청'} 순번 ${esc(r.no)}</div>${isOut(r)?`<div class="small" style="margin-top:2px">기관 주소: ${(S.contacts[r.school]||{}).addr?esc(S.contacts[r.school].addr):'<span class="muted">아직 입력 전</span>'}</div>`:''}</div><button class="btn" data-act="close">닫기</button></div>
+   <div class="row between"><div><h2>${esc(r.school)}</h2><div class="muted small">${esc(clsName(r))} · ${esc(rowGrade(r))} · ${isOut(r)?'목록':'교육청'} 순번 ${esc(r.no)}</div>${isOut(r)?`<div class="small" style="margin-top:2px">기관 주소: ${(S.contacts[r.school]||{}).addr?esc(S.contacts[r.school].addr):'<span class="muted">아직 입력 전</span>'}</div>`:''}</div><button class="btn" data-act="close">닫기</button></div>
    <div class="row">${stPill(r.status)}<select id="d-status" aria-label="상태 바꾸기">${ST_ORDER.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${ST[s][0]}</option>`).join('')}</select>
     <button class="btn sm" data-act="split" data-id="${r.id}">학급 나누기</button>${r.splitFrom?`<button class="btn sm danger" data-act="delsplit" data-id="${r.id}">이 학급 삭제</button>`:''}</div>
    ${matchRows().includes(r)?bundleBox(r,'open'):''}
@@ -5020,7 +5031,7 @@ function resultPlans(sch){
 function resultFill(tpl,sch){
   const ss=season(), c=S.contacts[sch]||{}, link=schoolLinkOf(sch);
   const list=resultRowsOf(sch).map(r=>{ const t=S.instructors.find(x=>x.id===r.inst), a=S.instructors.find(x=>x.id===r.asst), n=classDays(r).length;
-    return `· ${clsName(r)} (${r.grade||''}, ${r.sc.count||r.expected||'-'}명) - ${prog(r.prog).name}\n  ${md(r.start)}~${md(r.end)} ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)} · ${n}회 ${n*r.perDay}차시\n  강사 ${t?`${t.name} ${t.phone||''}`.trim():'미배정'}${a?` · 보조 ${a.name} ${a.phone||''}`.trim():''}`; }).join('\n');
+    return `· ${clsName(r)} (${rowGrade(r)||''}, ${r.sc.count||r.expected||'-'}명) - ${prog(r.prog).name}\n  ${md(r.start)}~${md(r.end)} ${daysTxt(r.days)} ${hm(r.ts)}~${hm(r.te)} · ${n}회 ${n*r.perDay}차시\n  강사 ${t?`${t.name} ${t.phone||''}`.trim():'미배정'}${a?` · 보조 ${a.name} ${a.phone||''}`.trim():''}`; }).join('\n');
   const m={학교:sch,담당자:c.name||'',차수:ss.name,학급목록:list,링크:link?`▶ 우리 학교 확인 링크: ${link}`:'',운영담당자:S.ops.name||'',운영연락처:S.ops.phone||'',운영메일:S.ops.email||'',카톡방:kakaoOf(S.rows.some(r=>r.school===sch&&isOut(r)),ss)};
   return bizWords(String(tpl||'').replace(/\{([^{}\s]+)\}/g,(all,k)=>k in m?m[k]:all));
 }
@@ -5034,7 +5045,7 @@ function resultAoa(sch){
   const N=Math.max(1,...rs.map(r=>classDays(r).length));
   const head=[...RESULT_HEAD,...Array.from({length:N},(_,k)=>`수업일${k+1}`)];
   const rows=rs.map((r,i)=>{ const p=prog(r.prog), sc=r.sc, days=classDays(r), t=S.instructors.find(x=>x.id===r.inst), cnt=sc.count!==''&&sc.count!=null?sc.count:r.expected;
-    return [i+1,orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),'충남',rowRegion(r)?rowRegion(r)+'시':'',r.school,seasonTerm(),sc.room||r.room||'',p.name,p.field||'',days.length*r.perDay,r.grade||'',cnt===''||cnt==null?'':(isNaN(+cnt)?cnt:+cnt),D(r.start),D(r.end),daysTxt(r.days),r.ts==null?'':hm(r.ts),r.te==null?'':hm(r.te),t?t.name:'',t?t.phone||'':'',t?t.email||'':'',...days.map(D)]; });
+    return [i+1,orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),'충남',rowRegion(r)?rowRegion(r)+'시':'',r.school,seasonTerm(),sc.room||r.room||'',p.name,p.field||'',days.length*r.perDay,rowGrade(r)||'',cnt===''||cnt==null?'':(isNaN(+cnt)?cnt:+cnt),D(r.start),D(r.end),daysTxt(r.days),r.ts==null?'':hm(r.ts),r.te==null?'':hm(r.te),t?t.name:'',t?t.phone||'':'',t?t.email||'':'',...days.map(D)]; });
   return {head,rows};
 }
 async function resultXlsxBuf(sch){
@@ -5323,7 +5334,7 @@ const AL_TPL_DEF = {
   3:'[충남 1권역 앵커늘봄] {기관} {담당자}님, 입력하신 운영 정보는 임시 저장되어 있지만 아직 제출 전입니다. 아래 주소에서 남은 항목을 확인하고 「확인 완료 제출」을 눌러 주세요.\n{주소}\n문의: {문의}'};
 /* 문구는 사업별 기준정보(ops)에 따로 저장 · 기본 문구는 그 사업 이름으로 */
 const alTpl = k => { const t=((S.ops||{}).alarmTpl||{})[k]; return t&&String(t).trim()?t:bizWords(AL_TPL_DEF[k]); };
-const alTouched = r => { const sc=r.sc||{}; return Object.keys(r.cond||{}).length>0||['room','count','multi','spYn','reqEtc','changeReq','label'].some(k=>String(sc[k]??'').trim())||(sc.off||[]).length>0||Object.values(sc.req||{}).some(Boolean)||Object.values(r.edited||{}).some(Boolean); };
+const alTouched = r => { const sc=r.sc||{}; return Object.keys(r.cond||{}).length>0||['room','gk','count','multi','spYn','reqEtc','changeReq','label'].some(k=>String(sc[k]??'').trim())||(sc.off||[]).length>0||Object.values(sc.req||{}).some(Boolean)||Object.values(r.edited||{}).some(Boolean); };
 function alList(){
   const by={}; myRows().filter(r=>r.status!=='cancel').forEach(r=>(by[r.school]=by[r.school]||[]).push(r));
   return Object.keys(by).sort((a,b)=>a.localeCompare(b,'ko')).map(sch=>{ const rs=by[sch], c=S.contacts[sch]||{};
@@ -5613,7 +5624,7 @@ function buildExportAoa(rowsArg,opt){
     const row=new Array(65).fill('');
     Object.assign(row,{0:i+1,1:'-',2:'충남RISE센터',3:orgOfRow(r)==='미지정'?MY_ORG:orgOfRow(r),4:'충남',5:rowRegion(r)?rowRegion(r)+'시':'',6:r.school,7:'동계',8:memo,
       9:tab?(tab.a.ans==='yes'?'가능':tab.a.ans==='no'?'불가':'미확인'):'해당 없음',10:tab&&tab.a.ans==='yes'&&tab.a.qty!==''?Number(tab.a.qty):'',11:sc.room||r.room,12:c.name||'',13:cPhones(c,'\n'),14:c.email||'',
-      15:p.name,16:p.field,17:days.length,18:r.perDay,19:days.length*r.perDay,20:1,21:r.grade,22:CL[r.id]||'A',23:r.expected,24:sc.count===''?'':Number(sc.count),25:D(r.start),26:D(r.end),27:daysTxt(r.days),
+      15:p.name,16:p.field,17:days.length,18:r.perDay,19:days.length*r.perDay,20:1,21:rowGrade(r),22:CL[r.id]||'A',23:r.expected,24:sc.count===''?'':Number(sc.count),25:D(r.start),26:D(r.end),27:daysTxt(r.days),
       28:r.ts==null?'':r.ts/1440,29:r.te==null?'':r.te/1440,30:sc.multi===''?'':Number(sc.multi),31:sc.low===''?'':Number(sc.low),32:regionSize(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr||''):S.addr[r.school]),33:(isOut(r)?((S.contacts[r.school]||{}).addr||r.addr):S.addr[r.school])||'',34:t?t.name:'',35:t?t.phone||'':'',36:t?t.email||'':'',37:a?a.name:'-',38:a?a.phone||'':''});
     days.slice(0,20).forEach((d,k)=>row[39+k]=D(d));
     if(extra) row.push((r.adminEdits||[]).map(a=>`${ainfo(a)}: ${a.changes.join(', ')} (${a.why})`).join(' / '),c.consent==='yes'?'동의':c.consent==='no'?'미동의':'',c.share==='yes'?'동의':c.share==='no'?'미동의':'',c.kakao?'입장':'',ST[r.status][0],sc.at,op.name,r.changeReason,cs.has?(cs.gate?'충족':cs.unmet?'미충족':cs.unanswered?'학교 체크 전':'재확인 전'):'조건 없음',
@@ -5720,7 +5731,7 @@ async function doSchoolExport(){
   const cols=[['학급',1],['프로그램',1],['학년',1],['확정 인원',1],['교실',1],['기간',1],['요일',1],['시간',1],['수업일 수',1],['진행 상태',1],['배치 강사',W-10]];
   header(cols.map(([v,span])=>({v,span})));
   rs.forEach((r,i)=>{ const z=i%2?C.zebra:null, st=r.reopen?'호서대 수정 요청':ST[r.status][0];
-    line([{v:clsName(r),font:{bold:true}},{v:prog(r.prog).name},{v:r.grade,align:'center'},{v:`${r.sc.count||r.expected}명`,align:'center'},{v:r.sc.room||r.room},
+    line([{v:clsName(r),font:{bold:true}},{v:prog(r.prog).name},{v:rowGrade(r),align:'center'},{v:`${r.sc.count||r.expected}명`,align:'center'},{v:r.sc.room||r.room},
       {v:`${md(r.start)} ~ ${md(r.end)}`,align:'center'},{v:(r.days.join('')==='12345'?'월~금':r.days.map(d=>DOWS[d]).join('·')),align:'center'},{v:`${hm(r.ts)}~${hm(r.te)}`,align:'center'},{v:`${classDays(r).length}일`,align:'center'},
       {v:st,align:'center',fill:r.status==='final'?C.yes:r.status==='blocked'||r.reopen?C.no:r.status==='proposed'?C.warn:z,font:{bold:true,color:{argb:r.status==='final'?C.yesT:r.status==='blocked'||r.reopen?C.noT:C.ink}}},
       {v:r.status==='final'&&r.inst?`${instName(r.inst)} ${instOf(r.inst)?.phone||''}${r.asst?`\n(보조 ${instName(r.asst)} ${instOf(r.asst)?.phone||''})`:''}`:'배치 전',span:W-10,align:'center'}].map(x=>({fill:z,...x}))); });
@@ -6557,7 +6568,7 @@ async function csGHwx(g){
   }catch(e){ toast(e&&e.code==='declined'?'저장을 취소했습니다':(e.message||'기안문 파일을 만들지 못했습니다')); }
 }
 function csGXlsx(g){ const names=new Set((g.rc||[]).map(r=>r.name)), F=matchRows().filter(r=>r.status==='final'&&names.has(r.school)).sort((a,b)=>a.school.localeCompare(b.school,'ko')||String(a.start).localeCompare(String(b.start)));
-  const aoa=[['순','학교(기관)','학급','학년','프로그램','운영 대학','시작일','종료일','요일','시간','횟수','차시','주강사','보조강사']].concat(F.map((r,i)=>[i+1,r.school,clsName(r),r.grade||'',prog(r.prog).name,orgShort(orgOfRow(r)),r.start||'',r.end||'',daysTxt(r.days),`${hm(r.ts)}~${hm(r.te)}`,classDays(r).length,rowHrs(r),instName(r.inst)||'',instName(r.asst)||'']));
+  const aoa=[['순','학교(기관)','학급','학년','프로그램','운영 대학','시작일','종료일','요일','시간','횟수','차시','주강사','보조강사']].concat(F.map((r,i)=>[i+1,r.school,clsName(r),rowGrade(r)||'',prog(r.prog).name,orgShort(orgOfRow(r)),r.start||'',r.end||'',daysTxt(r.days),`${hm(r.ts)}~${hm(r.te)}`,classDays(r).length,rowHrs(r),instName(r.inst)||'',instName(r.asst)||'']));
   const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:4},{wch:18},{wch:12},{wch:8},{wch:22},{wch:10},{wch:11},{wch:11},{wch:8},{wch:12},{wch:6},{wch:6},{wch:8},{wch:8}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'운영 확정 목록'); saveXlsx(wb,`${season().name} 운영 확정 목록 (${names.size}곳).xlsx`,{set textContent(v){ toast(v); }}); }
 
@@ -7196,6 +7207,7 @@ document.addEventListener('click',async e=>{
       const rs=liveRows().filter(x=>x.school===S.ui.school&&(x.status==='wait'||x.reopen));
       if(rs.some(isOut)&&!String(c.addr||'').trim()){ toast('기관 주소를 입력해 주세요'); return; }
       const miss=rs.filter(x=>condState(x).unanswered); if(miss.length){ toast(`${miss.map(clsName).join(', ')}: 운영 조건에 모두 답해 주세요`); return; }
+      const grm=rs.filter(x=>{ const GF=fcOf(x).fields.grade; return GF&&GF.on&&GF.req&&!(isOut(x)&&outCx(x))&&gradeMiss(x.sc); }); if(grm.length){ toast(`${grm.map(clsName).join(', ')}: 학년을 골라 주세요${grm.some(x=>x.sc.gk==='mix')?' (혼합학년은 몇 학년~몇 학년을 숫자로)':''}`); return; }
       const spm=rs.filter(x=>{ const SF=fcOf(x).fields.sp; return SF.on&&SF.req&&spMiss(x.sc); }); if(spm.length){ toast(`${spm.map(clsName).join(', ')}: 특수학생 여부${spm.some(x=>x.sc.spYn==='yes')?'와 인원':''}를 입력해 주세요`); return; }
       const noQty=rs.filter(x=>condState(x).list.some(y=>y.c.required&&qtyEmpty(y))); if(noQty.length){ toast(`${noQty.map(clsName).join(', ')}: 「예」를 고른 조건의 제공 수량을 입력해 주세요`); return; }
       { const oe=outSubmitErr(); if(oe){ toast(oe); return; } }
@@ -7564,6 +7576,7 @@ document.addEventListener('input',e=>{
   if(SQ[t.id]){ SQ[t.id](t.value); liveSearch(t.id); return; }
   if(e.isComposing) return;
   if(t.dataset.c&&t.type!=='radio'&&t.type!=='checkbox'){ const c=contactOf(S.ui.school); c[t.dataset.c]=t.value; if(t.dataset.c==='nameFix'){ const v=t.value.replace(/\s+/g,' ').trim(); c.nameFix=v&&v!==S.ui.school?v:''; } delete c.example; save(); return; }
+  if(t.dataset.r&&t.dataset.g&&t.tagName!=='SELECT'){ const x=R(t.dataset.r), v=String(t.value).replace(/\D/g,'').slice(0,1); if(t.value!==v) t.value=v; x.sc[t.dataset.g]=v; gradeApply(x); save(); return; }
   if(t.dataset.r&&t.dataset.f&&t.tagName!=='SELECT'){ R(t.dataset.r).sc[t.dataset.f]=t.value; save(); return; }
   if(t.dataset.treg&&S.ui.tReg){ S.ui.tReg[t.dataset.treg]=t.value; return; }
   if(t.dataset.jf&&t.type!=='radio'&&t.type!=='checkbox'){ (S.ui.jf=S.ui.jf||{})[t.dataset.jf]=t.value; return; }
@@ -7717,6 +7730,7 @@ document.addEventListener('change',e=>{
   else if(r&&t.dataset.ver){ r.verified[t.dataset.ver]=t.checked; }
   else if(r&&t.dataset.sch){ const k=t.dataset.sch; if(k==='start'||k==='end'){ r[k]=t.value; r.edited.date=true; } else { const m=toMin(t.value); if(m!=null){ r[k]=m; r.edited.time=true; } } }
   else if(r&&t.dataset.dow){ const d=+t.dataset.dow; r.days=t.type==='radio'?[d]:t.checked?[...new Set([...r.days,d])].sort():r.days.filter(x=>x!==d); r.edited.days=true; }
+  else if(r&&t.dataset.g){ const k=t.dataset.g; r.sc[k]=k==='gk'?t.value:String(t.value).replace(/\D/g,'').slice(0,1); if(k==='gk'&&t.value!=='mix'){ r.sc.ga=''; r.sc.gb=''; } gradeApply(r); }
   else if(r&&t.dataset.f){ r.sc[t.dataset.f]=t.value; }
   else if(r&&t.dataset.q){ r.sc.req[t.dataset.q]=t.checked; }
   else if(r&&t.dataset.top){ r.label=t.value; }
