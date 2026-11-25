@@ -2247,7 +2247,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.82';
+const LIB_VER='11.83';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4310,7 +4310,7 @@ function viewStats(){
   const dups=Object.entries(dup).filter(([,n])=>n>1).map(([k])=>k.split('|').join(' · '));
   return `<div class="stack st-page">
   <div class="row between st-head"><div class="row" style="gap:8px;align-items:center"><h2 style="margin:0">운영 통계</h2>${VW?`<span class="chip">보기 전용</span>${qt(['충남 1권역 앵커늘봄 운영기관별 통계','연도·운영기관을 눌러 보기','KPI 목표가 있으면 달성률 표시','학생 수 = 확정 인원(없으면 예상 인원)','차시 수 = 총차시(없으면 일별차시 × 운영일)'])}`:qt(['올린 운영현황 엑셀로 집계','연도·운영기관을 골라 보기','KPI 목표를 넣으면 달성률 표시','학급 수 = 엑셀의 학급(행) 수','학생 수 = 확정 인원(없으면 예상 인원)','차시 수 = 총차시(없으면 일별차시 × 운영일)'])}</div>
-   ${VW?(S.stats.at?`<span class="small muted">${esc(S.stats.at)} 기준</span>`:''):`<div class="row" style="gap:6px;align-items:center"><span class="small muted">${stSyncInfo()}</span><button class="btn sm pri" data-act="st-sync" title="구글 운영현황 시트(대학별 탭)의 매칭 현황을 읽어 반영">운영현황 시트 반영</button><button class="btn sm" data-act="st-panel" data-v="data">자료 관리 (${dsList.length})</button><button class="btn sm" data-act="st-panel" data-v="kpi">KPI 목표</button><button class="btn sm" data-act="st-panel" data-v="share">공유 링크${S.statsLink?' (사용 중)':''}</button><button class="btn sm pri" data-act="st-panel" data-v="rep">보고용 파일</button></div>`}</div>
+   ${VW?(S.stats.at?`<span class="small muted">${esc(S.stats.at)} 기준</span>`:''):`<div class="row" style="gap:6px;align-items:center">${S.adminOrg?'':`<span class="small muted">${stSyncInfo()}</span><button class="btn sm pri" data-act="st-sync" title="구글 운영현황 시트(대학별 탭)의 매칭 현황을 읽어 반영">운영현황 시트 반영</button>`}<button class="btn sm" data-act="st-panel" data-v="data">자료 관리 (${dsList.length})</button><button class="btn sm" data-act="st-panel" data-v="kpi">KPI 목표</button><button class="btn sm" data-act="st-panel" data-v="share">공유 링크${S.statsLink?' (사용 중)':''}</button><button class="btn sm pri" data-act="st-panel" data-v="rep">보고용 파일</button></div>`}</div>
   ${VW&&S.ui.stBack?`<div class="row"><button class="btn sm" data-act="st-back">← 관리자 화면으로 (체험판)</button></div>`:''}
   ${VW?'':u.stPanel==='data'?stDataPanel():u.stPanel==='kpi'?stKpiPanel(years,orgs):u.stPanel==='rep'?stRepPanel(sel,Y,O):u.stPanel==='share'?stSharePanel():''}
   ${!all.length?VW?`<div class="panel st-empty"><b>아직 공개된 통계가 없습니다.</b></div>`:`<div class="panel st-empty"><b>아직 통계 자료가 없습니다.</b><button class="btn pri sm" data-act="st-panel" data-v="data">자료 업로드</button></div>`:`
@@ -4373,9 +4373,10 @@ const stDsList=()=>((S.stats||{}).ds||[]).filter(d=>d.id!=='live'&&!stIsMc(d));
    타대학 계정도 누를 수 있음(시트 목록은 호서대가 반영할 때 S.kpi.opsSheets에 저장) */
 const stSyncDs = () => ((S.stats||{}).ds||[]).filter(d=>String(d.id).startsWith('gs_'));
 function stSyncInfo(){ const L=stSyncDs(); if(!L.length) return ''; const d=L.slice().sort((a,b)=>String(b.at).localeCompare(String(a.at)))[0], by=(String(d.name).match(/ · ([^·]+)$/)||[])[1]||''; return `마지막 반영 ${esc(String(d.at||'').slice(5,16).replace('-','.').replace('T',' '))}${by?' · '+esc(by):''}`; }
-const stSyncBar = () => S.ui.role==='stats'?'':`<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm pri" data-act="st-sync">운영현황 시트 반영</button><span class="small muted">${stSyncInfo()||'아직 반영 전'}</span>${qt(['구글 운영현황 시트(대학별 탭)의 매칭 현황을 읽어 통계·운영 점검에 반영','시트를 고친 뒤 직접 누르거나, 현황을 보기 직전에 누르기','같은 연도·시기의 기존 통계 자료는 시트 내용으로 바뀜','대학에서 추가한 열은 무시하고 필요한 항목만 읽음'])}</div>`;
+const stSyncBar = () => S.ui.role==='stats'||S.adminOrg?'':`<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm pri" data-act="st-sync">운영현황 시트 반영</button><span class="small muted">${stSyncInfo()||'아직 반영 전'}</span>${qt(['구글 운영현황 시트(대학별 탭)의 매칭 현황을 읽어 통계·운영 점검에 반영','시트를 고친 뒤 직접 누르거나, 현황을 보기 직전에 누르기','같은 연도·시기의 기존 통계 자료는 시트 내용으로 바뀜','대학에서 추가한 열은 무시하고 필요한 항목만 읽음'])}</div>`;
 function stSheetSync(btn){
-  const org=!!S.adminOrg, saved=(S.kpi||{}).opsSheets||[];
+  if(S.adminOrg){ toast('운영현황 시트 반영은 호서대 관리자만 할 수 있습니다'); return Promise.resolve(); }
+  const org=false, saved=(S.kpi||{}).opsSheets||[];
   const getList=org?Promise.resolve(saved):docsOpsList().then(L=>{ L=(L||[]).map(o=>({id:o.id,label:o.label||''})); if(L.length&&JSON.stringify(L)!==JSON.stringify(saved)){ S.kpi={...(S.kpi||{}),opsSheets:L}; save(); } return L; }).catch(e=>{ if(saved.length) return saved; throw e; });
   const lb=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent='시트 읽는 중…'; }
   return getList.then(L=>{ if(!L.length) throw new Error(org?'운영현황 시트 목록이 아직 없습니다. 호서대에서 한 번 반영한 뒤 쓸 수 있습니다':'강사서류 「운영현황」에 등록된 구글 시트가 없습니다');
