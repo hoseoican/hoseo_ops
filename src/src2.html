@@ -2158,7 +2158,7 @@ const orgTabsCfg = () => S.orgTabs||ORG_TAB_INIT();
 function orgTabOk(k,org){ org=org||S.adminOrg; if(!org) return true; const c=orgTabsCfg(), o=(c.orgs||{})[org]||{}; if(o[k]!=null) return !!o[k]; const d=(c.def||{})[k]; return d!=null?!!d:!!ORG_TAB_DEF[k]; }
 const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&S.adminOrg&&!orgTabOk(x[0]))&&!(role==='admin'&&x[0]==='stats'&&curBiz()!=='anchor')&&!(role==='admin'&&x[0]==='docs'&&(!window.ON_PAGES||S.adminOrg))).map(x=>role==='teacher'&&tRoleA()&&x[0]==='teacher'?['teacher','보조강사 모집']:x);
 function route(){ const h=location.hash.slice(1), ok=routesOf(S.ui.role).map(x=>x[0]); return ok.includes(h)?h:homeView(S.ui.role); }
-function homeView(role){ const ok=routesOf(role).map(x=>x[0]); return ok.includes('board')?'board':ok[0]||ROUTES[role][0][0]; }
+function homeView(role){ const ok=routesOf(role).map(x=>x[0]); if(role==='admin'&&S.adminOrg&&ok.includes('cons')) return 'cons'; return ok.includes('board')?'board':ok[0]||ROUTES[role][0][0]; }
 function render(){
   if(S&&S.ui&&S.ui.role!=='admin'&&typeof persist!=='undefined'){ try{ fixPhonesAll(); }catch(e){} }
   const cur=route();
@@ -2247,7 +2247,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.86';
+const LIB_VER='11.87';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -3918,6 +3918,10 @@ const SET_TABS=[['cycle','차수 · 카톡방'],['univ','대학별 관리'],['pr
 const SET_GROUPS=[['운영 설정',['cycle','hol']],['참여 대학',['univ','ext']],['프로그램',['prog']],['강사',['inst','eval']],['담당자 · 계정',['ops','form','acc','links']]];
 const LM_IC={univ:'<path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/>',orgtabs:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',cycle:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',hol:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',orgs:'<path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/>',ext:'<path d="M4 7h16M4 12h16M4 17h10"/>',prog:'<path d="M4 19V5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2zM8 7h6"/>',inst:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',eval:'<path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/>',ops:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>',form:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',acc:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/>',links:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',all:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>'};
 const lmIcon = k => LM_IC[k]?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${LM_IC[k]}</svg>`:'';
+/* 대학별 접속 링크(운영자 링크 + &uj=토큰): 담당자가 처음 한 번 직접 등록 → 이후 로그인. 서버 adminUnivJoin */
+let univJoinCall = (org,regen) => { const m=S.univJoin=S.univJoin||{}; if(org&&(regen||!m[org])) m[org]=Math.random().toString(36).slice(2,12); return Promise.resolve(m); };
+const univJoinUrl = o => { const t=(S.univJoin||{})[o]; return t&&S.adminLinkUrl?`${S.adminLinkUrl}&uj=${t}`:''; };
+function univJoinText(){ const U=ORGS.filter(o=>o!=='미지정'&&o!==MY_ORG); return U.map(o=>`${o}: ${univJoinUrl(o)||'(링크 없음)'}`).join('\n'); }
 /* 대학별 기본 연락처: 관리자 계정의 내선번호·오픈채팅이 비어 있으면 이 값으로 채움(이미 넣은 값은 그대로). 새 관리자 칸에도 미리 넣음 */
 const UNIV_CONTACT={'호서대학교':{phone:'041-423-2429',chat:'https:/'+'/open.kakao.com/o/sE2yXvfh'},'상명대학교':{phone:'041-623-0047',chat:'https:/'+'/open.kakao.com/o/sOjKDfEi'},'유원대학교':{phone:'041-536-5845',chat:'https:/'+'/open.kakao.com/o/gB1p3lGi'},'단국대학교':{phone:'010-3193-2839',chat:'https:/'+'/open.kakao.com/o/sBcPKxNi'},'연암대학교':{phone:'041-580-5624',chat:'https:/'+'/open.kakao.com/o/gFIXJfEi'}};
 const accOrgOf = a => a.org || (a.biz==='anchor'?MY_ORG:'');
@@ -3929,13 +3933,20 @@ function accFillDefaults(){ if(S.ui.accFilling||S.adminOrg||S.isMaster===false) 
 function univAdminPanel(){ const U=ORGS.filter(o=>o!=='미지정'&&o!==MY_ORG), on=activeOrgs(), c=orgTabsCfg(), T=ROUTES.admin.map(([k,l])=>[k,l.replace(/<[^>]+>/g,'').replace(/^\d+/,'').trim()]);
   let o=S.ui.uaOrg; if(!U.includes(o)) o=U[0]; if(!o) return '<div class="panel muted small">참여 대학이 없습니다.</div>';
   if(!S.ui.accFilled&&!S.ui.accFilling&&accFillTodo().length) setTimeout(accFillDefaults,0);
+  if(!S.univJoin&&!S.ui.ujLoading){ S.ui.ujLoading=1; univJoinCall('',false).then(m=>{ S.univJoin=m||{}; }).catch(()=>{ S.univJoin={}; }).finally(()=>{ S.ui.ujLoading=0; render(); }); }
+  const ju=univJoinUrl(o), allLinks=U.every(x=>univJoinUrl(x));
   const acc=x=>(S.admins||[]).filter(a=>a.org===x), tabsOn=x=>T.filter(([k])=>orgTabOk(k,x)), rows=x=>S.rows.filter(r=>orgOfRow(r)===x&&r.status!=='cancel').length, lk=x=>((S.univLinks||[]).find(y=>y.org===x)||{}).link||'';
   const dv=k=>(c.def||{})[k]!=null?!!c.def[k]:!!ORG_TAB_DEF[k], st=(k)=>{ const v=((c.orgs||{})[o]||{})[k]; return v==null?'':v?'on':'off'; };
   const card=x=>`<button type="button" class="ua-card ${x===o?'on':''}" data-act="uaorg" data-v="${esc(x)}"><b>${esc(orgShort(x))}</b><span class="chip ${on.includes(x)?'ok':''}">${on.includes(x)?'매칭 참여':'매칭 미참여'}</span><span class="small muted">관리자 ${acc(x).length}명 · 공개 탭 ${tabsOn(x).length}개${rows(x)?` · 학급 ${rows(x)}`:''}</span></button>`;
   return `<div class="stack">
+   <div class="panel stack" style="gap:6px"><div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><b>대학 접속 링크</b><span class="small muted">담당자가 링크로 들어와 처음 한 번 자기 정보·비밀번호를 등록하고, 이후 같은 링크에서 로그인합니다. 등록한 정보는 아래 관리자 계정에 바로 보입니다.</span><span style="flex:1"></span>${S.adminLinkUrl?`<button class="btn sm" data-act="ujall">${allLinks?'':'없는 링크 만들고 '}전체 링크 복사 (공문용)</button>`:''}</div>
+    ${S.adminLinkUrl?'':'<div class="small muted">웹앱 주소가 있어야 링크를 만들 수 있습니다(실제 화면에서).</div>'}</div>
    <div class="ua-cards">${U.map(card).join('')}</div>
    <div class="panel stack" style="gap:14px"><div class="row" style="gap:10px;align-items:center"><h3 style="margin:0">${esc(o)}</h3><label class="row small orgchk ${on.includes(o)?'on':''}" style="gap:6px;border:1px solid var(--line);border-radius:8px;padding:5px 10px"><input type="checkbox" data-org="${esc(o)}" ${on.includes(o)?'checked':''}> 매칭 참여 ${qt(['학교 확인·강사 모집·배치를 이 시스템에서 함께 진행','체크하면 학교 확인 화면·접속 신청·강사 수업 신청에 이 대학 학급도 나옴','통계·운영 점검은 체크와 상관없이 씀'])}</label></div>
-    <section class="stack" style="gap:6px"><b>관리자 계정</b><div class="small muted">이 대학 관리자는 「${esc(orgShort(o))}만」 보고 관리합니다. 접속 링크와 비밀번호를 담당자에게 따로 알려 주세요.</div>${accountsPanel(o)}</section>
+    <section class="stack" style="gap:6px"><b>접속 링크</b>
+     <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">${ju?`<span class="mono small" style="word-break:break-all">${esc(ju)}</span><button class="btn sm pri" data-act="copytext" data-t="${esc(ju)}">링크 복사</button><button class="btn sm" data-act="ujmake" data-o="${esc(o)}" data-regen="1" title="이전 링크는 더 이상 열리지 않습니다(이미 등록한 계정은 새 링크에서 로그인)">새 링크</button>`:`<button class="btn sm pri" data-act="ujmake" data-o="${esc(o)}" ${S.adminLinkUrl?'':'disabled'}>링크 만들기</button>`}</div>
+     <div class="small muted">이 링크를 받은 담당자가 직접 등록합니다. 링크가 바깥에 퍼졌으면 「새 링크」로 바꾸세요.</div></section>
+    <section class="stack" style="gap:6px"><b>관리자 계정</b><div class="small muted">이 대학 관리자는 「${esc(orgShort(o))}만」 보고 관리합니다. 보통은 위 링크로 담당자가 직접 등록하고, 필요하면 아래에서 직접 만들 수도 있습니다.</div>${accountsPanel(o)}</section>
     <section class="stack" style="gap:6px"><div class="row" style="gap:6px;align-items:center"><b>공개 탭</b><span class="small muted">이 대학 관리자 화면에 보일 메뉴 · 「기본」은 아래 「모든 대학 기본값」을 따름</span></div>
      <div class="ua-tabs">${T.map(([k,l])=>{ const v=st(k), eff=orgTabOk(k,o); return `<label class="ua-tab ${eff?'on':''}"><span>${esc(l)}</span><select data-oto="${esc(o)}" data-otk="${k}"><option value="" ${v===''?'selected':''}>기본 (${dv(k)?'공개':'비공개'})</option><option value="on" ${v==='on'?'selected':''}>공개</option><option value="off" ${v==='off'?'selected':''}>비공개</option></select></label>`; }).join('')}</div>
      <div class="small muted">9 강사서류는 공개로 바꿔도 타대학 화면에는 열리지 않습니다(개인정보). 비공개 탭의 자료는 서버가 그 대학에 보내지 않습니다.</div></section>
@@ -3973,7 +3984,7 @@ const accLinkBtn = a => { const L=accLink(a); return L?`<button class="btn sm pr
 function accountsPanel(fo){ const L=(S.admins||[]).filter(a=>fo?a.org===fo:!a.org), B=bizListC(), u=S.ui, nOrg=(S.admins||[]).filter(a=>a.org).length;
   const chatA=c=>c?`<a href="${esc(c)}" target="_blank" rel="noopener">오픈채팅 ↗</a>`:'<span class="muted">-</span>';
   const row=a=>u.accInfo===a.id?`<tr><td>${esc(bizOf(a.biz).name)}</td><td><b>${esc(a.name)}</b></td><td><input id="acc-epos" value="${esc(a.pos||'')}" placeholder="예: 팀장" style="width:90px"></td><td><input id="acc-ephone" value="${esc(a.phone||'')}" placeholder="041-000-0000" style="width:130px"></td><td><input id="acc-echat" value="${esc(a.chat||'')}" placeholder="open.kakao.com/o/..." style="width:100%"></td><td colspan="2" class="nowrap"><label class="small"><input type="checkbox" id="acc-eops"> 이 사업 운영 담당자 연락처로도</label> <button class="btn sm pri" data-act="accinfook" data-id="${a.id}">저장</button> <button class="btn sm" data-act="accinfo" data-id="">취소</button></td></tr>`
-   :`<tr><td>${esc(bizOf(a.biz).name)} <span class="muted small">${esc(bizOf(a.biz).center||'')}</span>${a.org?` ${uTag(a.org,orgShort(a.org)+'만')}`:''}</td><td><b>${esc(a.name)}</b></td><td class="small">${esc(a.pos||'-')}</td><td class="mono small">${esc(a.phone||'-')}</td><td class="small">${chatA(a.chat)}</td><td class="small muted">${esc(a.at||'')}</td><td class="nowrap">${u.accPw===a.id?`<input type="password" id="acc-pw2" placeholder="새 비밀번호 8자 이상" style="width:160px"> <button class="btn sm pri" data-act="accpwok" data-id="${a.id}">바꾸기</button> <button class="btn sm" data-act="accpw" data-id="">취소</button>`:`${accLinkBtn(a)} <button class="btn sm" data-act="accinfo" data-id="${a.id}">정보 수정</button> <button class="btn sm" data-act="accpw" data-id="${a.id}">비밀번호</button> ${u.accDel===a.id?`<button class="btn sm danger" data-act="accdelok" data-id="${a.id}">삭제 확인</button>`:`<button class="btn sm" data-act="accdel" data-id="${a.id}">삭제</button>`}`}</td></tr>`;
+   :`<tr><td>${esc(bizOf(a.biz).name)} <span class="muted small">${esc(bizOf(a.biz).center||'')}</span>${a.org?` ${uTag(a.org,orgShort(a.org)+'만')}`:''}</td><td><b>${esc(a.name)}</b>${a.via==='link'?' <span class="chip">링크로 등록</span>':''}${a.email?`<div class="small muted">${esc(a.email)}</div>`:''}</td><td class="small">${esc(a.pos||'-')}</td><td class="mono small">${esc(a.phone||'-')}</td><td class="small">${chatA(a.chat)}</td><td class="small muted">${esc(a.at||'')}</td><td class="nowrap">${u.accPw===a.id?`<input type="password" id="acc-pw2" placeholder="새 비밀번호 8자 이상" style="width:160px"> <button class="btn sm pri" data-act="accpwok" data-id="${a.id}">바꾸기</button> <button class="btn sm" data-act="accpw" data-id="">취소</button>`:`${accLinkBtn(a)} <button class="btn sm" data-act="accinfo" data-id="${a.id}">정보 수정</button> <button class="btn sm" data-act="accpw" data-id="${a.id}">비밀번호</button> ${u.accDel===a.id?`<button class="btn sm danger" data-act="accdelok" data-id="${a.id}">삭제 확인</button>`:`<button class="btn sm" data-act="accdel" data-id="${a.id}">삭제</button>`}`}</td></tr>`;
   if(fo) return `<div class="stack" style="gap:8px"><div class="tw"><table><thead><tr><th>사업 · 센터</th><th>관리자 이름</th><th>직위</th><th>내선번호</th><th>오픈채팅</th><th>만든 날</th><th></th></tr></thead><tbody>
     ${L.length?L.map(row).join(''):`<tr><td colspan="7" class="muted small">${esc(orgShort(fo))} 관리자 계정이 아직 없습니다.</td></tr>`}</tbody></table></div>
    <div class="stack" style="gap:6px;border-top:1px dashed var(--line);padding-top:10px"><b class="small">새 관리자 추가 <span class="muted" style="font-weight:400">— ${esc(orgShort(fo))} 담당자 정보를 넣으세요. * 는 꼭 넣어야 합니다</span></b>
@@ -7064,6 +7075,9 @@ document.addEventListener('click',async e=>{
     case 'pcapply': { const x=pcApply(); toast(`프로그램 ${x.add}개 추가 · ${x.up}개 바꿈${x.del?` · ${x.del}개 지움`:''}`); break; }
     case 'pcno': S.ui.pcPend=null; S.ui.pcDrop=false; break;
     case 'uaorg': S.ui.uaOrg=el.dataset.v; break;
+    case 'ujmake': univJoinCall(el.dataset.o,!!el.dataset.regen).then(m=>{ S.univJoin=m||{}; toast(el.dataset.regen?'새 링크를 만들었습니다. 이전 링크는 열리지 않습니다':'접속 링크를 만들었습니다'); render(); }).catch(e=>toast(e&&e.message||String(e))); return;
+    case 'ujall': { const U=ORGS.filter(o=>o!=='미지정'&&o!==MY_ORG); let ch=Promise.resolve(); U.forEach(o=>{ if(!univJoinUrl(o)) ch=ch.then(()=>univJoinCall(o,false)).then(m=>{ S.univJoin=m||{}; }); });
+      ch.then(()=>{ const t=univJoinText(); const done=()=>toast('대학별 접속 링크를 복사했습니다'); (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(done).catch(()=>{ prompt('복사해 주세요',t); }); render(); }).catch(e=>toast(e&&e.message||String(e))); return; }
     case 'settab': if(S.ui.setTab!==el.dataset.v) subNavPush({setTab:el.dataset.v}); S.ui.setTab=el.dataset.v; try{ localStorage.setItem('anchorSetTab',el.dataset.v); }catch(e){} window.scrollTo({top:0}); break;
     case 'iprof': S.ui.iProf=S.ui.iProf===el.dataset.t?'':el.dataset.t; S.ui.iEdit=''; break;
     case 'iproftab': S.ui.iProfTab=el.dataset.v; break;

@@ -204,6 +204,8 @@ function adminStart() {
 }
 function adminAskLogin(after) {
   if (document.getElementById('admlogin')) return;
+  const UJ = document.body.dataset.uj || '';
+  if (UJ) { run('univGate', ADMIN_LINK, UJ).then(g => showUnivLogin(g, UJ, after)).catch(e => fatal(e)); return; }
   /* 로그인 화면은 지난번 정보로 바로 띄우고, 서버 확인은 뒤에서 (달라졌으면 다시 그림) */
   let cg = null; try { cg = JSON.parse(localStorage.getItem('anc_gate') || 'null'); } catch (e) {}
   const show = g => showAdminLogin(g.pwSet, after, g.biz || []);
@@ -216,6 +218,47 @@ function adminAskLogin(after) {
     const pw = el.querySelector('#adm-pw'); if (pw && pw.value) return;
     el.remove(); show(g);
   }).catch(e => { if (!document.getElementById('admlogin')) fatal(e); });
+}
+/* 대학별 접속 링크: 처음 한 번 담당자 정보·비밀번호 등록 → 이후 그 정보로 로그인 */
+function showUnivLogin(g, UJ, after) {
+  const box = document.createElement('div'); box.id = 'admlogin'; box.className = 'admlogin';
+  let mode = g.admins.length ? 'in' : 'reg';
+  const ok = r => { ADMIN_KEY = r.key; ADM_PRELOAD = r.data || null; try { sessionStorage.setItem(ADM_SS, r.key); } catch (e) {} try { if (!location.hash) location.hash = 'cons'; } catch (e) {} box.remove(); if (after) after(); };
+  const draw = () => {
+    const short = String(g.org).replace(/학교$/, '');
+    box.innerHTML = `<form class="admcard stack" autocomplete="on">
+    <span class="logo-h" role="img" aria-label="호서대학교"></span>
+    <div><h2>${esc(g.org)} 운영 점검</h2><div class="small muted" style="margin-top:4px">충남 1권역 앵커늘봄 컨소시엄 · ${esc(short)} 담당자 전용 접속</div></div>
+    ${mode === 'in' ? `<label class="f">담당자<select id="uj-name">${g.admins.map(n => `<option>${esc(n)}</option>`).join('')}</select></label>
+     <label class="f">비밀번호<input type="password" id="uj-pw" autocomplete="current-password" required></label>
+     <button class="btn pri" type="submit">들어가기</button>
+     <button class="btn" type="button" id="uj-sw">처음이신가요? 담당자 등록</button>`
+    : `<div class="notice small" style="margin:0">처음 한 번만 담당자 정보를 등록하면 다음부터는 이 링크에서 이름과 비밀번호로 들어옵니다. 등록한 정보는 호서대(총괄)에서 담당자 연락처로 봅니다.</div>
+     <div class="fgrid" style="grid-template-columns:1fr 1fr;gap:8px"><label class="f">이름 *<input id="uj-name" autocomplete="name" required></label><label class="f">직위<input id="uj-pos" placeholder="예: 연구원" autocomplete="organization-title"></label>
+     <label class="f">연락처 *<input id="uj-phone" inputmode="tel" placeholder="041-000-0000" autocomplete="tel" required></label><label class="f">이메일<input id="uj-email" type="email" inputmode="email" autocomplete="email"></label></div>
+     <label class="f">오픈채팅 링크 (있으면)<input id="uj-chat" inputmode="url" placeholder="강사·학교 문의용 https://open.kakao.com/o/…"></label>
+     <div class="fgrid" style="grid-template-columns:1fr 1fr;gap:8px"><label class="f">비밀번호 *<input type="password" id="uj-pw" autocomplete="new-password" placeholder="8자 이상" required></label><label class="f">비밀번호 한 번 더<input type="password" id="uj-pw2" autocomplete="new-password" required></label></div>
+     <button class="btn pri" type="submit">등록하고 들어가기</button>${g.admins.length ? '<button class="btn" type="button" id="uj-sw">이미 등록했어요 · 로그인</button>' : ''}`}
+    <div class="small lv-crit" id="uj-msg" role="alert"></div>
+    <div class="small muted">비밀번호는 서버에만 보관됩니다. 잊으면 호서대에 초기화를 요청해 주세요.</div></form>`;
+    const q = s => box.querySelector(s), msg = q('#uj-msg'), btn = q('button[type=submit]');
+    if (q('#uj-sw')) q('#uj-sw').onclick = () => { mode = mode === 'in' ? 'reg' : 'in'; draw(); };
+    setTimeout(() => { const f = q(mode === 'in' ? '#uj-pw' : '#uj-name'); if (f) f.focus(); }, 50);
+    q('form').addEventListener('submit', ev => { ev.preventDefault(); msg.textContent = '';
+      const v = id => ((q(id) || {}).value || '').trim();
+      if (mode === 'reg') {
+        if (q('#uj-pw').value.length < 8) { msg.textContent = '비밀번호는 8자 이상으로 정해 주세요.'; return; }
+        if (q('#uj-pw').value !== q('#uj-pw2').value) { msg.textContent = '두 비밀번호가 다릅니다.'; return; }
+        if (v('#uj-chat') && !/^https?:\/\//.test(v('#uj-chat'))) { msg.textContent = '오픈채팅 링크는 https 주소로 넣어 주세요.'; return; }
+      }
+      btn.disabled = true; btn.textContent = '확인 중…';
+      const p = mode === 'reg' ? run('univRegister', ADMIN_LINK, UJ, { name: v('#uj-name'), pos: v('#uj-pos'), phone: v('#uj-phone'), email: v('#uj-email'), chat: v('#uj-chat'), pw: q('#uj-pw').value })
+        : run('adminLoginLoad', ADMIN_LINK, q('#uj-pw').value, 'anchor', v('#uj-name'));
+      p.then(ok).catch(e => { btn.disabled = false; btn.textContent = mode === 'reg' ? '등록하고 들어가기' : '들어가기'; msg.textContent = errMsg(e); });
+    });
+  };
+  ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation()));
+  document.body.appendChild(box); draw();
 }
 function showAdminLogin(pwSet, after, bizL) {
   bizL = bizL || [];
@@ -235,6 +278,7 @@ function showAdminLogin(pwSet, after, bizL) {
     ${master ? '' : (b && b.admins.length ? `<label class="f">관리자<select id="adm-name">${b.admins.map(n => `<option ${n === AN ? 'selected' : ''}>${n}</option>`).join('')}</select></label>` : '<div class="notice small">이 사업의 관리자 계정이 아직 없습니다. 총괄 관리자가 「기준정보 → 관리자 계정」에서 만들어 주세요.</div>')}
     <input type="text" name="username" value="${master ? '총괄 관리자' : (b ? b.center : '')}" autocomplete="username" hidden>
     <label class="f">비밀번호<input type="password" id="adm-pw" autocomplete="${master && !pwSet ? 'new-password' : 'current-password'}" required></label>
+    ${master ? '' : '<div class="notice small" style="margin:0">처음 접속하시면 비밀번호는 <b>담당자 연락처 뒷번호 4자리</b>입니다. 들어간 뒤 새 비밀번호로 바꿔 주세요.</div>'}
     ${master && !pwSet ? '<div class="small muted">처음 접속입니다. 총괄 관리자 비밀번호(8자 이상)를 정해 주세요.</div><label class="f">비밀번호 한 번 더<input type="password" id="adm-pw2" autocomplete="new-password" required></label>' : ''}
     <button class="btn pri" type="submit" ${!master && !(b && b.admins.length) ? 'disabled' : ''}>${master && !pwSet ? '비밀번호 정하고 들어가기' : '들어가기'}</button>
     <div class="small lv-crit" id="adm-msg" role="alert"></div>
@@ -250,6 +294,7 @@ function showAdminLogin(pwSet, after, bizL) {
       /* 로그인과 자료 불러오기를 한 번에 (서버가 예전 버전이면 따로) */
       run('adminLoginLoad', ADMIN_LINK, pw.value, master ? '' : who, nm).catch(e => /알 수 없는 요청/.test(errMsg(e)) ? run('adminLogin', ADMIN_LINK, pw.value, master ? '' : who, nm) : Promise.reject(e)).then(r => {
         ADMIN_KEY = r.key; ADM_PRELOAD = r.data || null; try { sessionStorage.setItem(ADM_SS, r.key); } catch (e) {}
+        if (r.mustPw) { pwChangeForm(box, pw.value, true, () => { box.remove(); if (after) after(); }); return; }
         box.remove(); if (after) after();
       }).catch(e => { btn.disabled = false; btn.textContent = '들어가기'; msg.textContent = errMsg(e); pw.select(); });
     });
@@ -257,9 +302,34 @@ function showAdminLogin(pwSet, after, bizL) {
   ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation()));
   document.body.appendChild(box); draw();
 }
+/* 관리자 비밀번호 직접 바꾸기: 최초 비밀번호(연락처 뒤 4자리)로 들어오면 꼭 바꾸게 함 · 위쪽 「비밀번호 변경」에서도 */
+function pwChangeForm(box, oldPw, must, done) {
+  box.innerHTML = `<form class="admcard stack" autocomplete="off">
+    <span class="logo-h" role="img" aria-label="호서대학교"></span>
+    <div><h2>${must ? '새 비밀번호 정하기' : '비밀번호 변경'}</h2><div class="small muted" style="margin-top:4px">${must ? '처음 접속하셨습니다. 연락처 뒤 4자리로 된 최초 비밀번호를 앞으로 쓸 비밀번호로 바꿔 주세요.' : '지금 비밀번호와 새 비밀번호를 넣어 주세요.'}</div></div>
+    ${oldPw ? '' : '<label class="f">지금 비밀번호<input type="password" id="pc-old" autocomplete="current-password" required></label>'}
+    <label class="f">새 비밀번호 <span class="small muted">8자 이상</span><input type="password" id="pc-new" autocomplete="new-password" required></label>
+    <label class="f">새 비밀번호 한 번 더<input type="password" id="pc-new2" autocomplete="new-password" required></label>
+    <button class="btn pri" type="submit">비밀번호 바꾸기</button>${must ? '' : '<button class="btn" type="button" id="pc-x">닫기</button>'}
+    <div class="small lv-crit" id="pc-msg" role="alert"></div>
+    <div class="small muted">비밀번호는 서버에만 보관되며, 총괄 관리자도 볼 수 없습니다. 잊으면 호서대에 초기화를 요청해 주세요.</div></form>`;
+  const q = s => box.querySelector(s), msg = q('#pc-msg');
+  setTimeout(() => (q('#pc-old') || q('#pc-new')).focus(), 50);
+  if (q('#pc-x')) q('#pc-x').onclick = () => box.remove();
+  q('form').addEventListener('submit', ev => { ev.preventDefault(); msg.textContent = '';
+    const o = oldPw || q('#pc-old').value, n1 = q('#pc-new').value, n2 = q('#pc-new2').value;
+    if (n1.length < 8) { msg.textContent = '새 비밀번호는 8자 이상으로 정해 주세요.'; return; }
+    if (n1 !== n2) { msg.textContent = '두 비밀번호가 다릅니다.'; return; }
+    if (n1 === o) { msg.textContent = '지금과 다른 비밀번호로 정해 주세요.'; return; }
+    const b = q('button[type=submit]'); b.disabled = true; b.textContent = '바꾸는 중…';
+    run('adminPwSelf', ADMIN_KEY, o, n1).then(() => { toast('비밀번호를 바꿨습니다. 다음부터 새 비밀번호로 들어오세요'); done(); })
+      .catch(e => { b.disabled = false; b.textContent = '비밀번호 바꾸기'; msg.textContent = errMsg(e); });
+  });
+}
+function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.86';
+const APP_VER = '11.87';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -283,8 +353,9 @@ function afterRender() {
   if (w.dataset.who === who) return;
   w.dataset.who = who;
   const lv = typeof LIB_VER !== 'undefined' ? LIB_VER : '';
-  w.innerHTML = `<span class="muted">${esc(who)}</span><span class="small" style="color:${lv === APP_VER ? 'var(--muted)' : '#c0392b'}" title="${lv === APP_VER ? '화면 코드(App·Lib)가 같은 버전입니다' : 'Lib.html이 예전 버전입니다. Lib.html을 바꾸고 새 버전으로 배포해 주세요'}">${lv === APP_VER ? '버전 ' + APP_VER + (S && S.serverVer ? ' · 서버 ' + esc(S.serverVer) : '') : 'Lib 예전 버전 · 교체 필요'}</span><button class="btn sm" id="admOut" type="button">로그아웃</button>`;
+  w.innerHTML = `<span class="muted">${esc(who)}</span><span class="small" style="color:${lv === APP_VER ? 'var(--muted)' : '#c0392b'}" title="${lv === APP_VER ? '화면 코드(App·Lib)가 같은 버전입니다' : 'Lib.html이 예전 버전입니다. Lib.html을 바꾸고 새 버전으로 배포해 주세요'}">${lv === APP_VER ? '버전 ' + APP_VER + (S && S.serverVer ? ' · 서버 ' + esc(S.serverVer) : '') : 'Lib 예전 버전 · 교체 필요'}</span>${S.isMaster ? '' : '<button class="btn sm" id="admPw" type="button">비밀번호 변경</button>'}<button class="btn sm" id="admOut" type="button">로그아웃</button>`;
   w.querySelector('#admOut').addEventListener('click', ev => { ev.stopPropagation(); adminLogoutGo(); });
+  const pb = w.querySelector('#admPw'); if (pb) pb.addEventListener('click', ev => { ev.stopPropagation(); pwChangeOpen(); });
 }
 function adminLogoutGo() {
   let n = 0;
@@ -711,6 +782,7 @@ if (MODE === 'admin') bizGo = function (b) {
   };
   go();
 };
+if (MODE === 'admin') univJoinCall = function (org, regen) { return run('adminUnivJoin', ADMIN_KEY, org || '', !!regen); };
 if (MODE === 'admin') adminAcc = function (op, d) { return run('adminAccounts', ADMIN_KEY, op, d).then(L => { S.admins = L || []; render(); return L; }).catch(e => { toast(errMsg(e)); throw e; }); };
 /* 운영 화면 시기 바꾸기: 저장할 것이 있으면 먼저 저장한 뒤 서버에서 그 시기 자료를 불러옴 */
 if (MODE === 'admin') seasonGo = function (k, after) {
