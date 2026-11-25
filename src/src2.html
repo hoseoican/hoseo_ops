@@ -1524,7 +1524,7 @@ function fcSet(D,path,val){ const [a,b,c]=path.split('.'), C=D.cfg;
   else if(a==='kakao'){ C.kakao=val; } }
 function outWords(h){ const P={'가':'이','는':'은','를':'을','와':'과','로':'으로'}; return String(h).replace(/(?<![가-힣])학교(?!밖)(가|는|를|와|로)?/g,(m,x)=>'기관'+(x?P[x]:'')); }
 function scopeBar(inl){ const nS=S.rows.filter(r=>mine(r)&&!isOut(r)).length, nO=S.rows.filter(r=>mine(r)&&isOut(r)).length, o=scopeOut();
-  return `<${inl?'span':'div'} class="scopebar${inl?' in':''}" role="tablist" aria-label="관리 대상">${inl?'<span class="sb-gap"></span><span class="sb-l">대상</span>':''}<button class="scp ${o?'':'on'}" role="tab" aria-selected="${!o}" data-act="scope" data-v="sch">학교 <em>${nS}</em></button><button class="scp ${o?'on':''}" role="tab" aria-selected="${o}" data-act="scope" data-v="out">학교밖 (돌봄센터 등) <em>${nO}</em></button>${qt(['학교 운영 건과 학교밖 운영 건을 나눠 관리','목록 업로드 · 접속 승인 · 검토·매칭 · 내보내기가 고른 쪽만 다룸','강사 일정 겹침은 양쪽을 함께 확인','강사 신청 기간은 양쪽 공통'],'r')}</${inl?'span':'div'}>`; }
+  return `<${inl?'span':'div'} class="scopebar${inl?' in':''}" role="tablist" aria-label="관리 대상">${inl?'<span class="sb-gap"></span><span class="sb-l">대상</span>':''}<button class="scp ${o?'':'on'}" role="tab" aria-selected="${!o}" data-act="scope" data-v="sch">학교 <em>${nS}</em></button><button class="scp ${o?'on':''}" role="tab" aria-selected="${o}" data-act="scope" data-v="out">학교밖 (돌봄센터 등) <em>${nO}</em></button>${qt(['학교 운영 건과 학교밖 운영 건을 나눠 관리','운영 현황 · 접속 승인 · 검토·매칭 · 내보내기가 고른 쪽만 다룸','강사 일정 겹침은 양쪽을 함께 확인','강사 신청 기간은 양쪽 공통'],'r')}</${inl?'span':'div'}>`; }
 const myRows = () => S.rows.filter(r=>mine(r)&&inScope(r));
 /* 운영 대학: 타대학 업로드 → 목록 파일 「운영기관」(r.org) → 프로그램 담당(개발) 대학. 프로그램 카드의 담당 대학은 개발 대학일 뿐 */
 const orgOfRow = r => r.extOrg||r.org||(prog(r.origProg)||{}).org||'미지정';
@@ -2148,7 +2148,7 @@ function autoAssign(silent){
 const stPill = s => { const [t,c]=ST[s]; return `<span class="pill st-${c}">${t}</span>`; };
 const issList = (list,max=9) => list.slice(0,max).map(i=>`<span class="iss lv-${i.lv}"><i>${i.lv==='crit'?'!':i.lv==='warn'?'△':'i'}</i>${esc(i.t)}</span>`).join('<br>');
 const thread = r => r.thread.length?`<div class="thread">${r.thread.map(m=>`<div class="msg"><b>${esc(m.who)}</b>${esc(m.text)} <span class="muted small">${esc(m.at)}</span></div>`).join('')}</div>`:'';
-const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>목록 업로드'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영현황 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류'],['cons','<span class="tno">10</span>운영 점검']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
+const ROUTES = {admin:[['setup','<span class="tno">1</span>기준정보'],['board','<span class="tno">2</span>운영 현황'],['joinadm','<span class="tno">3</span>접속 승인'],['match','<span class="tno">4</span>검토 · 매칭'],['export','<span class="tno">5</span>운영현황 내보내기'],['stats','<span class="tno">6</span>운영 통계'],['dev','<span class="tno">7</span>프로그램 개발'],['kit','<span class="tno">8</span>교구재'],['docs','<span class="tno">9</span>강사서류'],['cons','<span class="tno">10</span>운영 점검']],school:[['school','우리 학교 확인']],univ:[['univ','희망 강사 선택']],teacher:[['teacher','수업 찾기'],['tmine','내 신청 · 일정']],join:[['join','접속 신청']],stats:[['stats','운영 통계']]};
 /* 보조강사 신청 페이지(?r=asst): 주강사 신청 페이지와 완전히 분리. 강사 DB에 없는 사람도 가입해 보조강사 신청 */
 const tRoleA = () => ((document.body&&document.body.dataset.trole)||new URLSearchParams(location.search).get('r')||'')==='asst';
 /* 타대학 관리자에게 보일 탭: 기본값 + 대학별 따로(S.orgTabs = {def:{탭:bool}, orgs:{대학:{탭:bool}}}). 서버도 같은 기준으로 자료를 보내지 않음 */
@@ -2247,7 +2247,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.80';
+const LIB_VER='11.81';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2424,6 +2424,7 @@ function viewBoard(){
       <button class="btn" data-act="remind">확인 요청 보내기 (${pend.length}곳)</button></div>
   </div>
   ${O?outRulesPanel():''}
+  ${!SR.length?sheetPeekPanel(O):''}
   ${(()=>{const n=joinReqs().filter(q=>q.status==='pending'&&nameInScope(q.school)).length;return n?`<div class="notice">학교 접속 신청 <b>${n}건</b>이 승인을 기다리고 있습니다. <button class="btn sm" data-act="gojoin">접속 승인으로 가기</button></div>`:'';})()}
   <div class="bar" aria-hidden="true">${ST_ORDER.map(s=>`<span class="b-${ST[s][1]}" style="width:${pct(s)}%"></span>`).join('')}</div>
   <div class="pipe">${ST_ORDER.filter(s=>!['proposed','change'].includes(s)||cnt[s]||u.st===s).map(s=>`<button class="stage ${u.st===s?'on':''}" data-act="fst" data-v="${s}"><div class="n">${cnt[s]}</div><div class="l">${ST[s][0]}</div></button>`).join('')}</div>
@@ -3982,7 +3983,7 @@ function accOpsLocal(d){ if(d.biz!==curBiz()) return; if(!d.asOps){ if(S.ops.nam
 function viewSetup(){ return setupTabs(viewSetupAll()); }
 function viewSetupAll(){
   const ed=S.programs.find(p=>p.key===S.ui.condEdit);
-  return `<div class="stack"><div><h2>기준정보</h2><div class="muted small">차수 시작 때 1번부터 차례로 확인 ${qt(['「프로그램 · 조건」 설정대로 교육청 목록이 대학별로 나뉨','그래서 목록을 업로드 전에 맞춰 두기','다 마치면 「2 목록 업로드」에서 목록 업로드'])}</div></div>
+  return `<div class="stack"><div><h2>기준정보</h2><div class="muted small">차수 시작 때 1번부터 차례로 확인 ${qt(['「프로그램 · 조건」 설정대로 교육청 목록이 대학별로 나뉨','그래서 목록을 업로드 전에 맞춰 두기','다 마치면 「2 운영 현황」에서 목록 업로드'])}</div></div>
   <!--§cycle-->
   <div class="panel stack"><div><h3><span class="stepno">1</span>차수 · 단체 카톡방</h3><div class="muted small" style="margin-top:2px">차수별 학교 · 학교밖(기관) 담당자 단체 카톡방 ${qt(['학교 화면과 확인 요청 문구에 입장 안내로 나감','학교밖 기관 화면에는 학교밖 카톡방이 나감(비어 있으면 안내 없음)','공지 전용: 카톡방 설정에서 방장만 메시지 보내기'])}</div></div>
    <div class="row" style="align-items:flex-end"><label class="f"><span class="flab">학교·강사 공개 시기 ${qt(['학교 접속 신청 화면과 강사 신청 화면에 보이는 시기','운영 화면 위 「시기」에서 다른 시기도 관리 가능'])}</span><select id="curSeason" style="min-width:180px">${S.seasons.map(x=>`<option value="${x.k}" ${S.season===x.k?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
@@ -4388,6 +4389,26 @@ function stSheetSync(btn){
       return run('adminStatsSync',ADMIN_KEY,list).then(r=>{ S.ui.stLoaded=false; S.stats=null; if(typeof statsLoad==='function') statsLoad();
         toast(`운영현황 시트 반영: ${list.map(g=>`${g.year} ${g.period} ${g.rows.filter(x=>!x._x).length}학급`).join(' · ')}${r&&r.replaced?` (기존 자료 ${r.replaced}개 대체)`:''}${bad.length?` · 읽지 못함 ${bad.length}개`:''}`); if(bad.length) console.warn(bad.join('\n')); }); }); })
    .catch(e=>{ toast(e&&e.message||String(e)); }).finally(()=>{ if(btn){ btn.disabled=false; btn.textContent=lb; } render(); }); }
+/* 2 운영 현황: 이 시기에 시스템 학급이 없으면 강사서류에 등록된 구글 운영현황 시트(같은 연도·시기)를 읽어 학급 정보를 보여 줌(읽기 전용) */
+function sheetPeekKey(O){ return season().k+'|'+(O?'o':'s')+'|'+curBiz(); }
+function sheetPeekLoad(O,force){ const k=sheetPeekKey(O), P=S.ui.shPeek=S.ui.shPeek||{}; if(P[k]&&(P[k].busy||(!force&&(P[k].rows||P[k].err)))) return; P[k]={busy:true};
+  const nm=season().name, y=(String(nm).match(/20\d\d/)||[])[0], per=O?'학교밖':stPerOf(nm), saved=(S.kpi||{}).opsSheets||[];
+  const getL=S.adminOrg?Promise.resolve(saved):docsOpsList().then(L=>(L&&L.length)?L:saved).catch(()=>saved);
+  getL.then(L=>{ const hit=(L||[]).filter(o=>{ const lb=String(o.label||''); return (!y||lb.includes(y))&&stPerOf(lb)===per; })[0];
+      if(!hit) throw new Error(`강사서류에 「${y||''} ${per}」 운영현황 시트가 등록되어 있지 않습니다`);
+      return run('adminSheetRead',ADMIN_KEY,'https:/'+'/docs.google.com/spreadsheets/d/'+hit.id).then(d=>{ const p=stParseA(d.sheets.map(x=>({name:x.name,A:x.values})),(hit.label||'')+' '+d.name); P[k]={rows:p.rows,cx:p.cx.length,label:hit.label||d.name,at:now()}; }); })
+    .catch(e=>{ P[k]={err:e&&e.message||String(e)}; }).finally(()=>render()); }
+function sheetPeekPanel(O){ const k=sheetPeekKey(O), P=(S.ui.shPeek||{})[k]; if(!P){ setTimeout(()=>sheetPeekLoad(O),0); }
+  const head=`<div class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><b>운영현황 시트 학급</b><span class="small muted">이 시기에 시스템 학급이 없어 강사서류에 등록된 구글 운영현황 시트 내용을 보여 줍니다 (읽기 전용)</span><span style="flex:1"></span>${P&&!P.busy?`<button class="btn sm" data-act="shpeek">다시 읽기</button>`:''}</div>`;
+  if(!P||P.busy) return `<div class="panel stack" style="gap:8px">${head}<div class="small muted">운영현황 시트를 읽는 중…</div></div>`;
+  if(P.err) return `<div class="panel stack" style="gap:8px">${head}<div class="small muted">${esc(P.err)}</div></div>`;
+  const f=S.ui.shOrg||'', orgs=[...new Set(P.rows.map(r=>r.org||'미지정'))], L=P.rows.filter(r=>!f||(r.org||'미지정')===f), ses=L.reduce((a,r)=>a+(+r.ses||0),0);
+  return `<div class="panel stack" style="gap:8px">${head}
+   <div class="row small" style="gap:6px;flex-wrap:wrap;align-items:center"><span class="muted">「${esc(P.label)}」 · ${esc(P.at)} 읽음 · 학급 ${P.rows.length}개${P.cx?` (취소 표시 ${P.cx}개 제외)`:''}</span><span style="flex:1"></span><button class="fchip ${!f?'on':''}" data-act="shorg" data-v="">전체 <em>${P.rows.length}</em></button>${orgs.map(o=>`<button class="fchip ${f===o?'on':''}" data-act="shorg" data-v="${esc(o)}">${esc(orgShort(o))} <em>${P.rows.filter(r=>(r.org||'미지정')===o).length}</em></button>`).join('')}</div>
+   <div class="tw"><table><thead><tr><th>운영 대학</th><th>${O?'기관':'학교'}</th><th>교실 · 학년</th><th>프로그램</th><th class="num">인원</th><th class="num">차시</th><th>기간</th><th>요일 · 시간</th><th>강사</th></tr></thead><tbody>
+    ${L.map(r=>`<tr><td class="nowrap">${r.org?uTag(r.org):'<span class="muted">-</span>'}</td><td><b>${esc(r.school)}</b>${r.region?`<div class="muted small">${esc(r.region)}</div>`:''}</td><td class="small">${esc([r.room,r.grade].filter(Boolean).join(' · ')||'-')}</td><td>${esc(r.prog||'-')}${r.field?`<div class="muted small">${esc(r.field)}</div>`:''}</td><td class="num">${r.stu||'-'}</td><td class="num">${r.ses||'-'}</td><td class="nowrap small">${esc(r.start?(r.start.slice(5).replace('-','.')+(r.end?' ~ '+r.end.slice(5).replace('-','.'):'')):'-')}</td><td class="nowrap small">${esc([r.dow,r.ts?(r.ts+(r.te?'~'+r.te:'')):''].filter(Boolean).join(' ')||'-')}</td><td class="small">${esc(r.inst||'-')}</td></tr>`).join('')||'<tr><td colspan="9" class="muted small">학급이 없습니다.</td></tr>'}
+   </tbody><tfoot><tr><td colspan="4" class="small">합계 ${L.length}학급</td><td class="num">${L.reduce((a,r)=>a+(+r.stu||0),0)}</td><td class="num">${ses}</td><td colspan="3"></td></tr></tfoot></table></div>
+   <div class="small muted">시스템에서 학교 확인·강사 매칭을 하려면 「${O?'학교밖 운영현황 업로드':curBiz()==='anchor'?'교육청 목록 업로드':'운영현황 업로드'}」로 학급을 만드세요.</div></div>`; }
 function docsOpsList(){
   return new Promise((res,rej)=>{ let q; try{ q=indexedDB.open('anchor-lecturer-docs',1); }catch(e){ rej(new Error('이 브라우저에서 강사서류 설정을 읽을 수 없습니다')); return; }
     q.onupgradeneeded=()=>{ try{ q.transaction.abort(); }catch(e){} };
@@ -7202,6 +7223,8 @@ document.addEventListener('click',async e=>{
     case 'st-wfsave': { const y=el.dataset.v, L=[...new Set(String((document.getElementById('st-wf')||{}).value||'').split(/[\n,;]+/).map(x=>x.replace(/^\s*\d+[.)]\s*/,'').trim()).filter(Boolean))]; S.kpi={...(S.kpi||{}),welfare:{...((S.kpi||{}).welfare||{}),[y]:L}}; save(); toast(`${y}년 교육복지우선지원대상학교 ${L.length}곳을 저장했습니다`); break; }
     case 'st-wfprev': { const ta=document.getElementById('st-wf'); if(ta) ta.value=(((S.kpi||{}).welfare||{})[el.dataset.v]||[]).join('\n'); toast('이전 연도 명단을 불러왔습니다. 「저장」을 눌러야 반영됩니다'); return; }
     case 'st-sync': stSheetSync(el); return;
+    case 'shpeek': sheetPeekLoad(scopeOut(),true); render(); return;
+    case 'shorg': S.ui.shOrg=el.dataset.v; break;
     case 'st-docs': {
       el.disabled=true; el.textContent='불러오는 중…';
       docsOpsList().then(L=>{ if(!L.length) throw new Error('강사서류 「운영현황」에 등록된 구글 시트가 없습니다');
