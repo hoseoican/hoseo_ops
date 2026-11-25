@@ -1290,7 +1290,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.25-1';
+var APP_VERSION = '2026.11.25-2';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -3156,22 +3156,27 @@ function renderStatus(){
   $('stCopySent').onclick=function(){ copyText(sentSch.join('\n'), '발송 완료 학교 '+sentSch.length+'곳 이름을 복사했습니다'); };
   $('stEmpty').hidden = opsLoaded();
   var cnt={ all:pairs.length, sent:0, ready:0, hold:0, notready:0, none:0, unsent:0 };
-  pairs.forEach(function(x){ cnt[x.st]++; if(x.st!=='sent') cnt.unsent++; });
+  /* 기관별 보기: 카드는 기관 수로 셈. 기관 상태 = 모두 발송 → 발송 완료 / 남은 강사 모두 구비 → 구비 완료·미발송 / 미구비 강사가 있으면 미구비 / 그 밖(미등록만 남음) → 미등록 */
+  var bySch = stView==='school', schSt={};
+  if(bySch && stFilter==='hold') stFilter='all';
+  if(bySch){ Object.keys(sg).forEach(function(k){ var xs=sg[k].filter(function(x){ return !x.sent; }); schSt[k] = !xs.length ? 'sent' : xs.every(function(x){ return x.st==='ready'; }) ? 'ready' : xs.some(function(x){ return x.st==='notready'; }) ? 'notready' : xs.some(function(x){ return x.st==='none'; }) ? 'none' : 'notready'; });
+    cnt.all=Object.keys(schSt).length; Object.keys(schSt).forEach(function(k){ cnt[schSt[k]]++; if(schSt[k]!=='sent') cnt.unsent++; }); }
+  else pairs.forEach(function(x){ cnt[x.st]++; if(x.st!=='sent') cnt.unsent++; });
   var ppl={}; pairs.forEach(function(x){ ppl[x.name]=1; });
   var sch={}; pairs.forEach(function(x){ sch[x.school]=1; });
   $('stBasis').textContent = bizDef(docBiz).name+' · '+(opsLoaded() ? (ops.per ? ops.per.join('·')+' · ' : '')+(ops.on||[]).join('·')+' 시트 기준 · ' : '')+'강사 '+Object.keys(ppl).length+'명 · 학교·기관 '+Object.keys(sch).length+'곳';
   var nP={}, nS={}; pairs.forEach(function(x){ nP[x.name]=1; nS[x.school]=1; });
-  var stCards=[['all','전체 배치 (강사 '+Object.keys(nP).length+'명 · '+Object.keys(nS).length+'곳)', cnt.all, ''], ['sent','발송 완료', cnt.sent, 'ok'], ['ready','구비 완료·미발송', cnt.ready, 'warn'], ['hold','구비·같은 곳 강사 대기', cnt.hold, ''], ['notready','미구비', cnt.notready, 'err'], ['none','미등록', cnt.none, ''], ['unsent','미발송 전체', cnt.unsent, '']];
+  var stCards=[['all','전체 배치 (강사 '+Object.keys(nP).length+'명 · '+Object.keys(nS).length+'곳)', cnt.all, ''], ['sent','발송 완료', cnt.sent, 'ok'], ['ready','구비 완료·미발송', cnt.ready, 'warn']].concat(bySch?[]:[['hold','구비·같은 곳 강사 대기', cnt.hold, '']]).concat([['notready','미구비', cnt.notready, 'err'], ['none','미등록', cnt.none, ''], ['unsent','미발송 전체', cnt.unsent, '']]);
   var plc = stView==='person' && stPSub==='unplaced';
   $('stStats').innerHTML=stCards.map(function(x){
-    return '<button type="button" class="st2 '+x[3]+(stFilter===x[0]&&!plc?' on':'')+'" data-sf="'+x[0]+'"'+(plc?' disabled':'')+'><b>'+x[2]+'</b><span>'+x[1]+(cnt.all&&x[0]!=='all'?' · '+Math.round(x[2]/cnt.all*100)+'%':'')+'</span><span class="pk">표에 보는 중</span></button>'; }).join('');
+    return '<button type="button" class="st2 '+x[3]+(stFilter===x[0]&&!plc?' on':'')+'" data-sf="'+x[0]+'"'+(plc?' disabled':'')+'><b>'+x[2]+(bySch?'<small style="font-size:.55em;font-weight:600;margin-left:2px">곳</small>':'')+'</b><span>'+x[1]+(cnt.all&&x[0]!=='all'?' · '+Math.round(x[2]/cnt.all*100)+'%':'')+'</span><span class="pk">표에 보는 중</span></button>'; }).join('');
   each('[data-sf]', function(b){ b.onclick=function(){ stFilter=b.dataset.sf; renderStatus(); }; }, $('stStats'));
   var t=cnt.all||1;
   $('stBar').innerHTML='<i class="b1" style="width:'+(cnt.sent/t*100)+'%"></i><i class="b2" style="width:'+((cnt.ready+cnt.hold)/t*100)+'%"></i><i class="b3" style="width:'+(cnt.notready/t*100)+'%"></i><i class="b4" style="width:'+(cnt.none/t*100)+'%"></i>';
 
   each('label', function(l){ l.classList.toggle('on', l.dataset.v===stView); }, $('stView'));
 
-  var list=pairs.filter(function(x){ return stMatch(x, stFilter) && (!q || x.name.indexOf(q)>=0 || x.school.indexOf(q)>=0 || x.classes.some(function(c){ return c.program.replace(/\s/g,'').indexOf(q)>=0; })); });
+  var list=pairs.filter(function(x){ return (bySch ? (stFilter==='all' || (stFilter==='unsent' ? schSt[x.school]!=='sent' : schSt[x.school]===stFilter)) : stMatch(x, stFilter)) && (!q || x.name.indexOf(q)>=0 || x.school.indexOf(q)>=0 || x.classes.some(function(c){ return c.program.replace(/\s/g,'').indexOf(q)>=0; })); });
   var rdBadge=function(x){ return x.st==='none' ? '<span class="badge no">미등록</span>' : x.rd.lv==='ok' ? '<span class="badge ok">구비 완료</span>'+(x.st==='hold'?'<div class="miss w">같은 곳 대기: '+esc(x.holdBy.join(', '))+'</div>':'') : '<span class="badge err">미구비</span>'; };
   var sendCell=function(x){ return '<div class="sendcell">'+(x.sent ? '<span class="badge sent">'+fmtSent(x.sent)+' 발송</span><button type="button" class="ghost" data-unsend="'+esc(sentKey(x.school,x.name))+'">취소</button>' : '<span class="badge wait">미발송</span>'+(x.person?'<button type="button" class="ghost" data-send="'+esc(sentKey(x.school,x.name))+'">발송 완료 처리</button>':''))+'</div>'; };
   if(stView==='person' && stPSub==='unplaced'){
