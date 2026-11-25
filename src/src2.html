@@ -2252,7 +2252,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.99';
+const LIB_VER='11.100';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4233,8 +4233,15 @@ const ST_BIZ = {anchor:'앵커늘봄',vac:'초등방과후(방학집중형)'};
 function stAll(){ const L=stAllRaw(), b=S.ui.stBiz||''; return b?L.filter(r=>(r.biz||'anchor')===b):L; }
 function stAllRaw(){
   const out=[], VW=S.ui.role==='stats', live=(S.kpi||{}).live;
-  ((S.stats||{}).ds||[]).forEach(d=>{ if(stIsMc(d)) return; if(d.id==='live'&&!(VW&&live)) return; const per=stDsPer(d)||'(시기 미지정)'; d.rows.forEach(r=>{ if(!r._x) out.push({...r,year:d.year,period:per,_ds:d.id}); }); });
-  if(live&&!VW) stLiveRows().forEach(r=>out.push({...r,period:stPerOf(season().name)||'(시기 미지정)',_ds:'live'}));
+  /* 중복 막기: 같은 연도·시기·운영기관은 한 곳에서만 셈. 우선순위 ① 운영현황 시트 반영(gs_) ② 올린 자료 ③ 현재 시스템 학급(live) */
+  const K=(y,p,o)=>y+'|'+p+'|'+o, DS=((S.stats||{}).ds||[]).filter(d=>!stIsMc(d)&&!(d.id==='live'&&!(VW&&live)));
+  const rank=d=>String(d.id).startsWith('gs_')?0:d.id==='live'?2:1, cov={}, skip={};
+  DS.slice().sort((a,b)=>rank(a)-rank(b)).forEach(d=>{ const per=stDsPer(d)||'(시기 미지정)', mine={};
+    d.rows.forEach(r=>{ if(r._x) return; const k=K(d.year,per,r.org); if(cov[k]!=null&&cov[k]!==rank(d)){ skip[k]=(skip[k]||0)+1; return; } mine[k]=1; out.push({...r,year:d.year,period:per,_ds:d.id}); });
+    Object.keys(mine).forEach(k=>{ if(cov[k]==null) cov[k]=rank(d); }); });
+  if(live&&!VW){ const y=+String(S.season||'').slice(0,4)||new Date().getFullYear(), per=stPerOf(season().name)||'(시기 미지정)';
+    stLiveRows().forEach(r=>{ const k=K(r.year||y,per,r.org); if(cov[k]!=null){ skip[k]=(skip[k]||0)+1; return; } out.push({...r,period:per,_ds:'live'}); }); }
+  stAllRaw.skip=skip;
   const WF={}; Object.entries((S.kpi||{}).welfare||{}).forEach(([y,L])=>WF[y]=new Set((L||[]).map(schKey)));
   /* 분야·프로그램 이름은 띄어쓰기만 다르면 같은 것으로 묶음(「기후 환경」=「기후환경」). 표시는 프로그램 설정의 이름 → 가장 많이 쓴 표기 */
   ['field','prog'].forEach(f=>{ const cnt={}, known={}; (S.programs||[]).forEach(p=>{ const v=f==='field'?p.field:p.name; if(v) known[String(v).replace(/\s/g,'')]=v; });
@@ -4357,6 +4364,7 @@ function viewStats(){
    <span class="small muted" style="margin-left:10px">운영기관</span><button class="fchip ${!O?'on':''}" data-act="st-org" data-v="">전체</button>${orgs.map(o=>`<button class="fchip ${o===O?'on':''}" data-act="st-org" data-v="${esc(o)}">${uDot(o)}${esc(orgShort(o)||o)}</button>`).join('')}</div>
   ${multi?`<div class="small muted st-multi">${esc(stYL(Y))} · ${Y.map(y=>{ const z=stSum(inY.filter(r=>r.year===y&&(!O||r.org===O))); return `${y}년 ${stFmt(z.cls)}학급`; }).join(' + ')}</div>`:''}
   <div class="skcards">${ST_M.map(card).join('')}${mcCard}</div>
+  ${Object.keys(stAllRaw.skip||{}).length?`<div class="small muted">겹쳐서 한 번만 센 자료: ${esc(Object.entries(stAllRaw.skip).map(([k,n])=>k.split('|').map((x,i)=>i===2?orgShort(x)||x:x).join(' ')+' '+n+'학급').join(', '))} ${qt(['같은 연도·시기·운영기관 학급이 여러 자료에 있으면 한 곳만 셈','순서: 운영현황 시트 반영 → 올린 자료 → 현재 시스템 학급'])}</div>`:''}
   ${dups.length?`<div class="small lv-warn">같은 연도·시기·기관 자료가 2개 이상: ${esc(dups.join(', '))} ${qt(['같은 학급이 두 번 집계될 수 있음','「자료 관리」에서 겹치는 자료 삭제'])}</div>`:''}
   <div class="st-grid">
    <div class="panel stack st-sec"><div class="row" style="gap:6px;align-items:center"><h3>운영기관별 · ${stYL(Y)}</h3>${qt(['기관별 학급·학생·차시·학교 수','작은 글씨 = 기관 KPI 달성률 / 목표','비중(학급) = 전체 학급 중 그 기관 학급 비율, 비중(차시) = 전체 차시 중 그 기관 차시 비율','다문화 = 교육청 확인 자료 + 학교밖 기관명에 다문화가 들어간 학급 학생 수','기관 목표는 「KPI 목표」에서 입력'])}</div>
