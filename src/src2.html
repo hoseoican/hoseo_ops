@@ -2246,7 +2246,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.77';
+const LIB_VER='11.78';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6184,7 +6184,7 @@ document.addEventListener('change',e=>{ const t=e.target; if(!t||!t.dataset) ret
   else if(t.id==='cs-gnew'&&t.value){ const [tg,k]=t.value.split(':'); csGNew(k,tg); render(); } },true);
 function csAct(a,el){ const o=el.dataset.o, U=S.ui;
   switch(a){
-    case 'cstab': U.csTab=el.dataset.v; return true;
+    case 'cstab': if(U.csTab!==el.dataset.v){ subNavPush({csTab:el.dataset.v}); } U.csTab=el.dataset.v; return true;
     case 'csq': { const k=el.dataset.k, v=+el.dataset.v; if(k==='rep') U.csRq=v; else if(k==='judge') U.csJq=v; else U.csQ=v; return true; }
     case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab='mile'; } return true;
     case 'csmq': { const m=U.csMq||{[csQNow()]:true}; m[el.dataset.v]=!m[el.dataset.v]; U.csMq=m; return true; }
@@ -6995,7 +6995,7 @@ document.addEventListener('click',async e=>{
       const ws=XLSX.utils.aoa_to_sheet([PC_H,...rows]); ws['!cols']=[24,12,14,10,10,40,28,18,6,32,24].map(w=>({wch:w})); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'프로그램 카드'); saveXlsx(wb,a==='pctpl'?`프로그램 카드 양식.xlsx`:`${season().name} ${bizName()} 프로그램 목록.xlsx`); return; }
     case 'pcapply': { const x=pcApply(); toast(`프로그램 ${x.add}개 추가 · ${x.up}개 바꿈${x.del?` · ${x.del}개 지움`:''}`); break; }
     case 'pcno': S.ui.pcPend=null; S.ui.pcDrop=false; break;
-    case 'settab': S.ui.setTab=el.dataset.v; try{ localStorage.setItem('anchorSetTab',el.dataset.v); }catch(e){} window.scrollTo({top:0}); break;
+    case 'settab': if(S.ui.setTab!==el.dataset.v) subNavPush({setTab:el.dataset.v}); S.ui.setTab=el.dataset.v; try{ localStorage.setItem('anchorSetTab',el.dataset.v); }catch(e){} window.scrollTo({top:0}); break;
     case 'iprof': S.ui.iProf=S.ui.iProf===el.dataset.t?'':el.dataset.t; S.ui.iEdit=''; break;
     case 'iproftab': S.ui.iProfTab=el.dataset.v; break;
     case 'tradd': case 'isadd': case 'evadd': case 'pladd': { const t=S.instructors.find(x=>x.id===el.dataset.t); if(!t) return; const g=id=>((document.getElementById(id)||{}).value||'').trim(), nid=p0=>p0+Date.now().toString(36);
@@ -7392,6 +7392,10 @@ document.addEventListener('change',e=>{
   render();
 });
 window.addEventListener('hashchange',render);
+/* 왼쪽 메뉴(운영 점검·기준정보) 안에서 옮겨 다닌 것도 브라우저 뒤로가기로 돌아가게: 주소(#탭)는 그대로 두고 기록만 쌓음 */
+const curHash=()=>{ try{ return window.location['hash']||'#'; }catch(e){ return '#'; } };
+function subNavPush(next){ try{ const h=curHash(), cur={csTab:S.ui.csTab||'',setTab:S.ui.setTab||''}; const st=history.state||{}; if(!st.sub) history.replaceState({...st,sub:1,h,...cur},'',h); history.pushState({sub:1,h,...cur,...next},'',h); }catch(e){} }
+window.addEventListener('popstate',e=>{ const st=e.state; if(!st||!st.sub||st.h!==curHash()) return; if(st.csTab!=null) S.ui.csTab=st.csTab||S.ui.csTab; if(st.setTab) S.ui.setTab=st.setTab; render(); window.scrollTo({top:0}); });
 document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target&&/^tl-(name|phone|pin|pin2)$/.test(e.target.id)&&!e.isComposing){ e.preventDefault(); const b=document.querySelector(e.target.id==='tl-pin2'?'[data-act=tpinset]':'[data-act=tlogin]'); if(b) b.click(); return; }
   if(e.key==='Escape'&&document.querySelector('.ov')){ S.ui.rLayer=null; S.ui.jLayer=null; S.ui.drawer=''; S.ui.tDetail=''; S.ui.tCompare=false; document.getElementById('layer').innerHTML=''; save(); } });
 
