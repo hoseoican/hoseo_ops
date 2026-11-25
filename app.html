@@ -2258,7 +2258,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.88';
+const LIB_VER='11.89';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6186,32 +6186,49 @@ function csGongV(){ if(!S.adminOrg&&!S.univJoin&&!S.ui.ujLoading){ S.ui.ujLoadin
   return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><div class="seg2">${[['','전체'],['univ','타대학'],['school','학교 · 기관'],['late','기한 지남']].map(([k,l])=>`<button class="${f===k?'on':''}" data-act="csgf" data-v="${k}">${l} ${n(k)}</button>`).join('')}</div><span style="flex:1"></span>
     <select id="cs-gnew" aria-label="새 공문 종류"><option value="">새 공문…</option><optgroup label="타대학">${CS_GKINDS.univ.map(([k,l])=>`<option value="univ:${k}">${l}</option>`).join('')}</optgroup><optgroup label="학교 · 기관">${CS_GKINDS.school.map(([k,l])=>`<option value="school:${k}">${l}</option>`).join('')}</optgroup></select></div>
    <div class="tw"><table><thead><tr><th>대상</th><th>제목</th><th>문서번호</th><th>발송</th><th>회신 기한</th><th>회신</th><th>상태</th></tr></thead><tbody>
-    ${L.map(g=>{ const [sl,sc]=csGSt(g), rc=g.rc||[]; return `<tr class="click ${op&&op.id===g.id?'on':''}" data-act="csgopen" data-id="${g.id}"><td><span class="chip">${g.tgt==='univ'?'타대학':'학교'}</span></td><td>${esc(g.title||'(제목 없음)')}</td><td class="small muted">${esc(g.no||'')}</td><td class="nowrap">${g.sent?csFmtD(g.sent):'-'}</td><td class="nowrap">${g.reply&&g.due?csFmtD(g.due):'-'}</td><td class="nowrap">${g.reply?`${rc.filter(r=>r.rep).length}/${rc.length}`:`${rc.length}곳`}</td><td><span class="chip ${sc}">${sl}</span></td></tr>`; }).join('')||'<tr><td colspan="7" class="small muted">공문이 없습니다. 오른쪽 위 「새 공문」에서 종류를 고르세요.</td></tr>'}</tbody></table></div>
+    ${L.map(g=>{ const [sl,sc]=csGSt(g), rc=g.rc||[]; return `<tr class="click ${op&&op.id===g.id?'on':''}" data-act="csgopen" data-id="${g.id}"><td><span class="chip">${g.tgt==='univ'?'타대학':'학교'}</span></td><td>${esc(g.title||'(제목 없음)')}</td><td class="small muted">${esc(g.no||'')}</td><td class="nowrap">${g.sent?csFmtD(g.sent):'-'}</td><td class="nowrap">${g.reply&&g.due?csFmtD(g.due):'-'}</td><td class="nowrap">${g.reply?(g.sent?`${rc.filter(r=>r.rep).length}/${rc.filter(r=>!r.ex).length}`:'-'):`${rc.length}곳`}</td><td><span class="chip ${sc}">${sl}</span></td></tr>`; }).join('')||'<tr><td colspan="7" class="small muted">공문이 없습니다. 오른쪽 위 「새 공문」에서 종류를 고르세요.</td></tr>'}</tbody></table></div>
    ${op?csGDetail(op):''}`; }
-function csGDetail(g){ const i=csGong().indexOf(g), cp=`gongmun.items.${i}`, K=CS_GKINDS[g.tgt]||[], t=csToday(), c=csCfg();
-  const rcs=(g.rc||[]).map((r,j)=>{ const late=g.reply&&g.due&&!r.ex&&(r.rep?r.rep>g.due:t>g.due), rp=`${cp}.rc.${j}`;
-    return `<tr class="${late?'crit':''}"><td class="nowrap">${esc(r.name)}</td>${g.reply?`<td><input type="date" data-cp="${rp}.rep" data-cat="${cp}" value="${esc(r.rep||'')}" aria-label="회신일"></td>`:''}
-     ${g.reply?`<td class="nowrap">${r.ex?'<span class="chip">회신 제외</span>':late?`<span class="chip x">기한 지남</span>${g.tgt==='univ'?` <b class="lv-crit">-${c.pen.gong}</b>`:''}`:r.rep?'<span class="chip ok">기한 내</span>':'<span class="chip">대기</span>'}</td>`:''}
-     <td class="nowrap">${g.reply?`<label class="small" title="이 수신처는 회신을 받지 않음(해당 없음 · 기한 연장 등). 회신 집계와 감점에서 빠짐"><input type="checkbox" data-cp="${rp}.ex" data-cat="${cp}" ${r.ex?'checked':''}> 회신 제외</label>`:''}${g.kind==='meet'?` <label class="small"><input type="checkbox" data-cp="${rp}.absent" data-cat="${cp}" ${r.absent?'checked':''}> 불참</label>`:''}</td>
-     <td><input data-cp="${rp}.memo" data-cat="${cp}" value="${esc(r.memo||'')}" placeholder="메모" style="width:100%"></td><td><button class="btn sm" data-act="csgrdel" data-id="${g.id}" data-i="${j}" aria-label="수신처 빼기">빼기</button></td></tr>`; }).join('');
-  return `<div class="panel stack cs-gd" style="gap:10px"><div class="row between"><h3 style="margin:0">${esc(g.title||'새 공문')}</h3><div class="row" style="gap:6px"><span class="chip ${csGSt(g)[1]}">${csGSt(g)[0]}</span><button class="btn sm" data-act="csgclose">닫기</button></div></div>
+function csGDetail(g){ const i=csGong().indexOf(g), cp=`gongmun.items.${i}`, K=CS_GKINDS[g.tgt]||[], t=csToday(), c=csCfg(), rc=g.rc||[];
+  const edit=!g.sent||S.ui.csGedit===g.id, [sl,sc]=csGSt(g);
+  const head=`<div class="row between"><h3 style="margin:0">${esc(g.title||'새 공문')}</h3><div class="row" style="gap:6px"><span class="chip ${sc}">${sl}</span><button class="btn sm" data-act="csgclose">닫기</button></div></div>`;
+  /* ---- 발송한 공문: 회신(제출) 관리 ---- */
+  if(!edit){
+    const done=rc.filter(r=>r.rep).length, need=rc.filter(r=>!r.ex).length, dl=g.due?Math.round((new Date(g.due)-new Date(t))/864e5):null;
+    const rows=rc.map((r,j)=>{ const late=g.reply&&g.due&&!r.ex&&(r.rep?r.rep>g.due:t>g.due), rp=`${cp}.rc.${j}`;
+      return `<tr class="${late?'crit':''}"><td class="nowrap"><b>${esc(r.name)}</b></td>
+       ${g.reply?`<td><label class="row small" style="gap:4px"><input type="checkbox" data-act="csgrep" data-id="${g.id}" data-i="${j}" ${r.rep?'checked':''} ${r.ex?'disabled':''}> 제출함</label></td>
+       <td>${r.rep?`<input type="date" data-cp="${rp}.rep" data-cat="${cp}" value="${esc(r.rep)}" aria-label="제출일">`:'<span class="muted small">-</span>'}</td>
+       <td class="nowrap">${r.ex?'<span class="chip">회신 제외</span>':late?`<span class="chip x">기한 지남</span>${g.tgt==='univ'?` <b class="lv-crit">-${c.pen.gong}</b>`:''}`:r.rep?'<span class="chip ok">기한 내</span>':'<span class="chip">미제출</span>'}</td>
+       <td class="nowrap"><label class="small" title="이 수신처는 회신을 받지 않음(해당 없음 · 기한 연장 등). 집계와 감점에서 빠짐"><input type="checkbox" data-cp="${rp}.ex" data-cat="${cp}" ${r.ex?'checked':''}> 회신 제외</label>${g.kind==='meet'?` <label class="small"><input type="checkbox" data-cp="${rp}.absent" data-cat="${cp}" ${r.absent?'checked':''}> 불참</label>`:''}</td>`:''}
+       <td><input data-cp="${rp}.memo" data-cat="${cp}" value="${esc(r.memo||'')}" placeholder="메모" style="width:100%"></td></tr>`; }).join('');
+    return `<div class="panel stack cs-gd" style="gap:10px">${head}
+     <div class="row small" style="gap:14px;flex-wrap:wrap;color:var(--muted)"><span>문서번호 <b style="color:var(--ink)">${esc(g.no||'-')}</b></span><span>발송 <b style="color:var(--ink)">${csFmtD(g.sent)}</b></span>${g.reply?`<span>회신 기한 <b style="color:var(--ink)">${g.due?csFmtD(g.due)+(g.dueT?' '+esc(g.dueT):''):'-'}</b>${dl!=null&&done<need?` (${dl>0?'D-'+dl:dl===0?'오늘':'지남 '+(-dl)+'일'})`:''}</span>`:'<span>회신 받지 않음</span>'}<span style="flex:1"></span><button class="btn sm" data-act="csgedit" data-id="${g.id}">공문 내용 보기 · 수정</button></div>
+     ${g.reply?`<div class="row" style="gap:10px;align-items:center"><b>회신(제출) 관리</b><span class="chip ${done>=need&&need?'ok':''}">제출 ${done}/${need}</span>${g.tgt==='univ'?`<span class="small muted">기한 지난 미제출은 성실도 -${c.pen.gong}점</span>`:''}</div>`:''}
+     <div class="tw"><table><thead><tr><th>수신처</th>${g.reply?'<th>제출</th><th>제출일</th><th>상태</th><th></th>':''}<th style="min-width:140px">메모</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="small muted">수신처 없음</td></tr>'}</tbody></table></div>
+     ${g.reply?'<div class="small muted">회신 공문이나 제출 자료를 받으면 「제출함」을 체크하세요. 제출일은 오늘로 들어가며 바꿀 수 있습니다.</div>':''}</div>`; }
+  /* ---- 작성 · 기안 ---- */
+  const rcs=rc.map((r,j)=>`<li class="row" style="gap:6px;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--line)"><span>${esc(r.name)}</span><button class="btn sm" data-act="csgrdel" data-id="${g.id}" data-i="${j}" aria-label="수신처 빼기">빼기</button></li>`).join('');
+  return `<div class="panel stack cs-gd" style="gap:10px">${head}
    <div class="cs-g2"><div class="stack" style="gap:8px">
-     <div class="row" style="gap:8px;flex-wrap:wrap"><label class="f">종류<select data-cp="${cp}.kind" data-cat="${cp}">${K.map(([k,l])=>`<option value="${k}" ${g.kind===k?'selected':''}>${l}</option>`).join('')}</select></label>
-      <label class="f">문서번호<input data-cp="${cp}.no" data-cat="${cp}" value="${esc(g.no||'')}" placeholder="그룹웨어에서 부여된 번호" style="width:170px"></label><label class="f">발송일<input type="date" data-cp="${cp}.sent" data-cat="${cp}" value="${esc(g.sent||'')}"></label></div>
-     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="row small" style="gap:4px"><input type="checkbox" data-cp="${cp}.reply" data-cat="${cp}" ${g.reply?'checked':''}> 회신(제출) 받음</label>${g.reply?`<label class="f">회신 기한<input type="date" data-cp="${cp}.due" data-cat="${cp}" value="${esc(g.due||'')}"></label><label class="f">시각<input data-cp="${cp}.dueT" data-cat="${cp}" value="${esc(g.dueT||'')}" placeholder="15:00" style="width:70px"></label>`:''}${g.kind==='meet'?`<label class="f">협의회 날짜<input type="date" data-cp="${cp}.meetDate" data-cat="${cp}" value="${esc(g.meetDate||'')}"></label>`:''}</div>
+     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="f">종류<select data-cp="${cp}.kind" data-cat="${cp}">${K.map(([k,l])=>`<option value="${k}" ${g.kind===k?'selected':''}>${l}</option>`).join('')}</select></label>
+      <label class="row small" style="gap:4px"><input type="checkbox" data-cp="${cp}.reply" data-cat="${cp}" ${g.reply?'checked':''}> 회신(제출) 받음</label>${g.reply?`<label class="f">회신 기한<input type="date" data-cp="${cp}.due" data-cat="${cp}" value="${esc(g.due||'')}"></label><label class="f">시각<input data-cp="${cp}.dueT" data-cat="${cp}" value="${esc(g.dueT||'')}" placeholder="15:00" style="width:70px"></label>`:''}${g.kind==='meet'?`<label class="f">협의회 날짜<input type="date" data-cp="${cp}.meetDate" data-cat="${cp}" value="${esc(g.meetDate||'')}"></label>`:''}</div>
      <div class="row" style="gap:8px;flex-wrap:wrap"><label class="f">문의 전화<input data-cp="${cp}.tel" data-cat="${cp}" value="${esc(g.tel||'')}" placeholder="041-423-2420" style="width:150px"></label><label class="f">제출 · 문의 메일<input data-cp="${cp}.mail" data-cat="${cp}" value="${esc(g.mail||'')}" placeholder="담당자 메일" style="width:210px"></label></div>
      <label class="f">제목<input data-cp="${cp}.title" data-cat="${cp}" value="${esc(g.title||'')}"></label>
      <label class="f">본문<textarea data-cp="${cp}.body" data-cat="${cp}" rows="14" style="font-family:inherit;line-height:1.6">${esc(g.body||'')}</textarea></label>
-     <div class="small muted">본문의 {기한} {전화번호} {메일}은 「본문 복사」 때 위 칸(회신 기한 · 문의 전화 · 메일) 값으로 바뀝니다. 비어 있으면 (  )로 들어갑니다.</div></div>
-    <div class="stack" style="gap:8px"><div class="row between"><b>수신처 ${(g.rc||[]).length}곳</b>${g.reply&&g.tgt==='univ'?`<span class="small muted">기한 지난 미회신은 성실도 -${c.pen.gong}점</span>`:''}</div>
-     <div class="tw" style="max-height:420px;overflow:auto"><table><thead><tr><th>수신처</th>${g.reply?'<th>회신일</th><th>상태</th>':''}<th></th><th style="min-width:110px">메모</th><th></th></tr></thead><tbody>${rcs||'<tr><td colspan="6" class="small muted">수신처 없음</td></tr>'}</tbody></table></div>
+     <div class="small muted">본문의 {기한} {전화번호} {메일} {접속링크}는 「본문 복사」·「기안문 파일 받기」 때 채워집니다. 비어 있으면 (  )로 들어갑니다.</div></div>
+    <div class="stack" style="gap:8px"><b>수신처 ${rc.length}곳</b>
+     <ul style="list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:10px;max-height:360px;overflow:auto">${rcs||'<li class="small muted" style="padding:8px 10px">수신처 없음</li>'}</ul>
      <div class="row" style="gap:6px"><input id="cs-grc" placeholder="수신처 추가 (학교·기관·대학 이름)" style="flex:1"><button class="btn sm" data-act="csgradd" data-id="${g.id}">추가</button></div></div></div>
    <div class="row" style="gap:6px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px">
     <button class="btn sm pri" data-act="csghwx" data-id="${g.id}" title="제목 · 본문이 채워진 일반기안문(.hwx). 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열기">기안문 파일 받기</button>
     <button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="title">제목 복사</button><button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="body">본문 복사</button><button class="btn sm" data-act="csgcopy" data-id="${g.id}" data-v="rc">수신자 복사</button>
     ${g.tgt==='school'?`<button class="btn sm" data-act="csgxlsx" data-id="${g.id}">붙임: 운영 확정 목록 엑셀</button>`:''}<button class="btn sm" data-act="csgretpl" data-id="${g.id}">양식대로 다시 채우기</button>
     <span style="flex:1"></span><button class="btn sm danger" data-act="csgdel" data-id="${g.id}">삭제</button></div>
-   <div class="small muted">「기안문 파일 받기」 → 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열면 제목 · 본문이 채워져 있습니다. 수신처는 기안기에서 지정(「수신자 복사」로 이름 확인). 수신자는 「${esc(csRcName(g,(g.rc||[])[0]||{name:g.tgt==='univ'?'상명대학교':'○○초등학교'}))}, …」 형식으로 복사됩니다.</div></div>`; }
+   <div class="small muted">「기안문 파일 받기」 → 그룹웨어 결재 → 전체서식 → 「읽어오기」로 열면 제목 · 본문이 채워져 있습니다. 수신처는 기안기에서 지정(「수신자 복사」로 이름 확인).</div>
+   <div class="notice stack" style="gap:8px"><b>${g.sent?'발송 정보':'그룹웨어로 발송했으면'}</b>
+    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="f">문서번호<input id="cs-gno" value="${esc(g.no||'')}" placeholder="그룹웨어에서 부여된 번호" style="width:200px"></label><label class="f">발송일<input type="date" id="cs-gsent" value="${esc(g.sent||t)}"></label>
+     <button class="btn sm pri" data-act="csgsend" data-id="${g.id}">${g.sent?'저장하고 회신 관리로':'발송 처리'}</button>${g.sent?`<button class="btn sm" data-act="csgunsend" data-id="${g.id}" title="기안 준비 상태로 되돌림 (회신 기록은 그대로)">발송 취소</button>`:''}</div>
+    <div class="small muted">발송 처리하면 이 공문은 「회신(제출) 관리」 화면으로 열립니다. 수신처별 제출 여부는 거기서 체크합니다.</div></div></div>`; }
 function csMyGong(){ const o=csMine(), q=S.ui.csQ||csQNow(), P=csPen(o,q), t=csToday();
   const L=csGong().filter(g=>g.tgt==='univ'&&(g.rc||[]).some(r=>r.name===o));
   return `<div class="small muted">우리 대학이 받은 공문과 회신 기한입니다. 회신은 그룹웨어로 해 주세요.</div>
@@ -6283,9 +6300,14 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'cstk': U.csTk=el.dataset.v; return true;
     case 'cstkreset': { if(!confirm('이 종류의 제목 · 본문을 처음 문안으로 되돌릴까요?')) return false; const G=(S.consCfg=S.consCfg||CS_DEF()).gtpl||{}; delete G[el.dataset.v]; S.consCfg.gtpl={...G}; toast('처음 문안으로 되돌렸습니다'); return true; }
     case 'csgopen': U.csTab='gong'; U.csGopen=el.dataset.id; return true;
-    case 'csgclose': U.csGopen=''; return true;
+    case 'csgclose': S.ui.csGedit=''; U.csGopen=''; return true;
     case 'csgdel': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g||!confirm(`「${g.title||'제목 없음'}」 공문 기록을 지울까요?`)) return false; S.gongmun.items=csGong().filter(x=>x!==g); U.csGopen=''; return true; }
     case 'csgrdel': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; g.rc=(g.rc||[]).filter((_,j)=>j!==+el.dataset.i); g.at=Date.now(); return true; }
+    case 'csgedit': S.ui.csGedit=el.dataset.id; return true;
+    case 'csgsend': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; const v=id=>((document.getElementById(id)||{}).value||'').trim(), sd=v('cs-gsent'); if(!sd){ toast('발송일을 넣어 주세요'); return false; }
+      g.sent=sd; g.no=v('cs-gno'); g.at=Date.now(); S.ui.csGedit=''; toast('발송 처리했습니다. 수신처별 제출 여부를 체크하세요'); return true; }
+    case 'csgunsend': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g||!confirm('발송을 취소하고 기안 준비 상태로 되돌릴까요?')) return false; g.sent=''; g.at=Date.now(); S.ui.csGedit=''; return true; }
+    case 'csgrep': { const g=csGong().find(x=>x.id===el.dataset.id), r=g&&(g.rc||[])[+el.dataset.i]; if(!r) return false; r.rep=r.rep?'':csToday(); g.at=Date.now(); return true; }
     case 'csgradd': { const g=csGong().find(x=>x.id===el.dataset.id), v=((document.getElementById('cs-grc')||{}).value||'').trim(); if(!g||!v) return false; if((g.rc||[]).some(r=>r.name===v)){ toast('이미 있는 수신처입니다'); return false; } g.rc=[...(g.rc||[]),{name:v}]; g.at=Date.now(); return true; }
     case 'csgretpl': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; if(!confirm('제목과 본문을 이 종류의 기본 양식으로 다시 채울까요? 고친 내용은 사라집니다.')) return false; const [t,b]=csGTpl(g.kind,g.tgt); if(t) g.title=csGFill(g,t,true); g.body=csGFill(g,b,true); g.at=Date.now(); return true; }
     case 'csgcopy': { const g=csGong().find(x=>x.id===el.dataset.id); if(!g) return false; const v=el.dataset.v; copyStr(v==='title'?csGFill(g,g.title):v==='body'?csGFill(g,g.body):(g.rc||[]).map(r=>csRcName(g,r)).join(', ')); toast(v==='rc'?`수신자 ${(g.rc||[]).length}곳을 복사했습니다`:'복사했습니다'); return false; }
@@ -7773,7 +7795,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.88';
+const APP_VER = '11.89';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
