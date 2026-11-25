@@ -2302,7 +2302,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.111';
+const LIB_VER='11.112';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6182,6 +6182,8 @@ const csCfg = () => { const d=CS_DEF(), c=S.consCfg||{}; return {...d,...c,pen:{
 const csYear = () => { const c=S.consCfg||{}; if(c.fiscal) return +c.fiscal; const [y,m]=csToday().split('-').map(Number); return m>=3?y:y-1; };
 const csQMonths = q => { const Y=csYear(), ms={1:[3,4,5],2:[6,7,8],3:[9,10,11],4:[12,13,14]}[q]; return ms.map(m=>m>12?`${Y+1}-${String(m-12).padStart(2,'0')}`:`${Y}-${String(m).padStart(2,'0')}`); };
 const csQOf = d => { if(!d) return 0; const ym=String(d).slice(0,7); for(let q=1;q<=4;q++) if(csQMonths(q).includes(ym)) return q; return 0; };
+/* 마일스톤 입력을 연 분기(관리자가 정함, 연도별 consCfg.mileQ[연도]). 정하지 않았으면 이번 분기(2026년은 3분기까지) */
+const csMileQ = () => { const m=+((csCfg().mileQ||{})[csYear()]); return m>=1&&m<=4?m:csYear()===2026?Math.min(3,csQNow()):csQNow(); };
 const csQNow = () => csQOf(csToday())||(csToday()<`${csYear()}-03`?1:4);
 const csOrgD = o => { S.consOrg=S.consOrg||{}; return S.consOrg[o]=S.consOrg[o]||{}; };
 const csOrgR = o => (S.consOrg||{})[o]||{};
@@ -6203,7 +6205,7 @@ function csMV(it,d,o){ const v=it&&it.v; if(v!=null&&v!=='') return v;
   return ''; }
 function csMileDone(it,def,o){ const v=csMV(it,def,o); if(def[4]==='ox') return v==='O'; if(def[4]==='c') return v!==''&&v!=null&&!isNaN(+v); return +v>=1; }
 function csAutoCls(o,per){ if(!S.stats||!S.stats.ds) return null; try{ return stAllRaw().filter(r=>r.year===csYear()&&r.org===o&&(!per||r.period===per)); }catch(e){ return null; } }
-function csProg(o,q){ const M=csOrgR(o).mile||{}, need=CS_MILES.filter(d=>d[1]<=q&&csMCnt(d)), done=need.filter(d=>csMileDone(M[d[0]],d,o)).length; return {done,need:need.length,p:csPct(done,need.length)}; }
+function csProg(o,q){ q=Math.min(q,csMileQ()); const M=csOrgR(o).mile||{}, need=CS_MILES.filter(d=>d[1]<=q&&csMCnt(d)), done=need.filter(d=>csMileDone(M[d[0]],d,o)).length; return {done,need:need.length,p:csPct(done,need.length)}; }
 function csGoal(o,q){ const J=((S.consJudge||{})[q]||{})[o]||{}, R=((csOrgR(o).rep||{})[q])||{};
   const t=+(stTarget1(csYear(),o).cls)||0, L=csAutoCls(o), auto=L&&t?csPct(L.length,t):null;
   const v=J.goal!=null&&J.goal!==''?+J.goal:R.goal!=null&&R.goal!==''?+R.goal:auto; return {p:v,auto,kpi:t,n:L?L.length:null,src:J.goal!=null&&J.goal!==''?'위원회 수정':R.goal!=null&&R.goal!==''?'대학 입력':auto!=null?'자동':'' }; }
@@ -6256,7 +6258,7 @@ function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csY
   const nos=U.filter(o=>!(csOrgR(o).sub||{})[ym]); if(nos.length) todo.push({d:csMileDueOf(ym),who:nos.map(o=>o.replace('대학교','대')).join(' · '),t:`${+ym.slice(5)}월 마일스톤 점검표 제출`,late:csMileDueOf(ym)<t,n:`제출 ${U.length-nos.length}/${U.length}`});
   todo.sort((a,b)=>a.d.localeCompare(b.d));
   return `<div class="row" style="gap:8px;flex-wrap:wrap">${csQSeg('dash',q)}<span class="small muted">사업 연도 ${csYear()}</span></div>
-   <div class="cs-kps">${csKp(U.length+'개교','참여대학')}${csKp(`${cnt('g')} · ${cnt('y')} · ${cnt('r')}`,'Green · Yellow · Red')}${csKp(CS_MILES.filter(d=>d[1]<=q&&csMCnt(d)).length+'개','누적 예정 마일스톤')}${csKp(nos.length+'개교',`${+ym.slice(5)}월 점검표 미제출`,nos.length?'lv-warn':'')}${csKp(lateG+'건','기한 지난 미회신 공문',lateG?'lv-crit':'')}</div>
+   <div class="cs-kps">${csKp(U.length+'개교','참여대학')}${csKp(`${cnt('g')} · ${cnt('y')} · ${cnt('r')}`,'Green · Yellow · Red')}${csKp(CS_MILES.filter(d=>d[1]<=Math.min(q,csMileQ())&&csMCnt(d)).length+'개','누적 예정 마일스톤')}${csKp(nos.length+'개교',`${+ym.slice(5)}월 점검표 미제출`,nos.length?'lv-warn':'')}${csKp(lateG+'건','기한 지난 미회신 공문',lateG?'lv-crit':'')}</div>
    ${S.ui.stLoaded?'':'<div class="small muted">운영 통계 자료를 불러오는 중이라 목표 달성률이 잠시 비어 있을 수 있습니다.</div>'}
    <div class="cs-cards">${st.map(x=>`<section class="cs-card" data-act="csgo" data-v="${esc(x.o)}"><div class="row" style="gap:6px"><b style="flex:1">${esc(x.o)}${x.o==='호서대학교'?' <span class="chip">주관</span>':''}</b>${csSig(x.fin)}</div>
      <div class="cs-rates">${[['목표 달성률',x.g.p],['사업 진행률',x.p.p],['예산 집행률',x.b.p]].map(([l,p])=>`<span class="small muted">${l}</span>${csBar(p)}<b class="${csRateC(p)}">${p==null?'-':p+'%'}</b>`).join('')}</div>
@@ -6266,12 +6268,12 @@ function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csY
 /* ---------- 마일스톤 점검표 ---------- */
 function csPickOrg(k){ if(csMine()) return csMine(); const U=CS_UNIVS(); let o=S.ui.csOrg; if(!U.includes(o)) o=U.includes(MY_ORG)?MY_ORG:U[0]; return o; }
 const csOrgSel = o => csMine()?`<b>${esc(o)}</b>`:`<select id="cs-org" aria-label="대학">${CS_UNIVS().map(x=>`<option ${x===o?'selected':''}>${esc(x)}</option>`).join('')}</select>`;
-function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), ym=S.ui.csYm||csYm(), sub=(D.sub||{})[ym], due=csMileDueOf(ym), adm=!csMine(), lockM=!adm&&!!(sub||(D.sub||{})[csYm()]);
+function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, OQ=csMileQ(), q=Math.min(csQNow(),OQ), ym=S.ui.csYm||csYm(), sub=(D.sub||{})[ym], due=csMileDueOf(ym), adm=!csMine(), lockM=!adm&&!!(sub||(D.sub||{})[csYm()]);
   const okd=(D.subOk||{})[ym], fx=(D.subFix||{})[ym], fixOpen=fx&&!sub, reSub=fx&&sub;
   const pr=csProg(o,q), todoN=CS_MILES.filter(d=>d[1]===q&&csMCnt(d)&&!csMileDone(M[d[0]],d,o)).length, fixN=CS_MILES.filter(d=>(M[d[0]]||{}).st==='fix').length;
   const months=[]; for(let i=0;i<12;i++){ const d=new Date(csYear(),2+i,1); months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
   const open=S.ui.csMq||{[q]:true};
-  const row=d=>{ const it=M[d[0]]||{}, cp=`consOrg.${o}.mile.${d[0]}`, done=csMileDone(it,d,o), auto=csMAuto(o,d), dis=lockM&&it.st!=='fix'?'disabled':'', ex=!csMCnt(d);
+  const row=d=>{ const it=M[d[0]]||{}, cp=`consOrg.${o}.mile.${d[0]}`, done=csMileDone(it,d,o), auto=csMAuto(o,d), dis=(lockM&&it.st!=='fix')||(!adm&&d[1]>OQ)?'disabled':'', ex=!csMCnt(d);
     const ev=csMV(it,d,o), autoOx=d[4]==='ox'&&(it.v==null||it.v==='')&&ev;
     const inp=d[4]==='ox'?`<span class="cs-ox">${['O','X'].map(v=>`<button type="button" ${dis} class="${ev===v?'on':''}" data-act="csox" data-o="${esc(o)}" data-n="${d[0]}" data-v="${v}">${v}</button>`).join('')}</span>${autoOx?'<div class="small muted">자동</div>':''}`
       :`<input type="number" min="0" ${dis} style="width:64px" data-cp="${cp}.v" data-cat="${cp}" value="${esc(it.v??'')}" ${d[4]==='cls'&&auto?`placeholder="${auto.length}"`:''} aria-label="${d[4]==='c'?'건수':d[4]==='cls'?'학급 수':'횟수'}"> <span class="small muted">${csMUnit(d)}</span>`;
@@ -6284,9 +6286,10 @@ function csMile(){ const o=csPickOrg(), D=csOrgR(o), M=D.mile||{}, q=csQNow(), y
     <span style="flex:1"></span>${adm?(sub?(okd?`<span class="small muted">${esc(String(okd.at||'').slice(5,16).replace('-','.'))} 확인 완료</span> <button class="btn sm" data-act="csmok" data-o="${esc(o)}" data-v="">확인 취소</button>`:`<button class="btn sm pri" data-act="csmok" data-o="${esc(o)}" data-v="1">제출 완료 확인</button>`)+` <button class="btn sm" data-act="csmfix" data-o="${esc(o)}">보완 요청</button>`:''):sub?`<span class="small muted">제출 후에는 고칠 수 없습니다 · 수정이 필요하면 호서대에 요청</span>`:lockM?`<span class="small muted">${+csYm().slice(5)}월 점검표 제출 완료 · 보완 요청 항목만 고칠 수 있습니다</span>`:`<button class="btn sm pri" data-act="csask" data-k="mile" data-o="${esc(o)}">${fixOpen?'보완 후 다시 제출하기':'제출하기'}</button>`}</div>
    ${fixOpen?`<div class="notice bad stack" style="gap:4px"><b>호서대에서 ${+ym.slice(5)}월 점검표 보완을 요청했습니다</b><div class="small">${esc(fx.why||'')}</div><div class="small">${adm?'대학이 고친 뒤 다시 제출하면 「보완 후 재제출」로 표시됩니다.':'내용을 고쳐 입력한 뒤 「보완 후 다시 제출하기」를 눌러 주세요.'} <span class="muted">(${esc(String(fx.at||'').slice(5,16).replace('-','.'))} 요청)</span></div></div>`:''}
    ${lockM?`<div class="iss lv-info small">제출한 점검표는 고칠 수 없습니다. 호서대가 「보완」을 요청한 항목만 고칠 수 있고, 다른 수정이 필요하면 호서대에 요청해 주세요.</div>`:''}
+   ${adm?`<div class="row small" style="gap:6px;flex-wrap:wrap;align-items:center"><b>대학 입력 열기</b>${[1,2,3,4].map(qq=>`<button class="fchip ${qq===OQ?'on':''}" data-act="csmopen" data-v="${qq}">${qq}분기까지</button>`).join('')}${qt(['고른 분기까지 대학이 입력·제출할 수 있음','열지 않은 분기는 대학 화면에서 닫혀 보이고 진행률·판정에서도 빠짐',`${csYear()}년 설정 · 해마다 따로 정함`])}</div>`:''}
    <div class="cs-kps">${csKp(`${pr.done} / ${pr.need}`,'누적 완료 / 누적 예정')}${csKp(pr.p==null?'-':pr.p+'%','사업 진행률',csRateC(pr.p))}${csKp(todoN+'개','이번 분기 미완료')}${csKp(fixN+'개','보완 요청',fixN?'lv-warn':'')}</div>
    <div class="tw"><table class="cs-mt"><thead><tr><th style="width:36px">연번</th><th>마일스톤</th><th>근거 예시 (증빙 자료)</th><th style="width:130px">실적</th><th style="width:150px">확인</th><th style="width:16%">비고</th></tr></thead><tbody>
-   ${[1,2,3,4].map(qq=>`<tr class="cs-qh" data-act="csmq" data-v="${qq}"><td colspan="6">${open[qq]?'▾':'▸'} ${CS_QN[qq]}${qq===q?' · 이번 분기':''} <span class="muted" style="font-weight:400">· 완료 ${CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)&&csMileDone(M[d[0]],d,o)).length}/${CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)).length}</span></td></tr>${open[qq]?CS_MILES.filter(d=>d[1]===qq).map(row).join(''):''}`).join('')}
+   ${[1,2,3,4].map(qq=>qq>OQ&&!adm?`<tr class="cs-qh"><td colspan="6">▸ ${CS_QN[qq]} <span class="muted" style="font-weight:400">· 아직 열리지 않았습니다 (호서대가 입력을 열면 작성)</span></td></tr>`:`<tr class="cs-qh" data-act="csmq" data-v="${qq}"><td colspan="6">${open[qq]?'▾':'▸'} ${CS_QN[qq]}${qq===q?' · 이번 분기':''}${qq>OQ?' · <span class="lv-warn">대학 입력 닫힘</span>':''} <span class="muted" style="font-weight:400">· 완료 ${CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)&&csMileDone(M[d[0]],d,o)).length}/${CS_MILES.filter(d=>d[1]===qq&&csMCnt(d)).length}</span></td></tr>${open[qq]?CS_MILES.filter(d=>d[1]===qq).map(row).join(''):''}`).join('')}
    </tbody></table></div>
    <div class="small muted">완료 기준: O 표시, 또는 횟수·학급 수 1 이상. 민원은 0건(해당 없음)도 완료. 학교밖 학급 수는 운영 목록(그 분기에 시작한 학교밖 학급)으로 자동 채움, 「매칭·운영 개시」는 운영 목록에 그 시기 학급이 있고 첫 수업일이 지나면 자동 O. 다르면 직접 고쳐 입력. 해당하지 않는 마일스톤은 사업관리위원회 승인 후 비고에 대체 과업을 적어 주세요. 매월 마감(기본 ${csCfg().mileDay}일)까지 「점검표 제출」을 눌러야 성실도 감점이 없습니다.</div>`; }
 /* ---------- 제출 자료 통합: 대학별 제출 상태 + 운영 보고 통합 표 + 양식 내려받기 ---------- */
@@ -6640,6 +6643,7 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'csxls-rep': (el.dataset.f==='x'?csXlsRep:csHwpRep)(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
     case 'csxls-mile': (el.dataset.f==='x'?csXlsMile:csHwpMile)(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
     case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab='mile'; } return true;
+    case 'csmopen': { if(csMine()) return false; csSet(`consCfg.mileQ.${csYear()}`,+el.dataset.v); toast(`마일스톤 대학 입력을 ${el.dataset.v}분기까지 열었습니다`); return true; }
     case 'csmq': { const m=U.csMq||{[csQNow()]:true}; m[el.dataset.v]=!m[el.dataset.v]; U.csMq=m; return true; }
     case 'csox': { if(el.disabled) return false; const p=`consOrg.${o}.mile.${el.dataset.n}`, cur=csGet(p+'.v'); csSet(p+'.v',cur===el.dataset.v?'':el.dataset.v); csStamp(p); return true; }
     case 'csmst': { const p=`consOrg.${o}.mile.${el.dataset.n}`; if(el.dataset.v==='fix'){ const w=prompt('보완 요청 사유',csGet(p+'.fixWhy')||''); if(w===null) return false; csSet(p+'.fixWhy',w.trim()); csSet(p+'.st','fix'); } else { csSet(p+'.st',csGet(p+'.st')==='ok'?'':'ok'); } csStamp(p); return true; }
@@ -8188,7 +8192,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.111';
+const APP_VER = '11.112';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
