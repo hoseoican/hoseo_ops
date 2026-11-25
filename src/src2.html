@@ -2246,7 +2246,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄 관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.75';
+const LIB_VER='11.76';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6812,9 +6812,9 @@ document.addEventListener('click',async e=>{
     case 'asstsms': instSmsXlsx('asst'); return;
     case 'asrec': { const rs=asRows().filter(x=>(S.ui.asSel||{})[x.id]), go=rs.filter(x=>!x.aOpen&&asState(x)!=='fin'); go.forEach(x=>{ x.aOpen={at:now()}; x.aApps=x.aApps||[]; }); S.ui.asSel={}; const sk=rs.length-go.length; toast(`${go.length}학급 보조강사 모집을 강사 화면에 공개했습니다${sk?` · 이미 모집 중이거나 확정된 ${sk}학급은 건너뜀`:''}`); break; }
     case 'asclose': { const rs=asRows().filter(x=>(S.ui.asSel||{})[x.id]&&x.aOpen); rs.forEach(x=>{ delete x.aOpen; }); S.ui.asSel={}; toast(`${rs.length}학급 보조강사 모집을 닫았습니다. 받은 신청은 그대로 남습니다`); break; }
-    case 'aspick': { const tid=el.dataset.t; if(!r||r.status!=='final') return; if(r.inst===tid){ toast('이 학급의 주강사입니다'); return; } if(conflictsFor(tid,r,true).some(x=>x.hard)){ toast('같은 시간에 배정된 다른 수업이 있어 배치할 수 없습니다'); return; } const prev=r.asst; r.asst=tid; r.asstPend=true; toast(`${shortSch(r.school)} ${clsName(r)}: ${instName(tid)} 보조강사 가배치${prev&&prev!==tid?` (${instName(prev)} → 변경)`:''}`); break; }
+    case 'aspick': { const tid=el.dataset.t; if(!r) return; if(!asOk(r)){ toast('운영 확정 뒤에 보조강사를 배치할 수 있습니다'); return; } if(r.inst===tid){ toast('이 학급의 주강사입니다'); return; } if(conflictsFor(tid,r,true).some(x=>x.hard)){ toast('같은 시간에 배정된 다른 수업이 있어 배치할 수 없습니다'); return; } const prev=r.asst; r.asst=tid; r.asstPend=true; toast(`${shortSch(r.school)} ${clsName(r)}: ${instName(tid)} 보조강사 가배치${prev&&prev!==tid?` (${instName(prev)} → 변경)`:''}`); break; }
     case 'asunpick': { if(!r) return; const prev=r.asst; r.asst=''; delete r.asstPend; toast(`${instName(prev)} 보조강사 배치를 해제했습니다`); break; }
-    case 'asfin': { const rs=asRows().filter(x=>asState(x)==='pend'); rs.forEach(x=>{ delete x.asstPend; x.asstAt=now(); delete x.aOpen; if(!x.schPend) x.thread.push({who:'호서대',text:`보조강사 배치: ${instName(x.asst)} 강사`,at:now()}); }); toast(`${rs.length}학급 보조강사를 확정했습니다. 강사 화면에 공개되었습니다`); break; }
+    case 'asfin': { const rs=asRows().filter(x=>asState(x)==='pend'); rs.forEach(x=>{ delete x.asstPend; x.asstAt=now(); delete x.aOpen; if(!x.schPend) x.thread.push({who:'호서대',text:`보조강사 배치: ${instName(x.asst)} 강사`,at:now()}); }); const nf=rs.filter(x=>x.status!=='final').length; toast(`${rs.length}학급 보조강사를 확정했습니다. `+(nf?`강사 화면에 공개되었습니다 (주강사 확정 전인 ${nf}학급은 주강사 확정 후 공개)`:'강사 화면에 공개되었습니다')); break; }
     case 'afask': S.ui.afAsk=!S.ui.afAsk; S.ui.afSel={}; break;
     case 'assignfinal': { const rs=afReady().filter(afOn); S.ui.afAsk=false; S.ui.afSel={}; rs.forEach(r=>{ r.status='final'; r.schPend=true; r.finalAt=now(); }); toast(`${rs.length}학급 배치를 확정했습니다. 강사 화면에 공개되었고, 학교에는 「5. 학교 공개」 후 보입니다`); break; }
     case 'smstpl': { const k=el.dataset.k==='asst'?'asst':'main'; S.ui.smsTpl=S.ui.smsTpl&&smsK()===k?false:k; S.ui.smsDraft=null; break; }
