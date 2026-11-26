@@ -2306,7 +2306,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.128';
+const LIB_VER='11.129';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6298,15 +6298,19 @@ function mwLoad(fresh){ const D=mwDB(); if((D.loaded&&!D.cached)||D.loading) ret
       Promise.all([put.length?run('adminMwPut',ADMIN_KEY,put):null,del.length?run('adminMwDel',ADMIN_KEY,del):null]).then(()=>{ const D=mwDB(); P.forEach(x=>{ if(D.pend[x.id]===x) delete D.pend[x.id]; }); mwPendSync(); mwCachePut(); if(put.length) toast(`보관해 둔 민원 기록 ${put.length}건을 저장했습니다`); }).catch(()=>{}); } })
   .catch(e=>{ const X=mwDB(); X.loading=false; if(!X.loaded){ X.loaded=true; X.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); } render(); }); }
 /* 저장: 화면에 먼저 반영하고 서버로. 실패하면 알림(화면 값은 남겨 두고 다시 저장 가능) */
+/* 기록마다 저장 상태(저장 중 · 저장됨 시각 · 실패)를 화면에 표시 */
+function mwMark(id,st,msg){ const D=mwDB(); (D.ss=D.ss||{})[id]={st,at:now(),msg:msg||''}; if(route&&route()==='cons') render(); }
+function mwSaveTag(id){ const D=mwDB(), x=(D.ss||{})[id]; if(!x){ return (D.pend||{})[id]?'<span class="small lv-warn">저장 안 됨 · 보관 중</span>':''; }
+  return x.st==='saving'?'<span class="small muted">저장 중…</span>':x.st==='ok'?`<span class="small lv-ok">저장됨 ${esc(String(x.at).slice(-5))}</span>`:`<span class="small lv-crit">저장 실패</span> <button class="lnk small" data-act="mwretry" data-v="${esc(id)}">다시 저장</button>`; }
 /* 저장 못 한 기록은 이 브라우저에 남겨 두었다가(새로 고침해도) 다음에 불러올 때 다시 저장 */
 const mwPendKey=()=>'anc_mw_pend_'+(S.adminOrg||'hq');
 function mwPendSync(){ const D=mwDB(); try{ const P=D.pend||{}; if(Object.keys(P).length) localStorage.setItem(mwPendKey(),JSON.stringify(P)); else localStorage.removeItem(mwPendKey()); }catch(e){} }
 function mwPendLoad(){ try{ return JSON.parse(localStorage.getItem(mwPendKey())||'null')||{}; }catch(e){ return {}; } }
 function mwSave(rec){ const D=mwDB(); const i=D.list.findIndex(x=>x.id===rec.id); if(i>=0) D.list[i]=rec; else D.list.push(rec);
   if(!kitOnGas()){ S.mwLocal=D.list; save(); return; }
-  (D.pend=D.pend||{})[rec.id]=rec; mwPendSync(); kitSaveMsg('저장 중…');
-  run('adminMwPut',ADMIN_KEY,[rec]).then(()=>{ if(D.pend[rec.id]===rec) delete D.pend[rec.id]; mwPendSync(); kitSaveMsg('저장됨 · '+now()); mwCachePut(); })
-  .catch(e=>{ const m=String(e&&e.message||e).replace(/^Exception:\s*/,''); kitSaveMsg('저장 실패',true); toast(/알 수 없는 요청/.test(m)?'민원 관리 대장은 운영 서버를 새 버전(2026.11.26-2 이상)으로 배포해야 저장됩니다. 적은 내용은 이 브라우저에 보관했다가 배포 후 자동으로 저장합니다.':'민원 관리 대장을 저장하지 못했습니다: '+m); }); }
+  (D.pend=D.pend||{})[rec.id]=rec; mwPendSync(); kitSaveMsg('저장 중…'); mwMark(rec.id,'saving');
+  run('adminMwPut',ADMIN_KEY,[rec]).then(()=>{ if(D.pend[rec.id]===rec) delete D.pend[rec.id]; mwPendSync(); kitSaveMsg('저장됨 · '+now()); mwMark(rec.id,'ok'); mwCachePut(); })
+  .catch(e=>{ const m=String(e&&e.message||e).replace(/^Exception:\s*/,''); kitSaveMsg('저장 실패',true); mwMark(rec.id,'fail',m); toast(/알 수 없는 요청/.test(m)?'민원 관리 대장은 운영 서버를 새 버전(2026.11.26-2 이상)으로 배포해야 저장됩니다. 적은 내용은 이 브라우저에 보관했다가 배포 후 자동으로 저장합니다.':'민원 관리 대장을 저장하지 못했습니다: '+m); }); }
 function mwRemove(id){ const D=mwDB(); D.list=D.list.filter(x=>x.id!==id);
   if(!kitOnGas()){ S.mwLocal=D.list; save(); return; }
   (D.pend=D.pend||{})[id]={id,gone:true}; mwPendSync();
@@ -6384,7 +6388,7 @@ function csMw(){ const D=mwDB(); if(!D.loaded){ mwLoad(); return '<div class="pa
     return `<tr class="${on?'sel':''}"><td class="mono nowrap">${esc(x.date||'')}</td><td><span class="chip sm">${esc(MW_KL(x.kind))}</span></td><td><b>${esc(tName(x))}</b>${x.kind!=='site'&&x.school?`<div class="small muted">${esc(x.school)}</div>`:''}</td>
      <td class="small">${orgOf(x)?esc(orgShort(orgOf(x))):'<span class="muted">-</span>'}</td><td class="small">${esc(x.type||'')}</td><td class="small ${lvC(String(x.level))}">${esc(mwLvL(x.level))}</td>
      <td class="small" style="max-width:320px">${esc(String(x.desc||'').slice(0,80))}${String(x.desc||'').length>80?'…':''}</td>
-     <td><span class="pill ${x.status==='done'?'st-final':x.status==='doing'?'st-recruit':'st-wait'}">${MW_SL(x.status)}</span>${x.legacy?'<div class="small muted">강사 명단 기록</div>':''}${x.status==='done'&&x.reflect===false?'<div class="small muted">평가 미반영</div>':''}</td>
+     <td><span class="pill ${x.status==='done'?'st-final':x.status==='doing'?'st-recruit':'st-wait'}">${MW_SL(x.status)}</span>${x.legacy?'<div class="small muted">강사 명단 기록</div>':''}${x.status==='done'&&x.reflect===false?'<div class="small muted">평가 미반영</div>':''}${x.legacy?'':`<div>${mwSaveTag(x.id)}</div>`}</td>
      <td class="small muted">${last?esc(last.t.slice(0,40)):'-'}</td><td><button class="btn sm" data-act="mwopen" data-v="${esc(x.id)}">${on?'닫기':'열기'}</button></td></tr>${on?`<tr><td colspan="10">${mwDetail(x)}</td></tr>`:''}`; };
   const sum=MW_KIND.map(([k,l])=>{ const A=all.filter(x=>x.kind===k); return `<div class="panel" style="flex:1;min-width:160px;padding:10px 14px"><div class="small muted">${l}</div><div><b style="font-size:20px">${A.length}</b>건 <span class="small ${A.some(x=>x.status!=='done')?'lv-warn':'muted'}">처리 중 ${A.filter(x=>x.status!=='done').length}</span></div></div>`; }).join('');
   return `<div class="stack" style="gap:10px">
@@ -6402,7 +6406,7 @@ function csMw(){ const D=mwDB(); if(!D.loaded){ mwLoad(); return '<div class="pa
 function mwDetail(x){ const ed=!x.legacy&&mwCanEdit(x);
   const info=[['접수 경로',x.src],['시기',x.seasonName],['관련 학급',(()=>{ const r=x.rowId&&S.rows.find(z=>z.id===x.rowId); return r?`${r.school} · ${clsName(r)} · ${(prog(r.prog)||{}).name||''}`:''; })()],['등록',[x.by,x.at].filter(Boolean).join(' ')]].filter(([,v])=>v);
   return `<div class="stack" style="gap:8px;padding:6px 4px">
-   <div class="small">${info.map(([k,v])=>`<span class="muted">${k}</span> ${esc(v)}`).join(' · ')}</div>
+   <div class="row between" style="margin:0"><div class="small">${info.map(([k,v])=>`<span class="muted">${k}</span> ${esc(v)}`).join(' · ')}</div><div>${x.legacy?'':mwSaveTag(x.id)}</div></div>
    <div style="white-space:pre-wrap">${esc(x.desc||'')}</div>
    <div><b class="small">조치 기록</b>${(x.acts||[]).length?`<ul class="small" style="margin:4px 0 0;padding-left:18px;line-height:1.7">${x.acts.map(a=>`<li><span class="mono muted">${esc(a.d||'')}</span> ${esc(a.t)} <span class="muted">${esc(a.who||'')}</span></li>`).join('')}</ul>`:'<div class="small muted">아직 조치 기록이 없습니다</div>'}</div>
    ${ed?`<div class="row" style="gap:6px;flex-wrap:wrap"><input id="mw-act-${esc(x.id)}" placeholder="조치 내용 추가 (예: 학교와 통화, 일정 재조정)" style="flex:1;min-width:240px"><button class="btn sm" data-act="mwact" data-v="${esc(x.id)}">조치 추가</button></div>
@@ -6431,9 +6435,10 @@ function mwAct(a,el){ const U=S.ui, D=mwDB(), find=id=>D.list.find(x=>x.id===id)
       mwSave(rec); U.mwForm=null; U.mwOpen=rec.id; toast('민원 관리 대장에 저장했습니다'); return true; }
     case 'mwopen': U.mwOpen=U.mwOpen===el.dataset.v?'':el.dataset.v; U.mwDelAsk=''; return true;
     case 'mwact': { const x=find(el.dataset.v), i=document.getElementById('mw-act-'+el.dataset.v), t=i&&i.value.trim(); if(!x||!t){ toast('조치 내용을 적어 주세요'); return false; }
-      const y={...x,acts:[...(x.acts||[]),{d:mwToday(),who:S.adminName||(mwMine()?orgShort(mwMine()):'호서대'),t}]}; if(y.status==='open') y.status='doing'; mwSave(y); return true; }
-    case 'mwst': { const x=find(el.dataset.v); if(!x) return false; mwSave({...x,status:el.dataset.s}); return true; }
-    case 'mwref': { const x=find(el.dataset.v); if(!x) return false; mwSave({...x,reflect:!!el.checked}); return true; }
+      const y={...x,acts:[...(x.acts||[]),{d:mwToday(),who:S.adminName||(mwMine()?orgShort(mwMine()):'호서대'),t}]}; if(y.status==='open') y.status='doing'; mwSave(y); toast('조치 기록을 추가했습니다'); return true; }
+    case 'mwst': { const x=find(el.dataset.v); if(!x) return false; if(x.status===el.dataset.s){ toast(`이미 「${MW_SL(x.status)}」 상태입니다`); return false; } mwSave({...x,status:el.dataset.s}); toast(`「${MW_SL(el.dataset.s)}」로 바꿨습니다${el.dataset.s==='done'&&x.kind==='inst'&&x.reflect!==false?' · 강사 평가에 반영':''}`); return true; }
+    case 'mwretry': { const x=find(el.dataset.v); if(!x) return false; mwSave({...x}); return true; }
+    case 'mwref': { const x=find(el.dataset.v); if(!x) return false; mwSave({...x,reflect:!!el.checked}); toast(el.checked?'강사 평가에 반영합니다':'강사 평가에서 뺐습니다'); return true; }
     case 'mwedit': { const x=find(el.dataset.v); if(!x) return false; U.mwForm={...x}; return true; }
     case 'mwdel': U.mwDelAsk=el.dataset.v; return true;
     case 'mwdelno': U.mwDelAsk=''; return true;
