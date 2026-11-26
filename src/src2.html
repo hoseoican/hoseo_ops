@@ -1002,17 +1002,18 @@ tr:first-child>td{border-top:0}
 .mca .btn:disabled{display:none}
 .mca .btn.sm{padding:3px 9px;font-size:12px}
 /* 왼쪽 메뉴(A안): 탭 안 중분류·소분류 */
-.lwrap{display:flex;flex-wrap:wrap;align-items:flex-start;gap:24px}
-.lmenu{flex:1 1 220px;max-width:240px;position:sticky;top:8px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 0 12px;box-sizing:border-box}
-.lmenu .lg{display:flex;align-items:center;gap:8px;margin:14px 14px 4px;font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.08em}
-.lmenu .lg:first-child{margin-top:4px}
-.lmenu .lg::after{content:"";flex:1;height:1px;background:var(--line2,var(--line))}
-.lmenu button{display:flex;align-items:center;gap:10px;width:calc(100% - 16px);margin:1px 8px;padding:8px 12px;border:0;border-radius:10px;background:none;color:var(--fg);font:inherit;font-size:14px;text-align:left;cursor:pointer}
-.lmenu button svg{flex:none;width:18px;height:18px;color:var(--muted)}
-.lmenu button:hover{background:var(--tint,var(--sunk))}
-.lmenu button.on{background:var(--accent);color:var(--on-accent);font-weight:700}
-.lmenu button.on svg{color:var(--on-accent)}
-.lmenu .lsep{height:1px;background:var(--line2,var(--line));margin:10px 14px}
+.lwrap{display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px}
+.lmenu{flex:1 1 230px;max-width:260px;position:sticky;top:8px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px;box-sizing:border-box}
+.lmenu .lg{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;padding:14px 12px 6px;margin:0}
+.lmenu .lg:first-child{padding-top:6px}
+.lmenu button{display:flex;align-items:center;gap:8px;width:100%;height:42px;margin:0;padding:0 12px;border:0;border-radius:10px;background:none;color:var(--fg);font:inherit;font-size:14px;text-align:left;cursor:pointer;box-sizing:border-box}
+.lmenu button svg{display:none}
+.lmenu button:hover{background:var(--sunk)}
+.lmenu button.on{background:color-mix(in srgb,var(--accent) 8%,var(--surface));color:var(--accent);font-weight:700}
+.lmenu .lb{margin-left:auto;font-size:12px;font-weight:700;min-width:22px;text-align:center;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);box-sizing:border-box}
+.lmenu .lb.r{background:var(--accent);color:var(--on-accent)}
+.lmenu .lb.g{background:var(--fin-bg);color:var(--fin-fg)}
+.lmenu .lsep{height:1px;background:var(--line);margin:10px 4px}
 .lbody{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:14px}
 .lcrumb{font-size:13px;color:var(--muted)}
 @media (max-width:860px){.lmenu{max-width:none;position:static}}
@@ -2333,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.136';
+const LIB_VER='11.137';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4160,7 +4161,7 @@ function accOpsLocal(d){ if(d.biz!==curBiz()) return; if(S.ops.accId&&S.ops.accI
 function viewSetup(){ return setupTabs(viewSetupAll()); }
 function viewSetupAll(){
   const ed=S.programs.find(p=>p.key===S.ui.condEdit);
-  return `<div class="stack"><div><h2>기준정보</h2><div class="muted small">차수 시작 때 1번부터 차례로 확인 ${qt(['「프로그램 · 운영 조건」 설정대로 교육청 목록이 대학별로 나뉨','그래서 목록을 업로드 전에 맞춰 두기','다 마치면 「2 운영현황」에서 목록 업로드'])}</div></div>
+  return `<div class="stack">${pageHead(season().name,'기준정보',qt(['「프로그램 · 운영 조건」 설정대로 교육청 목록이 대학별로 나뉨','그래서 목록을 업로드 전에 맞춰 두기','다 마치면 「2 운영현황」에서 목록 업로드']))}
   <!--§cycle-->
   <div class="panel stack"><div class="row" style="gap:6px;align-items:center"><h3><span class="stepno">1</span>차수 · 카톡방</h3>${qt(['차수별 학교 · 학교밖(기관) 담당자 단체 카톡방','학교 화면과 확인 요청 문구에 입장 안내로 나감','학교밖 기관 화면에는 학교밖 카톡방이 나감(비어 있으면 안내 없음)','공지 전용: 카톡방 설정에서 방장만 메시지 보내기'])}</div>
    <div class="row" style="align-items:flex-end"><label class="f"><span class="flab">학교·강사 공개 시기 ${qt(['학교 접속 신청 화면과 강사 신청 화면에 보이는 시기','운영 화면 위 「시기」에서 다른 시기도 관리 가능'])}</span><select id="curSeason" style="min-width:180px">${S.seasons.map(x=>`<option value="${x.k}" ${S.season===x.k?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>
@@ -6580,18 +6581,20 @@ function mwAct(a,el){ const U=S.ui, D=mwDB(), find=id=>D.list.find(x=>x.id===id)
   }
 }
 /* ---------- 화면 ---------- */
-const CS_MENU = [['현황',[['dash','종합 현황'],['judge','분기 점검 · 판정']]],['대학 제출 자료',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['공문',[['gong','공문 발송 · 회신'],['gtpl','공문 양식']]],['관리',[['mw','민원 관리 대장']]],['기준',[['rule','평가 기준']]]];
+const CS_MENU = [['현황',[['dash','종합 현황 · 판정']]],['대학 제출 자료',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['공문',[['gong','공문 발송 · 회신'],['gtpl','공문 양식']]],['관리',[['mw','민원 관리 대장']]],['기준',[['rule','평가 기준']]]];
 const CS_MENU_ORG = [['입력',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['확인',[['mygong','받은 공문']]],['관리',[['mw','민원 관리 대장']]]];
 const CS_IC = {mw:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v4M12 14h.01"/>',sum:'<path d="M4 4h16v16H4z"/><path d="M4 10h16M10 4v16"/>',dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',judge:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',mile:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',rep:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',gong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',gtpl:'<path d="M8 3h9l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M10 12h7M10 16h5"/>',mygong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',rule:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
 function viewCons(){
   if(!S.consCfg&&!csMine()){ S.consCfg=CS_DEF(); }
   if(!S.ui.stLoaded&&!S.ui.stLoading&&typeof statsLoad==='function') setTimeout(statsLoad,0);
-  const M=csMine()?CS_MENU_ORG:CS_MENU, all=M.flatMap(g=>g[1]); let cur=S.ui.csTab; if(!all.some(x=>x[0]===cur)) cur=all[0][0];
-  const btn=([k,l])=>`<button type="button" role="tab" aria-selected="${cur===k}" class="${cur===k?'on':''}" data-act="cstab" data-v="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CS_IC[k]||''}</svg>${esc(l)}</button>`;
+  const M=csMine()?CS_MENU_ORG:CS_MENU, all=M.flatMap(g=>g[1]); let cur=S.ui.csTab==='judge'?'dash':S.ui.csTab; if(!all.some(x=>x[0]===cur)) cur=all[0][0];
+  const BD=csMine()?{}:csMenuBadge();
+  const btn=([k,l])=>`<button type="button" role="tab" aria-selected="${cur===k}" class="${cur===k?'on':''}" data-act="cstab" data-v="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CS_IC[k]||''}</svg>${esc(l)}${BD[k]&&BD[k][0]?`<span class="lb ${BD[k][1]||''}">${BD[k][0]}</span>`:''}</button>`;
   const menu=`<nav class="lmenu" aria-label="컨소시엄 관리 메뉴">${M.map(([g,L])=>`<div class="lg">${esc(g)}</div>${L.map(btn).join('')}`).join('')}</nav>`;
   const grp=M.find(g=>g[1].some(x=>x[0]===cur)), lab=all.find(x=>x[0]===cur)[1];
   const body={dash:csDash,sum:csDash,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,gtpl:csGTplV,mygong:csMyGong,rule:csRule,mw:csMw}[cur]()+csAskModal();
-  return `<div class="stack noenh"><div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">${csMine()?esc(orgShort(csMine())):'운영 점검'} › ${esc(grp[0])}</div><h2 style="margin:0">${esc(lab)}</h2>${['dash','rep'].includes(cur)?stSyncBar():''}${body}</div></div></div>`; }
+  const right=cur==='dash'?csQSeg('dash',S.ui.csQ||csQNow()):'';
+  return `<div class="stack noenh">${pageHead(csMine()?orgShort(csMine()):'사업 연도 '+csYear(),'운영 점검',right)}<div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">운영 점검 › ${esc(grp[0])} › ${esc(lab)}</div>${['dash','rep'].includes(cur)?stSyncBar():''}${body}</div></div></div>`; }
 const csQSeg = (k,q) => `<div class="seg2" role="tablist">${[1,2,3,4].map(i=>`<button class="${q===i?'on':''}" data-act="csq" data-k="${k}" data-v="${i}">${CS_QN[i]}</button>`).join('')}</div>`;
 /* 제출 전 확인 창: 제출하면 고칠 수 없음을 한 번 더 확인 */
 function csAskModal(){ const A=S.ui.csAsk; if(!A) return ''; const lab=A.k==='mile'?`${+(S.ui.csYm||csYm()).slice(5)}월 마일스톤 점검표`:`${CS_QN[A.q]} 운영 보고`;
@@ -6604,26 +6607,49 @@ function csAskModal(){ const A=S.ui.csAsk; if(!A) return ''; const lab=A.k==='mi
 const csKp = (v,t,c) => `<div class="cs-kp"><b class="${c||''}">${v}</b><span>${t}</span></div>`;
 const csBar = p => `<div class="cs-bar"><div style="width:${Math.max(0,Math.min(100,p||0))}%" class="${p==null?'':p>=90?'b-g':p>=70?'b-y':'b-r'}"></div></div>`;
 /* 종합 현황: 대학별 판정·진행·제출 상태 한 표 + 할 일 + 운영 보고 통합 표·양식 다운로드 (예전 「대학별 현황」 + 「제출 자료 통합」) */
-function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csYm(), pc=(a,b)=>b?Math.round(a/b*1000)/10+'%':'-';
+function csMenuBadge(){ const U=CS_UNIVS(), ym=csYm(), q=csQNow(), t=csToday(), B={};
+  const mW=U.filter(o=>{ const D=csOrgR(o); return (D.sub||{})[ym]&&!(D.subOk||{})[ym]; }).length; if(mW) B.mile=[mW,'r'];
+  const rW=U.filter(o=>{ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt&&!R.ok; }).length; if(rW) B.rep=[rW,'r'];
+  const gL=csGong().filter(g=>g.reply&&g.due&&g.due<t).reduce((a,g)=>a+(g.rc||[]).filter(r=>!r.rep&&!r.ex).length,0); if(gL) B.gong=[gL,'r'];
+  const D=mwDB(); if(D.loaded){ const n=mwAll().filter(x=>x.status!=='done').length; if(n) B.mw=[n,'']; }
+  return B; }
+/* 종합 현황 · 판정: 단계 탭(대학별 현황 / 점검표 미제출 / 보고 미제출 / 판정 전) */
+function csDash(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), ym=csYm(), t=csToday(), due=csMileDueOf(ym);
+  const noM=U.filter(o=>!(csOrgR(o).sub||{})[ym]), noR=U.filter(o=>!(((csOrgR(o).rep||{})[q])||{}).subAt), jd=((((S.consJudge||{})[q]||{})._meta)||{}).date;
+  const D=[{k:'all',t:'대학별 현황',g:'보기',n:U.length,u:'개교'},
+    {k:'mile',t:'점검표 미제출',g:`${+ym.slice(5)}월`,n:noM.length,u:'개교',st:noM.length?'now':'done'},
+    {k:'rep',t:'보고 미제출',g:CS_QN[q],n:noR.length,u:'개교',st:noR.length?'now':'done'},
+    {k:'judge',t:'판정 전',g:'운영위원회',n:jd?0:U.length,u:'개교',st:jd?'done':'now'}];
+  const cur=(S.ui.stg||{}).cons_dash||'all', d=D.find(x=>x.k===cur)||D[0], [bd,tn]=stageBadge(d);
+  const stM=o=>{ const R=csOrgR(o), sb=(R.sub||{})[ym]; return sb?((R.subOk||{})[ym]?'<span class="chip ok">확인 완료</span>':'<span class="chip info">확인 대기</span>'):(R.subFix||{})[ym]?'<span class="chip warn">보완 요청</span>':'<span class="chip">미제출</span>'; };
+  const stR=o=>{ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt?(R.ok?'<span class="chip ok">확인 완료</span>':'<span class="chip info">확인 대기</span>'):R.fix?'<span class="chip warn">보완 요청</span>':'<span class="chip">미제출</span>'; };
+  const tbl=(L,stf,tab,btn)=>`<div class="tw"><table><thead><tr><th>대학</th><th>상태</th><th></th></tr></thead><tbody>${L.map(o=>`<tr><td class="nowrap"><b>${esc(csUS(o))}대</b>${o===MY_ORG?' <span class="chip sm">주관</span>':''}</td><td>${stf(o)}</td><td style="text-align:right"><button class="btn sm" data-act="csgo" data-t="${tab}" data-v="${esc(o)}">${btn}</button></td></tr>`).join('')}</tbody></table></div>`;
+  const ord=(L,no)=>no.concat(L.filter(o=>!no.includes(o)));
+  let card;
+  if(cur==='mile') card=stageCard({title:`${+ym.slice(5)}월 마일스톤 점검표`,badge:bd,tone:tn,desc:`마감 ${csFmtD(due)}${due<t?' · 지남':''} · 미제출 대학이 위에 보입니다`,body:noM.length?tbl(ord(U,noM),stM,'mile','점검표 열기'):stageDone('보고 미제출','cons_dash','rep')});
+  else if(cur==='rep') card=stageCard({title:`${CS_QN[q]} 운영 보고`,badge:bd,tone:tn,desc:'미제출 대학이 위에 보입니다',body:noR.length?tbl(ord(U,noR),stR,'rep','운영 보고 열기'):stageDone('판정 전','cons_dash','judge')});
+  else if(cur==='judge') card=stageCard({title:`${CS_QN[q]} 점검 · 판정`,badge:bd,tone:tn,desc:'위원회 날짜를 넣으면 이 단계가 완료로 바뀝니다',body:csJudge()});
+  else card=stageCard({title:'대학별 현황',body:csDashAll()});
+  return stageBar('cons_dash',D,cur)+card; }
+function csDashAll(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=csYm(), pc=(a,b)=>b?Math.round(a/b*1000)/10+'%':'-';
   const st=U.map(o=>({o,a:csAuto(o,q),g:csGoal(o,q),p:csProg(o,q),b:csBud(o,q),fin:csFinal(o,q)}));
   const lateG=csGong().filter(g=>g.reply&&g.due&&g.due<t).reduce((a,g)=>a+(g.rc||[]).filter(r=>!r.rep&&!r.ex).length,0);
   const cnt=k=>st.filter(x=>x.fin===k).length;
   const stR=o=>{ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt?(R.ok?'<span class="chip ok">확인 완료</span>':'<span class="chip info">확인 대기</span>'):R.fix?'<span class="chip warn">보완 요청</span>':'<span class="chip">미제출</span>'; };
   const stM=o=>{ const D=csOrgR(o), sb=(D.sub||{})[ym]; return sb?((D.subOk||{})[ym]?'<span class="chip ok">확인 완료</span>':'<span class="chip info">확인 대기</span>'):(D.subFix||{})[ym]?'<span class="chip warn">보완 요청</span>':'<span class="chip">미제출</span>'; };
   const todo=[]; csGong().forEach(g=>{ if(!g.reply||!g.due) return; const left=(g.rc||[]).filter(r=>!r.rep&&!r.ex); if(left.length) todo.push({d:g.due,who:left.map(r=>shortSch(r.name).replace('대학교','대')).join(' · '),t:g.title,late:g.due<t,id:g.id,n:`회신 ${(g.rc||[]).length-left.length}/${(g.rc||[]).length}`}); });
-  const nos=U.filter(o=>!(csOrgR(o).sub||{})[ym]); if(nos.length) todo.push({d:csMileDueOf(ym),who:nos.map(o=>o.replace('대학교','대')).join(' · '),t:`${+ym.slice(5)}월 마일스톤 점검표 제출`,late:csMileDueOf(ym)<t,n:`제출 ${U.length-nos.length}/${U.length}`});
+  const nos=U.filter(o=>!(csOrgR(o).sub||{})[ym]);
   todo.sort((a,b)=>a.d.localeCompare(b.d));
   const V={}; U.forEach(o=>{ V[o]=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)); });
   const rowT=i=>U.reduce((tt,o)=>({cls:tt.cls+V[o][i].cls,ses:tt.ses+V[o][i].ses,stu:tt.stu+V[o][i].stu}),{cls:0,ses:0,stu:0}), G=CS_OPROWS.map((_,i)=>rowT(i)).reduce((tt,x)=>({cls:tt.cls+x.cls,ses:tt.ses+x.ses,stu:tt.stu+x.stu}),{cls:0,ses:0,stu:0});
   const sumO=(o,k)=>V[o].reduce((a,x)=>a+x[k],0), rate=p=>`<div class="cs-rate1">${csBar(p)}<b class="${csRateC(p)}">${p==null?'-':p+'%'}</b></div>`;
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('dash',q)}<span class="small muted">사업 연도 ${csYear()}</span></div>
-   <div class="cs-kps">${csKp(U.length+'개교','참여대학')}${csKp(`${cnt('g')} · ${cnt('y')} · ${cnt('r')}`,'Green · Yellow · Red')}${csKp(CS_MILES.filter(d=>d[1]<=Math.min(q,csMileQ())&&csMCnt(d)).length+'개','누적 예정 마일스톤')}${csKp(nos.length+'개교',`${+ym.slice(5)}월 점검표 미제출`,nos.length?'lv-warn':'')}${csKp(lateG+'건','기한 지난 미회신 공문',lateG?'lv-crit':'')}</div>
+  return `<div class="cs-kps">${csKp(U.length+'개교','참여대학')}${csKp(`${cnt('g')} · ${cnt('y')} · ${cnt('r')}`,'Green · Yellow · Red')}${csKp(CS_MILES.filter(d=>d[1]<=Math.min(q,csMileQ())&&csMCnt(d)).length+'개','누적 예정 마일스톤')}${csKp(lateG+'건','기한 지난 미회신 공문',lateG?'lv-crit':'')}</div>
    <div class="panel stack" style="gap:8px"><div class="row between" style="flex-wrap:wrap;gap:8px"><b>대학별 현황</b><div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm pri" data-act="csxls-rep" data-q="${q}">운영 보고 다운로드 (한글)</button><button class="btn sm pri" data-act="csxls-mile" data-q="${q}">마일스톤 점검표 다운로드 (한글)</button><button class="btn sm" data-act="csxls-rep" data-q="${q}" data-f="x">운영 보고 엑셀</button>${qt(['운영 보고: 통합 1개 + 대학별 5개를 ZIP 하나로','마일스톤 점검표: 통합은 엑셀, 대학별은 한글','대학 이름을 누르면 그 대학 마일스톤 점검표로 이동'])}</div></div>
     ${!S.ui.stLoaded?'<div class="small muted">운영 통계 자료를 불러오는 중이라 목표 달성률이 잠시 비어 있을 수 있습니다.</div>':S.ui.stCached&&S.ui.stLoading?'<div class="small muted">지난번 받은 통계로 보여 주는 중 · 최신 자료 확인 중…</div>':''}
     <div class="tw"><table class="cs-ut"><thead><tr><th>대학</th><th>판정</th><th>목표 달성률</th><th>사업 진행률</th><th>예산 집행률</th><th>성실도</th><th>${+ym.slice(5)}월 점검표</th><th>운영 보고</th><th>대학별 양식</th></tr></thead><tbody>
      ${st.map(x=>`<tr><td class="nowrap"><button class="lnk" data-act="csgo" data-v="${esc(x.o)}"><b>${esc(csUS(x.o))}대</b></button>${x.o===MY_ORG?' <span class="chip sm">주관</span>':''}</td><td>${csSig(x.fin)}</td><td>${rate(x.g.p)}</td><td>${rate(x.p.p)}<div class="small muted">${x.p.done}/${x.p.need}</div></td><td>${rate(x.b.p)}</td><td><span class="chip ${x.a.P.score<csCfg().cut?'x':''}">${x.a.P.score}점</span></td><td>${stM(x.o)}</td><td>${stR(x.o)}</td><td class="nowrap small"><button class="lnk" data-act="csxls-rep" data-q="${q}" data-o="${esc(x.o)}">운영 보고</button> · <button class="lnk" data-act="csxls-mile" data-q="${q}" data-o="${esc(x.o)}">마일스톤</button></td></tr>`).join('')}</tbody></table></div></div>
-   <div class="panel stack" style="gap:6px"><b>할 일 <span class="small muted" style="font-weight:400">기한 순</span></b>
-    ${todo.length?`<div class="tw"><table><thead><tr><th>기한</th><th>대상</th><th>내용</th><th>상태</th></tr></thead><tbody>${todo.map(x=>`<tr><td class="nowrap">${csFmtD(x.d)}${x.late?' <span class="lv-crit small">지남</span>':''}</td><td class="small">${esc(x.who)}</td><td>${x.id?`<button class="lnk" data-act="csgopen" data-id="${x.id}">${esc(x.t)}</button>`:esc(x.t)}</td><td><span class="chip ${x.late?'x':''}">${esc(x.n)}</span></td></tr>`).join('')}</tbody></table></div>`:'<div class="small muted">기한이 남은 일이 없습니다.</div>'}</div>
+   <div class="panel stack" style="gap:6px"><b>공문 회신 대기 <span class="small muted" style="font-weight:400">기한 순</span></b>
+    ${todo.length?`<div class="tw"><table><thead><tr><th>기한</th><th>대상</th><th>내용</th><th>상태</th></tr></thead><tbody>${todo.map(x=>`<tr><td class="nowrap">${csFmtD(x.d)}${x.late?' <span class="lv-crit small">지남</span>':''}</td><td class="small">${esc(x.who)}</td><td>${x.id?`<button class="lnk" data-act="csgopen" data-id="${x.id}">${esc(x.t)}</button>`:esc(x.t)}</td><td><span class="chip ${x.late?'x':''}">${esc(x.n)}</span></td></tr>`).join('')}</tbody></table></div>`:'<div class="small muted">회신을 기다리는 공문이 없습니다.</div>'}</div>
    <div class="panel stack" style="gap:8px"><b>운영 보고 통합 · 1. 프로그램 운영</b>
     <div class="tw"><table class="small"><thead><tr><th rowspan="2" colspan="2">운영 시기</th><th colspan="${U.length}">학급수(개)</th><th colspan="${U.length}">차시(차시)</th><th colspan="${U.length}">인원(명)</th><th rowspan="2">비중(학급)</th><th rowspan="2">비중(차시)</th></tr><tr>${[0,1,2].map(()=>U.map(o=>`<th>${esc(csUS(o))}</th>`).join('')).join('')}</tr></thead><tbody>
      ${CS_OPROWS.map(([g,per],i)=>{ const tt=rowT(i); return `<tr>${i%4===0?`<td rowspan="4"><b>${g}</b></td>`:''}<td>${per}</td>${['cls','ses','stu'].map(k=>U.map(o=>`<td class="num">${V[o][i][k]||''}</td>`).join('')).join('')}<td class="num">${pc(tt.cls,G.cls)}</td><td class="num">${pc(tt.ses,G.ses)}</td></tr>`; }).join('')}
@@ -6941,8 +6967,8 @@ function csMyGong(){ const o=csMine(), q=S.ui.csQ||csQNow(), P=csPen(o,q), t=csT
   return `<div class="small muted">우리 대학이 받은 공문과 회신 기한입니다. 회신은 그룹웨어로 해 주세요.</div>
    <div class="tw"><table><thead><tr><th>제목</th><th>문서번호</th><th>발송</th><th>회신 기한</th><th>우리 대학 회신</th></tr></thead><tbody>${L.map(g=>{ const r=g.rc.find(x=>x.name===o), late=g.reply&&g.due&&!r.ex&&(r.rep?r.rep>g.due:t>g.due); return `<tr><td>${esc(g.title)}</td><td class="small muted">${esc(g.no||'')}</td><td>${g.sent?csFmtD(g.sent):'-'}</td><td>${g.reply&&g.due?csFmtD(g.due):'-'}</td><td>${!g.reply?'-':r.rep?`<span class="chip ${late?'x':'ok'}">${csFmtD(r.rep)} 회신</span>`:late?'<span class="chip x">기한 지남</span>':'<span class="chip">회신 전</span>'}</td></tr>`; }).join('')||'<tr><td colspan="5" class="small muted">받은 공문이 없습니다.</td></tr>'}</tbody></table></div>`; }
 /* ---------- 분기 점검 · 판정 ---------- */
-function csJudge(){ const q=S.ui.csJq||csQNow(), c=csCfg(), U=CS_UNIVS();
-  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">${csQSeg('judge',q)}<span class="small muted">점검 운영위원회</span><input type="date" data-cp="consJudge.${q}._meta.date" data-cat="consJudge.${q}._meta" value="${esc((((S.consJudge||{})[q]||{})._meta||{}).date||'')}" aria-label="위원회 날짜"></div>
+function csJudge(){ const q=S.ui.csQ||csQNow(), c=csCfg(), U=CS_UNIVS();
+  return `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted">점검 운영위원회 날짜</span><input type="date" data-cp="consJudge.${q}._meta.date" data-cat="consJudge.${q}._meta" value="${esc((((S.consJudge||{})[q]||{})._meta||{}).date||'')}" aria-label="위원회 날짜"></div>
    <div class="tw"><table><thead><tr><th>대학</th><th>목표 달성률</th><th>사업 진행률</th><th>예산 집행률</th><th>지난 분기</th><th>성실도</th><th>자동 판정</th><th>판정 근거</th><th>위원회 판정</th></tr></thead><tbody>
    ${U.map(o=>{ const a=csAuto(o,q), g=csGoal(o,q), p=csProg(o,q), b=csBud(o,q), J=((S.consJudge||{})[q]||{})[o]||{}, jp=`consJudge.${q}.${o}`;
      return `<tr><td class="nowrap"><b>${esc(o)}</b></td>
@@ -6963,7 +6989,7 @@ function csRule(){ const c=csCfg(), f=(p,v,w,t)=>`<input ${t||'type="number"'} d
     <div class="cs-rule"><span>기본 점수</span>${f('base',c.base)}<span>점</span><span>판정 한 단계 낮추는 기준</span>${f('cut',c.cut)}<span>점 미만</span>
      <span>공문 회신 기한 지남</span>${f('pen.gong',c.pen.gong)}<span>점 / 건</span><span>마일스톤 점검표 마감 지남</span>${f('pen.mile',c.pen.mile)}<span>점 / 월</span>
      <span>실무협의회 불참</span>${f('pen.meet',c.pen.meet)}<span>점 / 회</span></div>
-    <div class="small muted">대학별 수기 조정(가점 · 감점)은 「분기 점검 · 판정」의 성실도 칸에서 사유와 함께 넣습니다. 공문별 「면제」를 체크하면 그 건은 감점하지 않습니다.</div></div>
+    <div class="small muted">대학별 수기 조정(가점 · 감점)은 「종합 현황 · 판정 › 판정 전」의 성실도 칸에서 사유와 함께 넣습니다. 공문별 「면제」를 체크하면 그 건은 감점하지 않습니다.</div></div>
    <div class="panel stack" style="gap:8px"><b>마일스톤 점검표 마감</b>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span>매월</span>${f('mileDay',c.mileDay,'60px')}<span>일까지 제출 (실무협의회 전)</span><span class="small muted">감점 시작 월</span><input type="month" data-cp="consCfg.mileFrom" value="${esc(c.mileFrom||'')}"></div>
     <details><summary class="small">월별로 마감일 따로 정하기</summary><div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">${months.map(m=>`<label class="f small">${+m.slice(5)}월<input type="date" data-cp="consCfg.mileDue.${m}" value="${esc(c.mileDue[m]||'')}"></label>`).join('')}</div></details></div>
@@ -6995,7 +7021,7 @@ function csAct(a,el){ const o=el.dataset.o, U=S.ui;
     case 'csq': { const k=el.dataset.k, v=+el.dataset.v; if(k==='rep') U.csRq=v; else if(k==='judge') U.csJq=v; else if(k==='sum') U.csSq=v; else U.csQ=v; return true; }
     case 'csxls-rep': (el.dataset.f==='x'?csXlsRep:csHwpRep)(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
     case 'csxls-mile': (el.dataset.f==='x'?csXlsMile:csHwpMile)(+el.dataset.q||csQNow(),el.dataset.o?[el.dataset.o]:CS_UNIVS()).catch(e=>toast(e.message||String(e))); return false;
-    case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab='mile'; } return true;
+    case 'csgo': if(!csMine()){ U.csOrg=el.dataset.v; U.csTab=el.dataset.t||'mile'; if(U.csTab==='rep') U.csRq=U.csQ||csQNow(); window.scrollTo({top:0}); } return true;
     case 'csmopen': { if(csMine()) return false; csSet(`consCfg.mileQ.${csYear()}`,+el.dataset.v); toast(`마일스톤 대학 입력을 ${el.dataset.v}분기까지 열었습니다`); return true; }
     case 'csdevok': { if(el.disabled) return false; const p=`consOrg.${o}.rep.${el.dataset.q}`; csSet(p+'.devOk',el.dataset.v?{at:kstNow().replace('T',' '),by:S.adminName||orgShort(o),sig:csDevSig(csDevAuto(o))}:''); csStamp(p); toast(el.dataset.v?'프로그램 개발 현황 검토를 완료했습니다':'검토 완료를 취소했습니다'); return true; }
     case 'csgodev': goView('dev'); window.scrollTo({top:0}); return true;
