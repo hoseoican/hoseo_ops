@@ -2306,7 +2306,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.125';
+const LIB_VER='11.126';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6322,6 +6322,14 @@ function mwTargets(kind){
   return (S.instructors||[]).filter(t=>!ids||ids.has(t.id)).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko')).map(t=>[t.id,t.name]); }
 function mwRowsFor(kind,target){ if(!target) return []; const L=S.rows.filter(r=>rowBiz(r)===curBiz()&&(!mwMine()||orgOfRow(r)===mwMine()));
   if(kind==='site') return L.filter(r=>r.school===target); if(kind==='inst') return L.filter(r=>r.inst===target||r.asst===target); if(kind==='org') return L.filter(r=>orgOfRow(r)===target).slice(0,0); return []; }
+/* 검색 선택: 강사는 전화번호 뒤 4자리·이번 사업 배치 학교, 기관은 학교밖 여부·지역을 같이 보여 줌 */
+function mwTDetail(kind,id){ if(kind==='inst'){ const t=(S.instructors||[]).find(x=>x.id===id)||{}, ph=String(t.phone||'').replace(/\D/g,''), sch=[...new Set(S.rows.filter(r=>rowBiz(r)===curBiz()&&(r.inst===id||r.asst===id)).map(r=>r.school))];
+    return [ph?'···'+ph.slice(-4):'',sch.length?sch.slice(0,2).join(', ')+(sch.length>2?` 외 ${sch.length-2}곳`:''):''].filter(Boolean).join(' · '); }
+  if(kind==='site'){ const r=S.rows.find(x=>x.school===id); return r?[isOut(r)?'학교밖':'학교',r.region||''].filter(Boolean).join(' · '):''; } return ''; }
+function mwFindHtml(q){ const F=S.ui.mwForm; if(!F) return ''; const k=String(q||'').replace(/\s/g,''); if(!k) return '';
+  const L=mwTargets(F.kind).filter(([id,l])=>{ if(String(l).replace(/\s/g,'').includes(k)) return true; if(F.kind==='inst'&&/^\d{2,}$/.test(k)){ const t=(S.instructors||[]).find(x=>x.id===id); return String((t&&t.phone)||'').replace(/\D/g,'').includes(k); } return false; });
+  if(!L.length) return '<div class="small muted">찾는 대상이 없습니다</div>';
+  return L.slice(0,12).map(([id,l])=>`<button type="button" class="btn sm" style="justify-content:flex-start;text-align:left" data-act="mwfpick" data-v="${esc(id)}"><b>${esc(l)}</b>&nbsp;<span class="small muted">${esc(mwTDetail(F.kind,id))}</span></button>`).join('')+(L.length>12?`<div class="small muted">${L.length-12}건 더 있음 · 더 자세히 입력해 주세요</div>`:''); }
 const mwToday=()=>fmtD(new Date());
 function mwNew(o){ const r=o.rowId?S.rows.find(x=>x.id===o.rowId):null, kind=o.kind||'site';
   const D={id:'mw'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),biz:curBiz(),season:curSK(),seasonName:season().name,date:mwToday(),src:MW_SRC[0],kind,target:o.target||'',rowId:o.rowId||'',type:MW_TYPES[kind][0],level:'1',desc:'',status:'open',reflect:true,first:'',isNew:true};
@@ -6336,8 +6344,10 @@ function mwFormHtml(){ const F=S.ui.mwForm; if(!F) return ''; const T=mwTargets(
   return `<div class="ov" data-act="mwx"><div class="drawer" role="dialog" aria-label="민원 등록" style="max-width:620px"><div class="stack" style="gap:10px">
    <div class="row between"><h2 style="margin:0">${F.isNew?'민원 등록':'민원 수정'}</h2><button class="btn sm" data-act="mwx">닫기</button></div>
    <div class="row" style="gap:8px;align-items:center"><span class="small"><b>대상 구분</b></span><div class="seg2" role="tablist">${kinds.map(([k,l])=>`<button class="${F.kind===k?'on':''}" data-act="mwfk" data-v="${k}" ${F.isNew?'':'disabled'}>${l}</button>`).join('')}</div></div>
+    ${F.kind==='org'?`<label class="f">운영 대학<select id="mwf-target"><option value="">선택</option>${opt(T,F.target)}</select></label>`
+      :`<div class="f" style="display:block"><span class="small">${F.kind==='site'?'학교 · 기관':'강사'}</span>${F.target?`<div class="row" style="gap:8px;align-items:center;min-height:36px"><b>${esc((T.find(x=>x[0]===F.target)||[0,F.kind==='inst'?instName(F.target):F.target])[1])}</b><span class="small muted">${esc(mwTDetail(F.kind,F.target))}</span><button class="btn sm" data-act="mwfclr">변경</button></div>`
+        :`<input id="mwf-find" type="search" style="width:100%" autocomplete="off" placeholder="${F.kind==='site'?'학교 · 기관 이름으로 검색':'강사 이름 또는 전화번호 뒤 4자리'}" aria-label="대상 검색"><div id="mwf-found" class="stack" style="gap:2px;margin-top:4px"></div>`}</div>`}
    <div class="fgrid">
-    <label class="f">${F.kind==='org'?'운영 대학':F.kind==='site'?'학교 · 기관':'강사'}<select id="mwf-target"><option value="">선택</option>${opt(T,F.target)}</select></label>
     ${F.kind==='inst'?`<label class="f">구분<select id="mwf-role">${opt([['주','주강사'],['보조','보조강사']],F.role||'주')}</select></label>`:''}
     ${F.kind!=='org'?`<label class="f">관련 학급 (선택)<select id="mwf-row"><option value="">없음</option>${opt(RW.map(r=>[r.id,`${r.school} · ${clsName(r)} · ${(prog(r.prog)||{}).name||''}`]),F.rowId)}</select></label>`:''}
     <label class="f">발생일<input type="date" id="mwf-date" value="${esc(F.date||'')}"></label>
@@ -6397,6 +6407,8 @@ function mwAct(a,el){ const U=S.ui, D=mwDB(), find=id=>D.list.find(x=>x.id===id)
   switch(a){
     case 'mwnew': mwLoad(); U.mwForm=mwNew({kind:el.dataset.k||(mwMine()?'site':'site'),rowId:el.dataset.r||'',target:el.dataset.t||''}); return true;
     case 'mwx': U.mwForm=null; return true;
+    case 'mwfpick': { mwFormRead(); const F=U.mwForm; if(!F) return true; F.target=el.dataset.v; F.rowId=''; const RW=mwRowsFor(F.kind,F.target); if(RW.length===1) F.rowId=RW[0].id; if(F.kind==='inst'&&F.rowId){ const r=RW[0]; F.role=r.asst===F.target?'보조':'주'; } return true; }
+    case 'mwfclr': { mwFormRead(); const F=U.mwForm; if(F){ F.target=''; F.rowId=''; } setTimeout(()=>{ const i=document.getElementById('mwf-find'); if(i) i.focus(); },0); return true; }
     case 'mwfk': mwFormRead(); { const k=el.dataset.v, F=U.mwForm; if(F&&F.kind!==k){ F.kind=k; F.target=''; F.rowId=''; F.type=MW_TYPES[k][0]; } } return true;
     case 'mwsave': { mwFormRead(); const F=U.mwForm; if(!F) return true;
       if(!F.target){ toast('대상을 골라 주세요'); return false; } if(!F.date){ toast('발생일을 입력해 주세요'); return false; } if(!String(F.desc||'').trim()){ toast('내용을 입력해 주세요'); return false; }
@@ -7942,6 +7954,7 @@ document.addEventListener('input',e=>{
   if(S.ui.role==='admin'&&typeof kitInput==='function'&&kitInput(t)) return;
   if(t.id==='smsbody'||t.id==='smsitem'){ const d=S.ui.smsDraft||(S.ui.smsDraft={...smsTpl(smsK())}); d[t.id==='smsbody'?'body':'item']=t.value; smsPvUpdate(); return; }
   /* 검색칸: 값은 바로 저장하고, 화면 다시 그리기는 입력이 멈춘 뒤에만(한글 조합이 끊기지 않게) */
+  if(t.id==='mwf-find'){ const box=document.getElementById('mwf-found'); if(box) box.innerHTML=mwFindHtml(t.value); return; }
   const SQ={tq:v=>{ tF().q=v; },'jq-done':v=>{ S.ui.jq=v; },'as-q':v=>{ S.ui.asQ=v; },'mw-q':v=>{ S.ui.mwQ=v; },iq:v=>{ S.ui.if={...(S.ui.if||{}),q:v}; },uq:v=>{ S.ui.uq=v; },mq:v=>{ S.ui.mq=v; },q:v=>{ S.ui.q=v.trim(); }};
   if(SQ[t.id]){ SQ[t.id](t.value); liveSearch(t.id); return; }
   if(e.isComposing) return;
