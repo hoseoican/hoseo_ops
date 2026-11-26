@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         호서대 운영 관리 · 강사서류 → 호서대 메일 보내기
 // @namespace    https://hoseoican.github.io/hoseo_docs/
-// @version      0.4.0
-// @description  운영 관리(접속 승인 메일)와 강사서류(학교별 발송)에서 메일을 보내면 호서대 웹메일 쓰기 창에 받는 사람·제목·본문·첨부를 채웁니다.
+// @version      0.5.0
+// @description  운영 관리(접속 승인·배치 완료 메일)와 강사서류(학교별 발송)에서 메일을 보내면 호서대 웹메일 쓰기 창에 받는 사람·제목·본문·첨부를 채웁니다.
 // @match        https://hoseoican.github.io/hoseo_ops/*
 // @match        https://hoseoican.github.io/hoseo_docs/*
 // @match        https://mail.hoseo.edu/*
@@ -19,7 +19,7 @@
 // ==/UserScript==
 (function () {
   'use strict';
-  var VERSION = '0.4.0';
+  var VERSION = '0.5.0';
   var MAIL_HOME = 'https://mail.hoseo.edu/mail/allmail';
   var JOB_TTL = 20 * 60 * 1000; // 20분 지난 작업은 버림
 
@@ -31,9 +31,10 @@
       var d = e.data;
       if (e.origin !== location.origin || !d || d.type !== 'hs-mail-send') return;
       try {
-        var b64 = d.data ? bufToB64(d.data) : '';
+        var files = (d.files || []).map(function (f) { return { name: String(f.name || '첨부'), type: f.type || '', data: typeof f.data === 'string' ? f.data : bufToB64(f.data) }; });
+        if (d.data) files.push({ name: d.fileName || '첨부.zip', type: 'application/zip', data: bufToB64(d.data) });
         GM_setValue('hsJob', { id: d.id, school: d.school, names: d.names, to: d.to, toName: d.toName, subject: d.subject, body: d.body, bodyHtml: d.bodyHtml || '',
-          fileName: d.fileName || '', data: b64, auto: !!d.auto, kind: d.kind || 'docs', reqId: d.reqId || '', label: d.label || '', created: Date.now(), state: 'new' });
+          fileName: files.map(function (f) { return f.name; }).join(', '), files: files, auto: !!d.auto, kind: d.kind || 'docs', reqId: d.reqId || '', label: d.label || '', created: Date.now(), state: 'new' });
         GM_deleteValue('hsResult');
         GM_openInTab(MAIL_HOME, { active: true, insert: true });
         window.postMessage({ type: 'hs-mail-ack', id: d.id }, location.origin);
@@ -187,7 +188,7 @@
     body = bodyOk ? body : null;
 
     var ok = true;
-    if (job.data) { ok = await attach(); log('ZIP 첨부', ok, job.fileName); }
+    if ((job.files || []).length) { ok = await attach(); log('첨부 ' + job.files.length + '개', ok, job.fileName); }
 
     job.state = 'filled'; GM_setValue('hsJob', job);
     watchSend();
@@ -199,29 +200,30 @@
   }
 
   async function attach() {
-    var bytes = b64ToBuf(job.data);
-    var file = new File([bytes], job.fileName, { type: 'application/zip' });
+    var list = (job.files || []).map(function (f) { return new File([b64ToBuf(f.data)], f.name, { type: f.type || 'application/octet-stream' }); });
+    if (!list.length) return true;
+    var allShown = function () { var t = document.body.innerText; return list.every(function (f) { return t.indexOf(f.name) >= 0; }); };
     var inputs = Array.prototype.slice.call(document.querySelectorAll('input[type=file]'));
-    if (!inputs.length) {
-      var ab = buttonByText(['파일첨부', '첨부파일', '내PC', '내 PC', '첨부']);
-      if (ab) { /* 클릭하면 파일 선택 창이 열리므로 누르지 않는다 */ }
-      inputs = Array.prototype.slice.call(document.querySelectorAll('input[type=file]'));
-    }
     if (inputs.length) {
       var inp = inputs.filter(function (i) { return i.multiple; })[0] || inputs[0];
-      var dt = new DataTransfer(); dt.items.add(file);
-      inp.files = dt.files;
-      inp.dispatchEvent(new Event('change', { bubbles: true }));
-      inp.dispatchEvent(new Event('input', { bubbles: true }));
-      var shown = await waitFor(function () { return document.body.innerText.indexOf(job.fileName) >= 0; }, 8000);
-      if (shown) return true;
+      var groups = inp.multiple ? [list] : list.map(function (f) { return [f]; });
+      for (var g = 0; g < groups.length; g++) {
+        var cur = (inp.isConnected ? inp : (Array.prototype.slice.call(document.querySelectorAll('input[type=file]'))[0] || inp));
+        var dt = new DataTransfer(); groups[g].forEach(function (f) { dt.items.add(f); });
+        cur.files = dt.files;
+        cur.dispatchEvent(new Event('change', { bubbles: true }));
+        cur.dispatchEvent(new Event('input', { bubbles: true }));
+        var nm = groups[g][groups[g].length - 1].name;
+        await waitFor(function () { return document.body.innerText.indexOf(nm) >= 0; }, 8000);
+      }
+      if (await waitFor(allShown, 4000)) return true;
     }
     // 끌어다 놓기로 한 번 더
     var zone = Array.prototype.filter.call(document.querySelectorAll('div, section'), function (n) { var t = txt(n); return visible(n) && t.length < 80 && /끌어|드래그|첨부/.test(t); })[0];
     if (zone) {
-      var dt2 = new DataTransfer(); dt2.items.add(file);
+      var dt2 = new DataTransfer(); list.forEach(function (f) { if (document.body.innerText.indexOf(f.name) < 0) dt2.items.add(f); });
       ['dragenter', 'dragover', 'drop'].forEach(function (t) { zone.dispatchEvent(new DragEvent(t, { dataTransfer: dt2, bubbles: true, cancelable: true })); });
-      if (await waitFor(function () { return document.body.innerText.indexOf(job.fileName) >= 0; }, 8000)) return true;
+      if (await waitFor(allShown, 8000)) return true;
     }
     return false;
   }
@@ -237,7 +239,7 @@
         if (!done) return;
         job.state = 'done'; GM_setValue('hsJob', job);
         GM_setValue('hsResult', { ok: true, id: job.id, kind: job.kind || 'docs', reqId: job.reqId || '', school: job.school, names: job.names, at: Date.now() });
-        steps.push({ name: '보내기 완료', ok: true, note: (job.kind === 'join' ? '운영 관리' : '강사서류 프로그램') + '에 발송 완료로 기록했습니다' }); render();
+        steps.push({ name: '보내기 완료', ok: true, note: (job.kind === 'docs' ? '강사서류 프로그램' : '운영 관리') + '에 발송 완료로 기록했습니다' }); render();
       });
     }, true);
   }

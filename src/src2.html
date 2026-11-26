@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.140';
+const LIB_VER='11.141';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5232,7 +5232,7 @@ const rmSentTxt = s => { const x=resultSentMap()[s]; return x?`<span class="lv-o
 function resultPanel(){
   const {ready,doing}=resultSchools(), unsent=ready.filter(x=>!resultSentMap()[x.school]), sel=ready.filter(x=>rmSelected(x.school)&&(S.contacts[x.school]||{}).email);
   const noPlan=[...new Set(ready.flatMap(x=>resultPlans(x.school).missing))];
-  return `<div class="panel stack" id="rmpanel">
+  return `${S.ui.mbGuide?mbGuideHtml():''}<div class="panel stack" id="rmpanel">
    <div class="row between"><div class="row" style="gap:6px;align-items:center"><h3>학교별 배치 완료 메일</h3>${qt(['모든 학급이 배치 완료된 학교','「미리 보기」로 내용·첨부 확인 후 보내기','첨부: 학교 운영현황(엑셀) + 프로그램 계획안'])}</div>
     <button class="btn sm" data-act="rmtpl">메일 문구 수정</button></div>
    ${noPlan.length?`<div class="notice">계획안 없는 프로그램: ${noPlan.map(esc).join(', ')} ${qt(['「1 기준정보 → 3 프로그램」에서 올리면 함께 첨부','없으면 엑셀만 첨부'])}</div>`:''}
@@ -5244,7 +5244,7 @@ function resultPanel(){
      <td class="small nowrap">${rmSentTxt(x.school)}</td>
      <td class="nowrap"><button class="btn sm" data-act="rmprev" data-s="${esc(x.school)}">미리 보기</button> <button class="btn sm ${resultSentMap()[x.school]?'':'pri'}" data-act="rmsend" data-s="${esc(x.school)}" ${m.to?'':'disabled'}>${resultSentMap()[x.school]?'다시 보내기':'보내기'}</button></td></tr>`; }).join('')}
     </tbody></table></div>
-    <div class="row"><button class="btn pri" data-act="rmsendsel" ${sel.length?'':'disabled'}>선택한 ${sel.length}곳 보내기</button><span class="small muted">안 보낸 학교 ${unsent.length}곳 · 메일 한 통에 학교 한 곳씩 보냅니다${S.mailInfo&&S.mailInfo.remaining!=null?` · 오늘 남은 발송 ${S.mailInfo.remaining}건`:''}</span><span id="rmmsg" class="small muted"></span></div>`
+    <div class="row"><button class="btn pri" data-act="rmsendsel" ${sel.length?'':'disabled'}>선택한 ${sel.length}곳 보내기</button><span class="small muted">안 보낸 학교 ${unsent.length}곳 · 호서 웹메일 쓰기 창으로 학교 한 곳씩 차례로 엽니다${mbOn()?'':' · <b class="lv-crit">웹메일 미연동</b> <button class="btn sm" data-act="mbguide">연동 방법</button>'}</span><span id="rmmsg" class="small muted"></span></div>`
    :'<div class="muted small">아직 모든 학급의 강사 배치가 끝난 학교가 없습니다.</div>'}
    ${doing.length?`<details class="small"><summary>배치가 아직 끝나지 않은 학교 ${doing.length}곳</summary><div style="margin-top:6px">${doing.map(x=>`${esc(shortSch(x.school))} <span class="muted">${x.done}/${x.rows.length}학급</span>`).join(' · ')}</div></details>`:''}
   </div>`;
@@ -5269,7 +5269,7 @@ function resultLayerHtml(){
   return `<div class="ov" data-act="close"><div class="drawer" role="dialog" aria-label="배치 완료 메일 미리 보기"><div class="stack">
    <div class="row between"><div><h2>${esc(x.school)}</h2><div class="muted small">배치 완료 메일 ${i+1} / ${list.length} · ${rmSentTxt(x.school)}</div></div><button class="btn" data-act="close">닫기</button></div>
    <div class="row between"><div class="row">${prev?`<button class="btn sm" data-act="rmprev" data-s="${esc(prev.school)}">‹ 이전 학교</button>`:''}${next?`<button class="btn sm" data-act="rmprev" data-s="${esc(next.school)}">다음 학교 ›</button>`:''}</div><button class="btn sm" data-act="rmtpl">메일 문구 수정</button></div>
-   <dl class="kv small"><dt>수신자</dt><dd>${m.to?`${esc(m.name)} &lt;${esc(m.to)}&gt;`:'<span class="lv-crit">메일 주소 없음 · 학교 담당자 정보를 먼저 채워 주세요</span>'}</dd><dt>발신자</dt><dd>${esc(mailName())}${mailReply()?` · 답장은 ${esc(mailReply())}`:''}</dd><dt>제목</dt><dd><b>${esc(m.subject)}</b></dd></dl>
+   <dl class="kv small"><dt>수신자</dt><dd>${m.to?`${esc(m.name)} &lt;${esc(m.to)}&gt;`:'<span class="lv-crit">메일 주소 없음 · 학교 담당자 정보를 먼저 채워 주세요</span>'}</dd><dt>발신자</dt><dd>호서 웹메일 · 이 Chrome에서 로그인한 계정 (답장도 그 계정으로)</dd><dt>제목</dt><dd><b>${esc(m.subject)}</b></dd></dl>
    <div class="conds"><div class="conds-h"><span>첨부 파일</span></div><div style="padding:8px 12px" class="stack small">
     <div class="row between"><span>${esc(m.xlsxName)} <span class="muted">${resultRowsOf(x.school).length}학급</span></span><button class="btn sm" data-act="rmxls" data-s="${esc(x.school)}">엑셀 다운로드해 확인</button></div>
     ${m.plans.map(p=>`<div>${esc(p.name)} <span class="muted">${esc(p.prog)} 계획안${p.size?` · ${fmtSize(p.size)}`:''}</span></div>`).join('')}
@@ -5317,7 +5317,7 @@ const smsBytes = t => [...String(t||'')].reduce((n,c)=>n+(c.charCodeAt(0)<128?1:
 const smsKind = b => b<=90?'단문(SMS)':b<=2000?'장문(LMS)':'2000바이트 초과';
 const smsTo = q => { const d=v=>String(v||'').replace(/\D/g,''), m=d(q.mobile), p=d(q.phone); return /^01\d{8,9}$/.test(m)?m:/^01\d{8,9}$/.test(p)?p:''; };
 const MAIL_NAME_DEFAULT='충남 1권역 앵커늘봄(호서대학교)', MAIL_REPLY_DEFAULT='iniini@hoseo.edu';
-const mailName = () => (S.mailFromName||'').trim()||MAIL_NAME_DEFAULT;
+
 const mailReply = () => S.mailReplyTo!=null?String(S.mailReplyTo).trim():MAIL_REPLY_DEFAULT;
 const joinAutoMail = () => S.joinAutoMail!==false;
 /* 호서 웹메일 연동(Tampermonkey 「호서대 메일 보내기」 0.4 이상) */
@@ -7635,7 +7635,7 @@ document.addEventListener('click',async e=>{
     case 'rmxls': resultXlsxDownload(el.dataset.s); return;
     case 'rmsend': { el.disabled=true; el.textContent='보내는 중…'; resultSend(el.dataset.s).then(()=>{ el.disabled=false; }); return; }
     case 'rmsendsel': { const list=resultSchools().ready.filter(x=>rmSelected(x.school)&&(S.contacts[x.school]||{}).email).map(x=>x.school); if(!list.length) return;
-      el.disabled=true; (async()=>{ let ok=0; for(let k=0;k<list.length;k++){ const b=document.querySelector('[data-act=rmsendsel]'); if(b){ b.disabled=true; b.textContent=`보내는 중… ${k+1}/${list.length}`; } if(await resultSend(list[k])) ok++; else break; } render(); toast(`${ok}곳에 배치 완료 메일을 보냈습니다${ok<list.length?` · ${list.length-ok}곳은 보내지 못했습니다`:''}`); })(); return; }
+      el.disabled=true; (async()=>{ let ok=0, q=0; for(let k=0;k<list.length;k++){ const r=await resultSend(list[k]); if(r==='q') q++; else if(r) ok++; else break; } render(); toast(q?`${q}곳 배치 완료 메일을 호서 웹메일 쓰기 창으로 하나씩 엽니다. 한 통을 보내면 다음 학교가 열립니다`:`${ok}곳에 배치 완료 메일을 보냈습니다${ok<list.length?` · ${list.length-ok}곳은 보내지 못했습니다`:''}`); })(); return; }
     case 'rmins': { const f=document.getElementById(S.ui.rFocus==='subject'?'rm-subject':'rm-body'); if(!f) return; const a0=f.selectionStart??f.value.length, b0=f.selectionEnd??a0, tag=el.dataset.t; f.value=f.value.slice(0,a0)+tag+f.value.slice(b0); f.focus(); f.setSelectionRange(a0+tag.length,a0+tag.length); f.dispatchEvent(new Event('input',{bubbles:true})); return; }
     case 'planlinkopen': S.ui.planLink=S.ui.planLink===+el.dataset.p?null:+el.dataset.p; break;
     case 'planlink': { const v=((document.getElementById('planurl-'+el.dataset.p)||{}).value||'').trim(); if(!v){ toast('드라이브 파일 링크를 붙여 넣어 주세요'); return; } planLink(+el.dataset.p,v); return; }

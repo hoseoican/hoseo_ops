@@ -345,7 +345,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.140';
+const APP_VER = '11.141';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -508,24 +508,50 @@ function enterSchool(tok) {
 }
 /* i-ONE 문자 보내기 스크립트에서 「보냄」 알림이 오면 서버에 기록 */
 window.joinSmsMark = id => { if (MODE === 'admin' && ADMIN_KEY) run('adminJoinMarkSms', ADMIN_KEY, id).catch(() => {}); };
-/* 운영기관: 접속 승인 메일 보내기 — 호서 웹메일(Tampermonkey 「호서대 메일 보내기」 스크립트)로, 지금 Chrome에서 로그인한 호서 메일 계정에서 발송.
-   웹메일에서 「보내기」를 누르면(또는 스크립트 상자의 「발송 완료 처리」) 서버에 보낸 시각을 남김 */
-function joinSend(id, auto) {
-  const q = joinCur((S.joinReqs || []).find(x => x.id === id)); if (!q) return Promise.resolve();
-  const m = joinMailOf(q), ce = String(((S.contacts || {})[q.school] || {}).email || '').trim(), to = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ce) ? ce : m.to;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(to || ''))) { toast(`${q.school} 담당자 메일 주소가 올바르지 않습니다`); return Promise.resolve(); }
-  if (!mbOn()) { S.ui.mbGuide = true; render(); toast(`${auto ? '승인은 되었지만 ' : ''}메일을 보내려면 호서 웹메일 연동이 필요합니다. 안내를 확인해 주세요`); return Promise.resolve(); }
-  window.postMessage({ type: 'hs-mail-send', id: 'join-' + id + '-' + Date.now(), kind: 'join', reqId: id, label: `접속 승인 메일 · ${q.school}`, school: q.school, names: [],
-    to, toName: q.name || '', subject: m.subject, body: m.body, auto: S.joinMbAuto === true }, (location.protocol === 'file:' || location.origin === 'null') ? '*' : location.origin);
-  toast(`${q.school} 담당자(${to}) 메일을 호서 웹메일 쓰기 창에 채웁니다`);
-  return Promise.resolve();
+/* ===== 메일 발송: 모두 호서 웹메일(Tampermonkey 「호서대 메일 보내기」 스크립트)로 =====
+   지금 Chrome에서 로그인한 호서 메일 계정에서 나가고 답장도 그 계정으로 옴. 스크립트는 한 번에 한 통만 다루므로 줄 세워 하나씩 보냄.
+   웹메일에서 「보내기」(또는 스크립트 상자의 「발송 완료 처리」)를 누르면 done()으로 서버에 기록하고 다음 메일을 엶 */
+const MBQ = { list: [], cur: null };
+const mbTarget = () => (location.protocol === 'file:' || location.origin === 'null') ? '*' : location.origin;
+function mbEnqueue(items) {
+  if (!mbOn()) { S.ui.mbGuide = true; render(); toast('메일을 보내려면 호서 웹메일 연동이 필요합니다. 화면 위 안내를 확인해 주세요'); return false; }
+  MBQ.list.push(...items); if (!MBQ.cur) mbNext(); else mbBar(); return true;
+}
+async function mbNext() {
+  const it = MBQ.list.shift(); MBQ.cur = it || null; mbBar(); if (!it) return;
+  try {
+    const files = it.files ? await it.files() : [];
+    it.id = it.kind + '-' + Date.now();
+    window.postMessage({ type: 'hs-mail-send', id: it.id, kind: it.kind, reqId: it.reqId || '', label: it.label, school: it.school, names: [],
+      to: it.to, toName: it.toName || '', subject: it.subject, body: it.body, files, auto: S.joinMbAuto === true }, mbTarget());
+    toast(`${it.label} · 호서 웹메일 쓰기 창을 엽니다`);
+  } catch (e) { toast(`${it.label}: 메일을 준비하지 못했습니다 · ${errMsg(e)}`); MBQ.cur = null; mbBar(); }
+}
+function mbBar() {
+  let el = document.getElementById('mbq'); const n = MBQ.list.length;
+  if (!MBQ.cur && !n) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'mbq'; el.style.cssText = 'position:fixed;left:16px;bottom:16px;z-index:9999;background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:10px 14px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:560px'; document.body.appendChild(el);
+    el.addEventListener('click', e => { const b = e.target.closest('[data-mbq]'); if (!b) return; if (b.dataset.mbq === 'next') { MBQ.cur = null; mbNext(); } else { MBQ.list = []; MBQ.cur = null; mbBar(); toast('남은 메일 발송을 취소했습니다'); } }); }
+  el.innerHTML = `<span>${MBQ.cur ? `<b>웹메일 발송 중</b> · ${esc(MBQ.cur.label)}` : '<b>웹메일 발송 멈춤</b>'}${n ? ` · 대기 ${n}건` : ''}</span>` +
+    (n || !MBQ.cur ? `<button class="btn sm" data-mbq="next">${MBQ.cur ? '이 건 건너뛰고 다음' : '다음 건 열기'}</button>` : '') + `<button class="btn sm" data-mbq="stop">${n ? '모두 취소' : '닫기'}</button>`;
 }
 window.addEventListener('message', e => {
-  const d = e.data; if ((e.origin !== location.origin && e.source !== window) || !d || typeof d.type !== 'string' || !/^hs-mail-(sent|error)$/.test(d.type) || !/^join-/.test(String(d.id || ''))) return;
-  if (d.type === 'hs-mail-error') { toast('메일 연결 오류: ' + (d.msg || '')); return; }
-  if (!d.reqId || MODE !== 'admin' || !ADMIN_KEY) return;
-  run('adminJoinMarkMail', ADMIN_KEY, d.reqId).then(r => { const i = (S.joinReqs || []).findIndex(x => x.id === d.reqId); if (i >= 0 && r && r.req) S.joinReqs[i] = r.req; render(); toast(`${d.school || ''} 승인 메일을 보내고 기록했습니다`); }).catch(err => toast(errMsg(err)));
+  const d = e.data; if ((e.origin !== location.origin && e.source !== window) || !d || typeof d.type !== 'string' || !/^hs-mail-(sent|error)$/.test(d.type)) return;
+  const it = MBQ.cur; if (!it || d.id !== it.id) return;
+  if (d.type === 'hs-mail-error') { toast('메일 연결 오류: ' + (d.msg || '')); MBQ.cur = null; mbBar(); return; }
+  MBQ.cur = null;
+  Promise.resolve().then(() => it.done && it.done()).catch(err => toast(errMsg(err))).then(() => mbNext());
 });
+const mbOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || '').trim());
+/* 접속 승인 메일 */
+function joinSend(id, auto) {
+  const q = joinCur((S.joinReqs || []).find(x => x.id === id)); if (!q) return Promise.resolve();
+  const m = joinMailOf(q), ce = String(((S.contacts || {})[q.school] || {}).email || '').trim(), to = mbOk(ce) ? ce : m.to;
+  if (!mbOk(to)) { toast(`${q.school} 담당자 메일 주소가 올바르지 않습니다`); return Promise.resolve(); }
+  mbEnqueue([{ kind: 'join', reqId: id, label: `접속 승인 메일 · ${q.school}`, school: q.school, to, toName: q.name || '', subject: m.subject, body: m.body,
+    done: () => run('adminJoinMarkMail', ADMIN_KEY, id).then(r => { const i = (S.joinReqs || []).findIndex(x => x.id === id); if (i >= 0 && r && r.req) S.joinReqs[i] = r.req; render(); toast(`${q.school} 승인 메일을 보내고 기록했습니다`); }) }]);
+  return Promise.resolve();
+}
 /* 운영기관: 프로그램 계획안 올리기 · 드라이브 링크 연결 (파일은 계획안 폴더에 저장, 프로그램 설정에는 파일 정보만) */
 function planUpload(i, file) {
   const p = S.programs[i]; if (!p || !file) return;
@@ -549,10 +575,12 @@ function bufB64(buf) { const u = new Uint8Array(buf); let s = ''; for (let i = 0
 function resultSend(sch) {
   const m = resultMailOf(sch);
   if (!m.to) { toast(`${sch} 담당자 메일 주소가 없습니다`); return Promise.resolve(false); }
-  return resultXlsxBuf(sch)
-    .then(buf => run('adminResultSend', ADMIN_KEY, sch, m.subject, m.body, { name: m.xlsxName, b64: bufB64(buf) }, m.plans.map(x => x.id)))
-    .then(r => { S.resultSent = r.resultSent || {}; if (r.mailInfo) S.mailInfo = r.mailInfo; render(); toast(`${shortSch(sch)} 담당자(${m.to})에게 배치 완료 메일을 보냈습니다`); return true; })
-    .catch(err => { toast(`${shortSch(sch)} 메일을 보내지 못했습니다: ${errMsg(err)}`); render(); return false; });
+  const names = [m.xlsxName, ...m.plans.map(x => x.name)];
+  const ok = mbEnqueue([{ kind: 'result', label: `배치 완료 메일 · ${shortSch(sch)}`, school: sch, to: m.to, toName: m.name || '', subject: m.subject, body: m.body,
+    files: async () => { const buf = await resultXlsxBuf(sch), pf = m.plans.length ? await run('adminPlanFiles', ADMIN_KEY, m.plans.map(x => x.id)) : [];
+      return [{ name: m.xlsxName, type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', data: buf }].concat((pf || []).map(f => ({ name: f.name, type: f.mime || '', data: f.b64 }))); },
+    done: () => run('adminResultMark', ADMIN_KEY, sch, m.to, names).then(r => { S.resultSent = r.resultSent || {}; render(); toast(`${shortSch(sch)} 배치 완료 메일을 보내고 기록했습니다`); }) }]);
+  return Promise.resolve(ok ? 'q' : false);
 }
 /* 운영기관: 최근 강사 확인 실패 기록 (서버가 원인 추정) */
 /* 운영 통계 자료: 서버 「통계자료」 탭 */
@@ -677,15 +705,6 @@ document.addEventListener('click', e => {
     if (a === 'jno2') {
       stop(); const why = ((document.getElementById('jrej-why') || {}).value || '').trim(); if (!why) { toast('반려 사유를 적어 주세요'); return; }
       run('adminJoinDecide', ADMIN_KEY, id, false, why).then(res => { S.ui.jRej = ''; joinApplied(res); toast(`${res.req.school} 신청을 반려했습니다`); }).catch(err => toast(errMsg(err)));
-      return;
-    }
-    if (a === 'mail-send') {
-      stop();
-      const msgEl = document.getElementById('mailmsg'), text = (document.getElementById('rm-text') || {}).value || '';
-      const pend = [...new Set(myRows().filter(r => r.status === 'wait').map(r => r.school))].filter(s => (S.contacts[s] || {}).email);
-      const list = pend.map(s => { const L = (S.schoolLinks || []).find(x => x.school === s) || {}; return { to: S.contacts[s].email, subject: `[충남 1권역 앵커늘봄] ${season().name} 운영 정보 확인 요청 (${s})`, body: text.replace('확인 링크: (학교별 링크)', '확인 링크: ' + (L.link || '(운영 담당자에게 문의)')) }; });
-      msgEl.textContent = '보내는 중…';
-      run('adminSendMail', ADMIN_KEY, list).then(r => { msgEl.textContent = `${r.sent}곳에 보냈습니다${r.fails.length ? ` · 실패 ${r.fails.length}곳${(r.why||[])[0] ? ` (${r.why[0]}${r.why.length>1?` 외 ${r.why.length-1}건`:''})` : ''}` : ''} · 오늘 남은 발송 ${r.remaining}건`; }).catch(err => msgEl.textContent = errMsg(err));
       return;
     }
   }
