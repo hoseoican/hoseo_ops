@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         호서대 운영 관리 · 강사서류 → 호서대 메일 보내기
 // @namespace    https://hoseoican.github.io/hoseo_docs/
-// @version      0.5.0
+// @version      0.5.1
 // @description  운영 관리(접속 승인·배치 완료 메일)와 강사서류(학교별 발송)에서 메일을 보내면 호서대 웹메일 쓰기 창에 받는 사람·제목·본문·첨부를 채웁니다.
 // @match        https://hoseoican.github.io/hoseo_ops/*
 // @match        https://hoseoican.github.io/hoseo_docs/*
@@ -19,7 +19,7 @@
 // ==/UserScript==
 (function () {
   'use strict';
-  var VERSION = '0.5.0';
+  var VERSION = '0.5.1';
   var MAIL_HOME = 'https://mail.hoseo.edu/mail/allmail';
   var JOB_TTL = 20 * 60 * 1000; // 20분 지난 작업은 버림
 
@@ -52,7 +52,16 @@
   /* ================= 호서대 웹메일 쪽 ================= */
   var job = GM_getValue('hsJob');
   if (!job || Date.now() - job.created > JOB_TTL || job.state === 'done') return;
-  if (/\/member\/login/.test(location.pathname)) { panel('로그인한 뒤 잠시 기다리면 메일 쓰기 창을 엽니다.', []); return; }
+  /* 로그인·2단계 인증 화면: 작업은 20분 동안 보관해 두고, 로그인이 끝나 메일 화면으로 넘어오면(새로고침 없이 넘어와도) 이어서 채움 */
+  var isLogin = function () { return /login|signin|sign-in|auth|otp|cert|verify|mfa|2fa/i.test(location.pathname + location.search) || !!document.querySelector('input[type=password]'); };
+  if (isLogin()) {
+    panel('로그인(2단계 인증 포함)을 마치면 메일 쓰기 창을 열어 이어서 채웁니다. 20분 안에 로그인해 주세요.', []);
+    var lt = setInterval(function () {
+      if (Date.now() - job.created > JOB_TTL) { clearInterval(lt); panel('시간이 지나 작업을 취소했습니다. 운영 관리에서 다시 보내 주세요.', []); return; }
+      if (!isLogin()) { clearInterval(lt); location.href = MAIL_HOME; }
+    }, 1000);
+    return;
+  }
 
   var steps = [];
   function log(name, ok, note) { steps.push({ name: name, ok: ok, note: note || '' }); render(); }
