@@ -2344,7 +2344,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.135';
+const LIB_VER='11.136';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2519,16 +2519,18 @@ function viewBoard(){
      <label class="row small" style="margin-top:6px"><input type="checkbox" id="up-fixed" ${curBiz()!=='anchor'?'checked':''}> <b>이미 확정된 운영현황</b>입니다 · 학교 확인 단계 없이 바로 「운영 확정」(강사 배치 단계)으로 ${qt(['학교 확인·제출·검토를 건너뜀','검토 · 매칭에서 바로 강사 화면에 공개할 수 있음','학교 링크·접속 승인은 나중에도 쓸 수 있음'])}</label>
      <label class="row small" style="margin-top:6px"><input type="checkbox" id="up-reset" ${u.pending.resetContacts!==false?'checked':''}> ${u.pending.out?'기관':'학교'} 담당자 정보(연락처·동의·카톡방 입장)도 비우기 (새 차수라면 권장)</label>
      <div class="row" style="margin-top:8px"><button class="btn pri sm" data-act="up-ok">${u.pending.out?'학교밖 목록 바꾸기':'새로 시작'}</button><button class="btn sm" data-act="up-no">취소</button></div></div>`:''}
-  <div class="row between">
-    <div><h2>${esc(season().name)} 진행 현황</h2><div class="small" style="margin:2px 0 4px">${O?'학교밖 운영현황':curBiz()==='anchor'?'교육청 목록':'운영현황'} 업로드 → 접속 승인·링크 전달 → 학교 확인·제출 → 검토 · 매칭 ${qt(['목록을 올리면 학교마다 확인 링크가 생김','링크 전달: 「3 접속 승인」 또는 「확인 요청 보내기」','학교가 제출하면 「4 검토 · 매칭」에서 검토'])}</div><div class="muted small">호서대 운영 ${rows.length}학급 · 학교 ${schools.length}곳 · 타대학 배분 ${others}건${(O?S.fileOut:S.file)?` · 원본: ${esc(O?S.fileOut:S.file)}`:''}</div></div>
-    <div class="row" ${S.adminOrg&&!O?'hidden':''}><label class="btn" for="up">${O?'학교밖 운영현황 업로드':curBiz()==='anchor'?'교육청 목록 업로드':'운영현황 업로드'}</label><input id="up" type="file" accept=".xlsx,.xls" hidden><button class="btn" data-act="man-open" data-out="${O?1:0}">학급 직접 추가</button>
-      <button class="btn" data-act="remind">확인 요청 보내기 (${pend.length}곳)</button></div>
-  </div>
+  ${pageHead(`${season().name}${O?' · 학교밖':''} · 호서대 운영 ${rows.length}학급 · 학교 ${schools.length}곳${others?` · 타대학 배분 ${others}건`:''}${(O?S.fileOut:S.file)?` · 원본 ${O?S.fileOut:S.file}`:''}`,'운영현황',(S.adminOrg&&!O?'':`<label class="btn" for="up">${O?'학교밖 운영현황 업로드':curBiz()==='anchor'?'교육청 목록 업로드':'운영현황 업로드'}</label><input id="up" type="file" accept=".xlsx,.xls" hidden><button class="btn" data-act="man-open" data-out="${O?1:0}">학급 직접 추가</button>`)+qt([(O?'학교밖 운영현황':curBiz()==='anchor'?'교육청 목록':'운영현황')+' 업로드 → 접속 승인 · 링크 전달 → 학교 확인 · 제출 → 검토 · 매칭','링크 전달: 「3 접속 승인」 또는 「학교 확인 대기」 단계의 확인 요청','학교가 제출하면 「4 검토 · 매칭」에서 검토']))}
   ${O||noScope()?outRulesPanel():''}
   ${!SR.length?sheetPeekPanel(O):''}
   ${(()=>{const n=joinReqs().filter(q=>q.status==='pending'&&nameInScope(q.school)).length;return n?`<div class="notice">학교 접속 신청 <b>${n}건</b>이 승인을 기다리고 있습니다. <button class="btn sm" data-act="gojoin">접속 승인으로 가기</button></div>`:'';})()}
-  <div class="bar" aria-hidden="true">${ST_ORDER.map(s=>`<span class="b-${ST[s][1]}" style="width:${pct(s)}%"></span>`).join('')}</div>
-  <div class="pipe">${ST_ORDER.filter(s=>!['proposed','change'].includes(s)||cnt[s]||u.st===s).map(s=>`<button class="stage ${u.st===s?'on':''}" data-act="fst" data-v="${s}"><div class="n">${cnt[s]}</div><div class="l">${ST[s][0]}</div></button>`).join('')}</div>
+  ${(()=>{ const later=i=>ST_ORDER.slice(i+1).some(x=>x!=='cancel'&&cnt[x]);
+    const G={wait:'학교',blocked:'학교',confirmed:'검토',proposed:'검토',change:'검토',fixed:'배치',recruit:'배치',final:'배치',cancel:'기타'};
+    const D=[{k:'all',t:'전체',n:rows.length,u:'학급',st:''}].concat(ST_ORDER.filter(x=>!['proposed','change'].includes(x)||cnt[x]||u.st===x).map(x=>{ const i=ST_ORDER.indexOf(x), act=['wait','blocked','confirmed','proposed','change'].includes(x);
+      return {k:x,t:({confirmed:'검토 대기',final:'배치 완료',blocked:'조건 미충족'})[x]||ST[x][0],g:G[x],n:cnt[x],u:'학급',st:act?(cnt[x]?'now':later(i)?'done':''):''}; }));
+    const cur=u.st&&D.some(d=>d.k===u.st)?u.st:'all', d=D.find(x=>x.k===cur), [bt,bc]=stageBadge(d);
+    const DESC={all:'올린 목록과 직접 추가한 학급 전체입니다. 단계를 고르면 그 단계의 학급만 남습니다.',wait:'학교가 아직 운영안을 확인하지 않은 학급입니다. 확인 요청을 보내 재촉합니다.',blocked:'운영 조건이 맞지 않는 학급입니다. 조건을 다시 확인하거나 프로그램을 바꿉니다.',confirmed:'학교가 제출한 학급입니다. 검토는 「4 검토 · 매칭」에서 합니다.',proposed:'운영안을 다시 보낸 학급입니다.',change:'학교가 조정을 요청한 학급입니다.',fixed:'검토를 마친 학급입니다. 강사 공개는 「4 검토 · 매칭」에서 합니다.',recruit:'강사 화면에 공개되어 신청을 받는 학급입니다.',final:'강사 배치까지 끝난 학급입니다.',cancel:'취소된 학급입니다.'};
+    const ACT={wait:`<button class="btn pri" data-act="remind" ${pend.length?'':'disabled'}>확인 요청 보내기 (${pend.length}곳)</button>`,confirmed:'<a class="btn pri" href="#match">4 검토 · 매칭에서 검토 →</a>',fixed:'<a class="btn" href="#match">4 검토 · 매칭으로 →</a>'};
+    return stageBar('board',D,cur)+`<section class="scard"><div class="scard-h"><div style="min-width:0"><h2>${esc(cur==='all'?'전체 학급':d.t)}<span class="sbadge ${bc}">${esc(bt)}</span></h2><div class="scard-d">${DESC[cur]||''}</div></div>${ACT[cur]?`<div class="scard-a">${ACT[cur]}</div>`:''}</div><div class="scard-b">`; })()}
   <div class="row small"><span class="iss lv-warn"><i>△</i>확인이 필요한 학급 ${probs}</span><span class="iss lv-crit"><i>!</i>운영 조건이 있는 학급 ${condRows.length} (학교 체크 전 ${condUnchecked})</span><span class="iss lv-info"><i>i</i>날짜 자동 보정 ${fixed}건</span><span class="iss lv-info"><i>i</i>카톡방 입장 ${schools.filter(x=>(S.contacts[x]||{}).kakao).length}/${schools.length}개교</span></div>
   ${cxPanel()}
   ${offPanel()}
@@ -2554,6 +2556,7 @@ function viewBoard(){
        ${hrsCell(r)}<td class="mono nowrap" data-l="기간">${md(r.start)} ~ ${md(r.end)}</td><td class="nowrap" data-l="요일·시간">${daysTxt(r.days)}${r.edited.days||r.edited.time||r.edited.date?' <span class="chip">학교 수정</span>':''}<div class="mono muted">${hm(r.ts)}~${hm(r.te)}</div></td>
        <td class="nowrap" data-l="강사">${r.inst?esc(instName(r.inst)):r.apps.length?`<span class="chip app">신청 ${r.apps.length}명</span>`:'<span class="muted">-</span>'}${asstCell(r)}</td>
        <td class="c-st">${stPill(r.status)}</td><td class="c-iss" style="min-width:200px">${issList(is,3)}${is.length>3?`<div class="muted small">외 ${is.length-3}건</div>`:''}</td></tr>`;}).join('')).join('')||`<tr><td colspan="10" class="muted">조건에 맞는 학급이 없습니다.</td></tr>`}</tbody></table></div>`}
+  </div></section>
   </div>`;
 }
 
@@ -2961,7 +2964,7 @@ const stageBadge = d => d.st==='done'?['완료','done']:d.k==='all'?[`${d.n}${d.
 /* 단계 탭 · 역할 전환 · 하위 탭 동작 (모든 탭 공통). 단계를 바꾸면 화면 맨 위로 */
 function frameAct(a,el){ const U=S.ui;
   switch(a){
-    case 'stgsw': U.stg={...(U.stg||{}),[el.dataset.g]:el.dataset.v}; U.afAsk=false; U.spAsk=false; U.smsTpl=false; return true;
+    case 'stgsw': if(el.dataset.g==='board'){ U.st=el.dataset.v==='all'?'':el.dataset.v; return true; } U.stg={...(U.stg||{}),[el.dataset.g]:el.dataset.v}; U.afAsk=false; U.spAsk=false; U.smsTpl=false; return true;
     case 'rolesw': U.rsw={...(U.rsw||{}),[el.dataset.g]:el.dataset.v}; U.smsTpl=false; return true;
     case 'tstab': U.tsTab=el.dataset.v; U.smsTpl=false; return true;
     case 'nsgo': U.rsw={...(U.rsw||{}),match:el.dataset.k==='asst'?'asst':'main'}; U.stg={...(U.stg||{}),['match_'+(el.dataset.k==='asst'?'asst':'main')]:'teacher'}; U.tsTab='none'; window.scrollTo({top:0}); return true;
@@ -5493,14 +5496,14 @@ function alShown(all){ const u=S.ui, f=u.alSt==null?'todo':String(u.alSt), gap=+
 const alSelOn = x => !(S.ui.alSel&&S.ui.alSel[x.school]===false);
 function alMark(sch,st,by){ const c=S.contacts[sch]||(S.contacts[sch]={}); const t=new Date(), lab=`${t.getMonth()+1}/${t.getDate()} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
   c.alarm=[...(c.alarm||[]),{at:lab,ts:t.getTime(),st:+st,by:by||'문자'}].slice(-10); }
-function alarmPanel(){
-  const u=S.ui, all=alList(); if(!all.length) return '';
+function alarmPanel(o){
+  o=o||{}; const u=S.ui, all=alList(); if(!all.length) return o.embed?'<div class="muted small">운영 학급이 있는 기관이 없습니다.</div>':'';
   const list=alShown(all), f=u.alSt==null?'todo':String(u.alSt), sel=list.filter(alSelOn), canSms=sel.filter(x=>[0,2,3].includes(x.st)&&x.mobile);
   const chip=(v,label,n,cls,tip)=>`<button class="stage ${cls||''} ${f===v?'on':''}" data-act="alst" data-v="${v}" title="${esc(tip||'')}"><div class="n">${n}</div><div class="l">${label}</div></button>`;
   const ed=u.alEdit;
-  return `<div class="panel stack alarmp"><div class="row between" style="align-items:flex-start;flex-wrap:wrap;gap:8px"><div class="row" style="gap:6px;align-items:center"><h3>담당자 알람</h3>${qt(['기관별로 어디까지 진행했는지 보고, 아직 진행하지 않은 기관 담당자에게 단계에 맞는 알림 문자를 보냅니다.','진행 단계는 그 기관의 모든 수업(학급) 기준','신청 전 기관은 목록 파일의 연락처로 보냄','문자는 i-ONE 캠퍼스 연결로 한 곳씩 채워짐','보낸 기록은 기관마다 남음'])}</div>
+  return `<div class="${o.embed?'stack inner':'panel stack'} alarmp">${o.embed?'<div hidden>':''}<div class="row between" style="align-items:flex-start;flex-wrap:wrap;gap:8px"><div class="row" style="gap:6px;align-items:center"><h3>담당자 알람</h3>${qt(['기관별로 어디까지 진행했는지 보고, 아직 진행하지 않은 기관 담당자에게 단계에 맞는 알림 문자를 보냅니다.','진행 단계는 그 기관의 모든 수업(학급) 기준','신청 전 기관은 목록 파일의 연락처로 보냄','문자는 i-ONE 캠퍼스 연결로 한 곳씩 채워짐','보낸 기록은 기관마다 남음'])}</div>
     <button class="btn sm" data-act="aledit">${ed?'문구 닫기':'알람 문구 수정'}</button></div>
-   <div class="pipe">${chip('todo','알람 대상',all.filter(x=>[0,2,3].includes(x.st)).length,'','신청 전 + 입력 전 + 입력 중')}${AL_ST.map((a,i)=>chip(String(i),a[0],all.filter(x=>x.st===i).length,a[1],a[2])).join('')}${chip('','전체',all.length)}</div>
+   <div class="pipe">${chip('todo','알람 대상',all.filter(x=>[0,2,3].includes(x.st)).length,'','신청 전 + 입력 전 + 입력 중')}${AL_ST.map((a,i)=>chip(String(i),a[0],all.filter(x=>x.st===i).length,a[1],a[2])).join('')}${chip('','전체',all.length)}</div>${o.embed?'</div>':''}
    ${ed?`<div class="stack" style="gap:8px"><div class="notice small"><b>${esc(bizName())}</b> 사업의 알람 문구입니다. 사업마다 따로 저장되며, 다른 사업 문구는 위쪽에서 사업을 바꾼 뒤 고칩니다.</div>${[0,2,3].map(k=>`<label class="f">${AL_ST[k][0]} 기관에 보낼 문구 <span class="small muted">({기관} {담당자} {차수} {주소} {문의})</span><textarea data-altpl="${k}" rows="4">${esc(alTpl(k))}</textarea></label>`).join('')}<div class="row"><button class="btn sm" data-act="altpldef">처음 문구로</button></div></div>`:''}
    <div class="filters">
     <input id="al-q" placeholder="기관 검색" value="${esc(u.alQ||'')}" style="flex:1 1 160px" aria-label="기관 검색">
@@ -5522,19 +5525,31 @@ function alarmPanel(){
    </tbody></table></div></div>`; }
 /* 운영기관: 접속 승인 탭 */
 function viewJoinAdmin(){
-  const all=joinReqs().filter(q=>nameInScope(q.school)), t=joinMailTpl(), n=k=>all.filter(q=>q.status===k).length;
-  const sample=all.find(q=>q.status==='approved')||{school:'천안○○초등학교',name:'홍길동',email:'name@example.com',phone:'041-000-0000',link:(S.webAppUrl||'https:\/\/script.google.com/macros/s/(웹앱 주소)/exec')+'?s=(학교별 링크)'}, pv=joinMailOf(sample);
-  return `<div class="stack">
-   <div class="row" style="gap:6px;align-items:center"><h2>접속 승인</h2>${qt(['공문에는 대표 주소 하나만 안내','학교 담당자가 신청하면 여기서 확인 후 승인','승인하면 학교 확인 링크가 만들어짐','링크는 메일(자동·수동) 또는 문자 엑셀로 전달'])}</div>
-   <div class="small muted">공문에 대표 주소 안내 → 학교 신청 <b>대기 ${n('pending')}건</b> → 확인 · 승인 <b>승인 ${n('approved')} · 반려 ${n('rejected')}</b> → 링크 전달 ${qt(['학교당 담당자 1명','승인하면 학교 링크를 새로 발급(이전 링크 막힘)','대표 주소는 맨 위 「신청 화면 → 학교 접속 신청」에서도 열기·복사'],'r')}</div>
-   ${alarmPanel()}
-   ${joinPanel()}
-   <div class="panel stack"><div class="row between"><div><h3>메일 · 문자 문구 템플릿</h3><div class="muted small" style="margin-top:2px">승인 안내 메일·문자 문구</div></div><button class="btn sm" data-act="jtpl">템플릿 수정</button></div>
+  const all=joinReqs().filter(q=>nameInScope(q.school)), t=joinMailTpl(), n=k=>all.filter(q=>q.status===k).length, u=S.ui, AL=alList();
+  const sample=all.find(q=>q.status==='approved')||{school:'천안○○초등학교',name:'홍길동',email:'name@example.com',phone:'041-000-0000',link:(S.webAppUrl||'https:/'+'/script.google.com/macros/s/(웹앱 주소)/exec')+'?s=(학교별 링크)'}, pv=joinMailOf(sample);
+  const c=i=>AL.filter(x=>x.st===i).length, later=i=>AL.some(x=>x.st>i);
+  const D=[{k:'all',t:'전체',n:AL.length,u:'곳',st:''},
+    {k:'s0',t:AL_ST[0][0],g:'신청',n:c(0),u:'곳',st:c(0)?'':later(0)?'done':''},
+    {k:'s1',t:AL_ST[1][0],g:'승인',n:Math.max(c(1),n('pending')),u:'곳',st:(c(1)||n('pending'))?'now':later(1)?'done':''},
+    {k:'s2',t:AL_ST[2][0],g:'입력',n:c(2),u:'곳',st:''},
+    {k:'s3',t:AL_ST[3][0],g:'입력',n:c(3),u:'곳',st:''},
+    {k:'s4',t:AL_ST[4][0],g:'완료',n:c(4),u:'곳',st:''},
+    {k:'rej',t:'반려 · 취소',g:'기타',n:n('rejected')+n('revoked'),u:'건',st:''}];
+  const G='join', cur=stgCur(G,D), d=D.find(x=>x.k===cur), [bt,bc]=stageBadge(d);
+  const DESC={all:'운영 학급이 있는 기관 전체의 진행 단계입니다. 단계를 고르면 그 단계의 기관만 남습니다.',s0:'목록에는 있지만 아직 접속 신청을 하지 않은 기관입니다. 알람 문자로 신청을 안내합니다.',s1:'학교 담당자가 보낸 접속 신청입니다. 확인하고 승인하면 확인 링크가 만들어지고 안내 메일이 나갑니다.',s2:'승인됐지만 수업 정보를 아직 고치지 않은 기관입니다.',s3:'일부 입력했지만 「확인 완료 제출」 전인 기관입니다.',s4:'모든 수업을 제출한 기관입니다. 검토는 「4 검토 · 매칭」에서 합니다.',rej:'반려하거나 취소한 신청입니다.'};
+  if(cur.startsWith('s')||cur==='all') u.alSt=cur==='all'?'':cur.slice(1);
+  const alarm=['all','s0','s2','s3','s4'].includes(cur);
+  const acts=alarm?`<button class="btn" data-act="aledit">${u.alEdit?'알람 문구 닫기':'알람 문구 수정'}</button>`:cur==='s4'?'':'';
+  const body=alarm?alarmPanel({embed:true}):cur==='s1'?joinPanel()+`<details class="panel inner"><summary class="small"><b>승인 안내 메일 · 문자 설정</b> <span class="muted">자동 발송 · 발신자 · 미리 보기</span></summary><div class="stack" style="margin-top:10px"><div class="stack">
     <div class="conds"><div style="padding:10px 12px" class="stack"><label class="row small" style="gap:8px"><input type="checkbox" id="jautomail" ${joinAutoMail()?'checked':''}> <b>승인하면 이 문구로 학교 담당자에게 메일 자동 발송</b></label>
      <div class="fgrid"><label class="f" style="grid-column:span 2">발신자 이름<input id="mail-name" data-mset="mailFromName" value="${esc(mailName())}"></label><label class="f" style="grid-column:span 2">답장 받을 주소<input id="mail-reply" data-mset="mailReplyTo" type="email" value="${esc(mailReply())}" placeholder="비우면 보내는 계정으로 답장"></label></div>
      <div class="small muted">보내는 계정: <b>${esc((S.mailInfo&&S.mailInfo.from)||'웹앱을 배포한 구글 계정')}</b>${S.mailInfo&&S.mailInfo.remaining!=null?` · 오늘 남은 발송 ${S.mailInfo.remaining}건`:''}. ${qt([`수신자에게 「${mailName()}」으로 보임`,`답장 받는 주소: ${mailReply()||'보내는 계정'}`,'자동 발송을 끄면 학교 줄의 「메일 보내기」로 하나씩'])}</div></div></div>
     <div class="conds"><div class="conds-h"><span>메일 미리 보기 · ${esc(sample.school)}</span></div><div style="padding:10px 12px"><div class="small"><b>${esc(pv.subject)}</b></div><pre class="small" style="white-space:pre-wrap;margin:8px 0 0;font-family:inherit">${esc(pv.body)}</pre></div></div>
-    <div class="conds"><div class="conds-h"><span>문자 미리 보기 · ${esc(sample.school)}</span><span class="muted small">${smsBytes(joinSmsOf(sample))}바이트 · ${smsKind(smsBytes(joinSmsOf(sample)))}</span></div><div style="padding:10px 12px"><pre class="small" style="white-space:pre-wrap;margin:0;font-family:inherit">${esc(joinSmsOf(sample))}</pre></div></div></div>
+    <div class="conds"><div class="conds-h"><span>문자 미리 보기 · ${esc(sample.school)}</span><span class="muted small">${smsBytes(joinSmsOf(sample))}바이트 · ${smsKind(smsBytes(joinSmsOf(sample)))}</span></div><div style="padding:10px 12px"><pre class="small" style="white-space:pre-wrap;margin:0;font-family:inherit">${esc(joinSmsOf(sample))}</pre></div></div></div></div></details>`:joinPanel();
+  return `<div class="stack" style="gap:16px">
+   ${pageHead(season().name+' · 공문 대표 주소로 받은 접속 신청','접속 승인',`<button class="btn" data-act="copytext" data-t="${esc(joinUrl())}">대표 주소 복사</button><button class="btn" data-act="jtpl">메일 · 문자 문구</button>`+qt(['공문에는 대표 주소 하나만 안내','학교 담당자가 신청하면 「승인 대기」에서 확인 후 승인','승인하면 학교 확인 링크가 만들어짐','신청 전 · 입력 전 · 입력 중 기관에는 알람 문자를 보냄']))}
+   ${stageBar(G,D,cur)}
+   ${stageCard({title:cur==='all'?'기관 전체':d.t,badge:bt,tone:bc,desc:DESC[cur]||'',acts,body})}
   </div>`;
 }
 /* 메일 내용 · 템플릿 창 */
@@ -8579,7 +8594,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.135';
+const APP_VER = '11.136';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
