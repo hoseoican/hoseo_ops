@@ -2229,7 +2229,8 @@ function orgTabOk(k,org){ org=org||S.adminOrg; if(!org) return true; const c=org
 const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&S.adminOrg&&!orgTabOk(x[0]))&&!(role==='admin'&&x[0]==='stats'&&curBiz()!=='anchor')&&!(role==='admin'&&x[0]==='docs'&&(!window.ON_PAGES||S.adminOrg))).map(x=>role==='teacher'&&tRoleA()&&x[0]==='teacher'?['teacher','보조강사 모집']:x);
 function route(){ const ok=routesOf(S.ui.role).map(x=>x[0]); return ok.includes(S.ui.view)?S.ui.view:homeView(S.ui.role); }
 function homeView(role){ const ok=routesOf(role).map(x=>x[0]); if(role==='admin'&&S.adminOrg&&ok.includes('cons')) return 'cons'; return ok.includes('board')?'board':ok[0]||ROUTES[role][0][0]; }
-function render(){
+let RENDER_EPOCH=0;
+function render(){ RENDER_EPOCH++;
   if(S&&S.ui&&S.ui.role!=='admin'&&typeof persist!=='undefined'){ try{ fixPhonesAll(); }catch(e){} }
   const cur=route();
   if(S.ui.role==='admin') try{ tSyncHist(); }catch(e){}
@@ -2316,7 +2317,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.123';
+const LIB_VER='11.124';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4326,7 +4327,12 @@ function stSizeOf(r){
 }
 const ST_BIZ = {anchor:'앵커늘봄',vac:'초등방과후(방학집중형)'};
 function stAll(){ const L=stAllRaw(), b=S.ui.stBiz||''; return b?L.filter(r=>(r.biz||'anchor')===b):L; }
-function stAllRaw(){
+/* 한 번 그릴 때 여러 곳(10번 탭 대학·항목·분기마다)에서 부르므로, 같은 화면 그리기 안에서는 한 번만 계산 */
+let ST_MEMO=null;
+function stAllRaw(){ const mk=[RENDER_EPOCH,S.stats,S.kpi,S.ui.role,S.rows&&S.rows.length,S.season,S.biz];
+  if(ST_MEMO&&ST_MEMO.k.length===mk.length&&ST_MEMO.k.every((v,i)=>v===mk[i])){ stAllRaw.skip=ST_MEMO.skip; return ST_MEMO.v; }
+  const v=stAllRaw0(); ST_MEMO={k:mk,v,skip:stAllRaw.skip}; return v; }
+function stAllRaw0(){
   const out=[], VW=S.ui.role==='stats', live=(S.kpi||{}).live;
   /* 중복 막기: 같은 연도·시기·운영기관은 한 곳에서만 셈. 우선순위 ① 운영현황 시트 반영(gs_) ② 올린 자료 ③ 현재 시스템 학급(live) */
   const K=(y,p,o)=>y+'|'+p+'|'+o, DS=((S.stats||{}).ds||[]).filter(d=>!stIsMc(d)&&!(d.id==='live'&&!(VW&&live)));
@@ -5961,9 +5967,25 @@ const KIT_TABS=[['kits','교구재 기준표'],['quote','구매 견적 · 규격
 const progLK = s => String(s??'').normalize('NFC').replace(/\[[^\]]*\]/g,'').replace(/고도화/g,'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
 const kitOnGas = () => stOnGas();
 function kitDB(){ return S.kitDB||(S.kitDB={items:[],dev:[],loaded:false}); }
-function kitLoad(){ const D=kitDB(); if(D.loaded||D.loading) return;
-  if(kitOnGas()){ D.loading=true; run('adminKitLoad',ADMIN_KEY).then(d=>{ S.kitDB={items:(d&&d.items)||[],dev:(d&&d.dev)||[],loaded:true}; render(); }).catch(e=>{ D.loading=false; D.loaded=true; D.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); render(); }); return; }
+/* 7·8번 탭 자료: 지난번 받은 자료(localStorage)를 먼저 보여 주고, 최신 자료를 뒤에서 받아 바꿈.
+   캐시를 보는 동안 고친 항목(KIT_SEEN)은 최신 자료가 와도 화면 값(고친 값)을 그대로 둠 */
+const kitCacheKey = () => 'anc_kit_'+(S.adminOrg||'hq');
+const KIT_SEEN={kit:new Set(),dev:new Set()};
+function kitCachePut(){ const D=S.kitDB; if(!D||!D.loaded||D.cached||D.err) return; try{ localStorage.setItem(kitCacheKey(),JSON.stringify({items:D.items,dev:D.dev,at:now()})); }catch(e){ try{ localStorage.removeItem(kitCacheKey()); }catch(_){} } }
+function kitMerge(fresh,local,kind,kf){ const T=KIT_SEEN[kind]; if(!T.size) return fresh; const id=x=>(x.biz||'')+'\u0001'+kf(x);
+  return fresh.filter(x=>!T.has(id(x))).concat(local.filter(x=>T.has(id(x)))); }
+function kitLoad(fresh){ const D=kitDB(); if((D.loaded&&!D.cached)||D.loading) return;
+  if(kitOnGas()){
+    if(!fresh&&!D.loaded){ try{ const c=JSON.parse(localStorage.getItem(kitCacheKey())||'null'); if(c&&Array.isArray(c.items)&&Array.isArray(c.dev)){ S.kitDB={items:c.items,dev:c.dev,loaded:true,cached:true,cacheAt:c.at||'',loading:true}; KIT_SEEN.kit.clear(); KIT_SEEN.dev.clear(); setTimeout(render,0); } }catch(e){} }
+    const C=S.kitDB||D; C.loading=true;
+    run('adminKitLoad',ADMIN_KEY).then(d=>{ const L=S.kitDB||{items:[],dev:[]}, wasC=!!L.cached;
+      const items=(d&&d.items)||[], dev=(d&&d.dev)||[];
+      S.kitDB={items:wasC?kitMerge(items,L.items||[],'kit',x=>x.pk):items,dev:wasC?kitMerge(dev,L.dev||[],'dev',x=>x.key):dev,loaded:true};
+      KIT_SEEN.kit.clear(); KIT_SEEN.dev.clear(); kitCachePut(); render(); })
+    .catch(e=>{ const X=S.kitDB||D; X.loading=false; if(X.cached){ X.stale=true; render(); return; } X.loaded=true; X.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); render(); }); return; }
   D.loaded=true; setTimeout(render,0); }
+/* 캐시로 보여 주는 중 안내(7·8번 탭 위) */
+function kitCacheNote(){ const D=kitDB(); if(!D.cached) return ''; return `<div class="small muted" style="margin:0 0 8px">${D.stale?`최신 자료를 받지 못해 지난번 받은 자료(${esc(D.cacheAt||'')})로 보여 주는 중 <button class="lnk" data-act="kitreload">다시 불러오기</button>`:`지난번 받은 자료(${esc(D.cacheAt||'')})로 먼저 보여 주는 중 · 최신 자료 확인 중…`}</div>`; }
 const kitItems = () => kitDB().items.filter(x=>x.biz===curBiz());
 /* 타 대학 계정: 7번 탭에서 우리 대학 프로그램만 보고 고침(대학 칸 고정) */
 const devMine = () => S.adminOrg?(orgShort(S.adminOrg)||S.adminOrg):'';
@@ -5975,7 +5997,7 @@ const devProg = r => progInSeason(r.key)||(r.aliasKeys||[]).map(k=>progInSeason(
 const DEV_RANK={'미착수':0,'개발 중':1,'개발 완료':2};
 /* 저장: 고친 프로그램만 모아 0.8초 뒤 서버로 (사업을 함께 넘겨 사업을 바꾸는 중에도 섞이지 않게) */
 const KIT_DIRTY={kit:new Map(),dev:new Map()}; let KIT_T=null;
-function kitTouch(kind,key){ KIT_DIRTY[kind].set(curBiz()+'\u0001'+key,1); clearTimeout(KIT_T); KIT_T=setTimeout(kitFlush,800); }
+function kitTouch(kind,key){ KIT_DIRTY[kind].set(curBiz()+'\u0001'+key,1); if(kitDB().cached) KIT_SEEN[kind].add(curBiz()+'\u0001'+key); clearTimeout(KIT_T); KIT_T=setTimeout(kitFlush,800); }
 function kitFlush(){ clearTimeout(KIT_T);
   if(!kitOnGas()){ KIT_DIRTY.kit.clear(); KIT_DIRTY.dev.clear(); save(); return; }
   const D=kitDB(), jobs=[], back=[];
@@ -5985,7 +6007,7 @@ function kitFlush(){ clearTimeout(KIT_T);
   Object.entries(gd).forEach(([b,ks])=>{ back.push(()=>ks.forEach(k=>KIT_DIRTY.dev.set(b+'\u0001'+k,1))); jobs.push(run('adminDevPut',ADMIN_KEY,ks,D.dev.filter(x=>x.biz===b&&ks.includes(x.key)),b)); });
   if(!jobs.length) return;
   kitSaveMsg('저장 중…');
-  Promise.all(jobs).then(()=>kitSaveMsg('저장됨 · '+now())).catch(e=>{ back.forEach(f=>f()); kitSaveMsg('저장 실패 · 잠시 뒤 다시 저장합니다',true); toast('교구재·현황을 저장하지 못했습니다: '+String(e&&e.message||e).replace(/^Exception:\s*/,'')); KIT_T=setTimeout(kitFlush,8000); }); }
+  Promise.all(jobs).then(()=>{ kitSaveMsg('저장됨 · '+now()); kitCachePut(); }).catch(e=>{ back.forEach(f=>f()); kitSaveMsg('저장 실패 · 잠시 뒤 다시 저장합니다',true); toast('교구재·현황을 저장하지 못했습니다: '+String(e&&e.message||e).replace(/^Exception:\s*/,'')); KIT_T=setTimeout(kitFlush,8000); }); }
 function kitSaveMsg(t,bad){ if(typeof setSave==='function') setSave(t,bad); }
 const kitNum = v => { const n=parseFloat(String(v??'').replace(/[^\d.\-]/g,'')); return isFinite(n)?n:''; };
 const kitId = () => 'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -6197,7 +6219,7 @@ function csDevAuto(o){ const u=orgShort(o)||o, hs=u===(orgShort(MY_ORG)||'호서
 const csDevSig = L => { const t=JSON.stringify(L||[]); let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))|0; return String(L.length)+'.'+(h>>>0).toString(36); };
 function csDevOkState(o,q){ const R=((csOrgR(o).rep||{})[q])||{}, k=R.devOk; if(!k||!k.at) return {ok:false}; return {ok:R.subAt&&Array.isArray(R.devSnap)?true:k.sig===csDevSig(csDevAuto(o)),k,changed:!(R.subAt&&Array.isArray(R.devSnap))&&k.sig!==csDevSig(csDevAuto(o))}; }
 function csDevOf(o,q){ const R=((csOrgR(o).rep||{})[q])||{}; return R.subAt&&Array.isArray(R.devSnap)?R.devSnap:csDevAuto(o); }
-const kitEnsure = () => new Promise(res=>{ if(kitDB().loaded) return res(); kitLoad(); let n=0; const t=setInterval(()=>{ if(kitDB().loaded||++n>150){ clearInterval(t); res(); } },100); });
+const kitEnsure = () => new Promise(res=>{ const ok=()=>kitDB().loaded&&!kitDB().cached; if(ok()) return res(); kitLoad(); let n=0; const t=setInterval(()=>{ if(ok()||++n>150){ clearInterval(t); res(); } },100); });
 const CS_SIG = {g:['Green 정상','cs-g'],y:['Yellow 주의','cs-y'],r:['Red 지원','cs-r'],n:['판정 전','cs-n']};
 const CS_GKINDS = {univ:[['meet','협의회 참석 요청'],['perf','운영 실적 입력 요청'],['work','업무 진행 협조'],['sub','제출 협조 요청'],['etc','기타']],school:[['op','운영 협조 요청'],['sat','만족도 조사 협조'],['att','출석부 제출 협조'],['etc','기타']]};
 const CS_DEF = () => ({pen:{gong:2,mile:2,meet:1},base:100,cut:85,mileDay:25,mileDue:{},mileFrom:csYm(),sender:'앵커늘봄총괄센터장',docPre:'앵커늘봄총괄센터',tel:'041-423-2420',mail:'',fiscal:''});
@@ -6229,7 +6251,10 @@ function csMV(it,d,o){ const v=it&&it.v; if(v!=null&&v!=='') return v;
   if(d[4]==='ox'&&d[5]&&d[5]!=='학교밖'){ const a=csMAuto(o,d), t=csToday(); return a&&a.some(r=>r.start&&r.start<=t)?'O':''; }
   return ''; }
 function csMileDone(it,def,o){ const v=csMV(it,def,o); if(def[4]==='ox') return v==='O'; if(def[4]==='c') return v!==''&&v!=null&&!isNaN(+v); return +v>=1; }
-function csAutoCls(o,per){ if(!S.stats||!S.stats.ds) return null; try{ return stAllRaw().filter(r=>r.year===csYear()&&r.org===o&&(!per||r.period===per)); }catch(e){ return null; } }
+let CS_CLS_MEMO=null;
+function csAutoCls(o,per){ if(!S.stats||!S.stats.ds) return null; try{ const L=stAllRaw(), y=csYear();
+  if(!CS_CLS_MEMO||CS_CLS_MEMO.L!==L||CS_CLS_MEMO.y!==y){ const m={}; L.forEach(r=>{ if(r.year===y) (m[r.org]=m[r.org]||[]).push(r); }); CS_CLS_MEMO={L,y,m}; }
+  const A=CS_CLS_MEMO.m[o]||[]; return per?A.filter(r=>r.period===per):A.slice(); }catch(e){ return null; } }
 function csProg(o,q){ q=Math.min(q,csMileQ()); const M=csOrgR(o).mile||{}, need=CS_MILES.filter(d=>d[1]<=q&&csMCnt(d)), done=need.filter(d=>csMileDone(M[d[0]],d,o)).length; return {done,need:need.length,p:csPct(done,need.length)}; }
 function csGoal(o,q){ const J=((S.consJudge||{})[q]||{})[o]||{}, R=((csOrgR(o).rep||{})[q])||{};
   const t=+(stTarget1(csYear(),o).cls)||0, L=csAutoCls(o), auto=L&&t?csPct(L.length,t):null;
@@ -6742,14 +6767,14 @@ function csGXlsx(g){ const names=new Set((g.rc||[]).map(r=>r.name)), F=matchRows
 function viewKit(){ const D=kitDB(); if(!D.loaded){ kitLoad(); return `<div class="panel">프로그램 · 교구재 자료를 불러오는 중…</div>`; }
   kitAutoFix();
   const cur=KIT_TABS.some(([k])=>k===S.ui.kitTab)?S.ui.kitTab:'kits';
-  return `<div class="stack"><div class="row" style="gap:6px;align-items:center"><h2>교구재</h2>${qt(['교구재 기준표: 프로그램별 품목 · 산정 기준 · 단가 · 반납 지정','구매 견적 · 규격서: 매칭 정보로 필요 수량 계산','사업(센터)별로 따로 저장, 시기와 상관없이 이어서 씀','프로그램 개발 현황은 「프로그램 개발」 탭'])}</div>
+  return `<div class="stack">${kitCacheNote()}<div class="row" style="gap:6px;align-items:center"><h2>교구재</h2>${qt(['교구재 기준표: 프로그램별 품목 · 산정 기준 · 단가 · 반납 지정','구매 견적 · 규격서: 매칭 정보로 필요 수량 계산','사업(센터)별로 따로 저장, 시기와 상관없이 이어서 씀','프로그램 개발 현황은 「프로그램 개발」 탭'])}</div>
    ${D.err?`<div class="notice bad">자료를 불러오지 못했습니다: ${esc(D.err)} <button class="btn sm" data-act="kitreload">다시 불러오기</button></div>`:''}
    <nav class="settabs" role="tablist" aria-label="교구재 메뉴">${KIT_TABS.map(([k,l])=>`<button role="tab" aria-selected="${cur===k}" class="${cur===k?'on':''}" data-act="kittab" data-v="${k}">${l}</button>`).join('')}</nav>
    ${cur==='quote'?quotePanel():kitPanel()}</div>`; }
 function progInSeason(lk){ return (S.programs||[]).find(p=>progLK(p.name)===lk||(p.aliases||[]).some(a=>progLK(a)===lk)); }
 /* ===== 7 프로그램 개발: 대시보드 · 이번 시기 운영 프로그램 · 목록 ===== */
 function viewDev(){ const D=kitDB(); if(!D.loaded){ kitLoad(); return `<div class="panel">프로그램 개발 자료를 불러오는 중…</div>`; }
-  return `<div class="stack"><div class="row" style="gap:6px;align-items:center"><h2>프로그램 개발</h2>${qt(['개발 단계와 자료(계획서·지도안·PPT·활동지·완료본) 진행을 한눈에','막대·대학 줄을 누르면 아래 목록이 그 조건으로 걸러짐','시기마다 운영할 프로그램을 골라 기준정보 프로그램 목록과 이어 줌','교구재는 「교구재」 탭'])}</div>
+  return `<div class="stack">${kitCacheNote()}<div class="row" style="gap:6px;align-items:center"><h2>프로그램 개발</h2>${qt(['개발 단계와 자료(계획서·지도안·PPT·활동지·완료본) 진행을 한눈에','막대·대학 줄을 누르면 아래 목록이 그 조건으로 걸러짐','시기마다 운영할 프로그램을 골라 기준정보 프로그램 목록과 이어 줌','교구재는 「교구재」 탭'])}</div>
    ${D.err?`<div class="notice bad">자료를 불러오지 못했습니다: ${esc(D.err)} <button class="btn sm" data-act="kitreload">다시 불러오기</button></div>`:''}
    ${devMine()?`<div class="notice small">${esc(devMine())} 프로그램만 보입니다. 프로그램마다 <b>유형(기존·고도화·신규) · 단계 · 자료(계획서·차시별 지도안·PPT)</b>를 입력하면 「10. 운영 점검 › 운영 보고 › 3. 프로그램 개발」에 그대로 반영됩니다. 목록에 없는 프로그램은 아래 「프로그램 직접 추가」로 넣어 주세요.</div>`:''}
    ${devRecs().length?devDash():''}${devMine()?'':devSeasonPanel()}${devPanel()}</div>`; }
@@ -7033,7 +7058,7 @@ const devByKey = k => kitDB().dev.find(x=>x.key===k&&x.biz===curBiz()&&!x.gone);
 function kitClick(a,el){ const u=S.ui;
   switch(a){
     case 'kittab': u.kitTab=el.dataset.v; return true;
-    case 'kitreload': S.kitDB=null; kitLoad(); return true;
+    case 'kitreload': S.kitDB=null; kitLoad(true); return true;
     case 'devfclr': u.devF={...(u.devF||{}),[el.dataset.k]:''}; return true;
     case 'devf': u.devF={...(u.devF||{}),[el.dataset.k]:u.devF&&u.devF[el.dataset.k]===el.dataset.v&&el.dataset.k==='stage'?'':el.dataset.v}; return true;
     case 'devfreset': u.devF={}; return true;
@@ -8241,7 +8266,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.123';
+const APP_VER = '11.124';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
