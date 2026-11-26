@@ -2230,7 +2230,7 @@ const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&S.adminOrg&&!o
 function route(){ const ok=routesOf(S.ui.role).map(x=>x[0]); return ok.includes(S.ui.view)?S.ui.view:homeView(S.ui.role); }
 function homeView(role){ const ok=routesOf(role).map(x=>x[0]); if(role==='admin'&&S.adminOrg&&ok.includes('cons')) return 'cons'; return ok.includes('board')?'board':ok[0]||ROUTES[role][0][0]; }
 let RENDER_EPOCH=0;
-function render(){ RENDER_EPOCH++;
+function render(){ RENDER_EPOCH++; if(S&&S.ui&&S.ui.role==='admin'&&typeof mwLoad==='function') mwLoad();
   if(S&&S.ui&&S.ui.role!=='admin'&&typeof persist!=='undefined'){ try{ fixPhonesAll(); }catch(e){} }
   const cur=route();
   if(S.ui.role==='admin') try{ tSyncHist(); }catch(e){}
@@ -2317,7 +2317,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.124';
+const LIB_VER='11.125';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -3484,7 +3484,7 @@ const mailOk = v => /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z
 const asstJobTxt = t => !t||!t.job?'':t.job+((t.job==='대학생'||t.job==='대학원생')&&t.jobSchool?` · ${t.jobSchool} ${t.jobMajor||''}`:t.job==='전문강사'&&(t.jobFields||[]).length?` · ${t.jobFields.join(', ')}`:t.job==='일반인'&&t.jobEtc?` · ${t.jobEtc}`:'');
 const carTxt = t => t&&t.car==='yes'?'차량 가능':t&&t.car==='no'?'차량 없음':'';
 /* ===== 강사 평가 · 등급 (사업 공통) =====
-   연수 이수(인정 기간 내 공통과정 n차시) · 경력 · 운영 평가 · 배치 실적 · 분야 + 이슈 감점 → 100점, 등급 S/A/B/C/D
+   연수 이수(인정 기간 내 공통과정 n차시) · 경력 · 운영 평가 · 배치 실적 · 분야 + 민원 감점 → 100점, 등급 S/A/B/C/D
    기준은 설정 tScore(기준정보 「강사 평가 기준 · 연수」), 강사 기록은 강사 명단: trainings[] · issues[] · evals[] · places[] */
 const TS_DEF = {train:{need:10,from:'',to:'',course:'공통',mode:'warn'},w:{years:25,yearsFull:5,train:20,eval:25,place:15,placeFull:10,field:15},pen:{sub:2,cancel:5,c1:5,c2:10,c3:20,years:2},grade:{S:90,A:80,B:70,C:60}};
 const tsSet = () => { const s=S.tScore||{}; return {train:{...TS_DEF.train,...(s.train||{})},w:{...TS_DEF.w,...(s.w||{})},pen:{...TS_DEF.pen,...(s.pen||{})},grade:{...TS_DEF.grade,...(s.grade||{})}}; };
@@ -3495,9 +3495,9 @@ function trainHours(t){ const C=tsSet().train; return (t.trainings||[]).filter(x
 const trainOk = t => trainHours(t)>=tsSet().train.need;
 const trainOn = () => { const C=tsSet().train; return !!(C.from||C.to); };
 /* 이슈: 운영기관 입력 + 대체 강의 기록 · 강사 직접 취소(자동 반영). 감점은 최근 pen.years년 */
-function tIssues(t){ return (t.issues||[]).filter(x=>!x.del); }
+function tIssues(t){ return (t.issues||[]).filter(x=>!x.del).concat(typeof mwInstIssues==='function'?mwInstIssues(t):[]); }
 function tPenalty(t){ const P=tsSet().pen, cut=new Date(); cut.setFullYear(cut.getFullYear()-(+P.years||2)); const c0=cut.toISOString().slice(0,10); let p=0;
-  tIssues(t).filter(x=>!x.date||x.date>=c0).forEach(x=>{ if(x.noPen) return; if(x.kind==='대체강사 진행') p+=+P.sub; else if(x.kind==='배정 후 취소') p+=+P.cancel; else p+=+(P['c'+(x.level||'1')]||P.c1); }); return p; }
+  tIssues(t).filter(x=>!x.date||x.date>=c0).forEach(x=>{ if(x.noPen||x.pend) return; if(x.kind==='대체강사 진행') p+=+P.sub; else if(x.kind==='배정 후 취소') p+=+P.cancel; else p+=+(P['c'+(x.level||'1')]||P.c1); }); return p; }
 function tEvalAvg(t){ const L=(t.evals||[]).filter(x=>+x.score>0); return L.length?L.reduce((a,x)=>a+(+x.score),0)/L.length:null; }
 const tPlaceN = t => new Set((t.places||[]).map(x=>x.k)).size;
 /* 점수: row를 주면 그 학급 분야 적합으로, 없으면 등록 분야가 있으면 만점 */
@@ -3507,7 +3507,7 @@ function tScoreOf(t,row){ const Z=tsSet(), W=Z.w, y=+t.years||0, ev=tEvalAvg(t),
   const pen=tPenalty(t), raw=Object.values(parts).reduce((a,b)=>a+b,0)-pen, total=Math.max(0,Math.min(100,Math.round(raw)));
   const G=Z.grade, grade=total>=G.S?'S':total>=G.A?'A':total>=G.B?'B':total>=G.C?'C':'D';
   return {total,grade,parts,pen,ev,pl,th,need:+Z.train.need,trainOk:th>=+Z.train.need,fieldOk}; }
-const tGradeChip = (t,row) => { const s=tScoreOf(t,row); return `<span class="tg tg-${s.grade}" title="${esc(`평가 ${s.total}점 · 경력 ${Math.round(s.parts.years)} · 연수 ${Math.round(s.parts.train)} · 운영 평가 ${Math.round(s.parts.eval)} · 배치 실적 ${Math.round(s.parts.place)} · 분야 ${Math.round(s.parts.field)}${s.pen?` · 이슈 −${s.pen}`:''}`)}">${s.grade} <b>${s.total}</b></span>${trainOn()&&!s.trainOk?` <span class="chip x" title="인정 기간 공통과정 연수 ${s.th}/${s.need}차시">연수 미충족</span>`:''}`; };
+const tGradeChip = (t,row) => { const s=tScoreOf(t,row); return `<span class="tg tg-${s.grade}" title="${esc(`평가 ${s.total}점 · 경력 ${Math.round(s.parts.years)} · 연수 ${Math.round(s.parts.train)} · 운영 평가 ${Math.round(s.parts.eval)} · 배치 실적 ${Math.round(s.parts.place)} · 분야 ${Math.round(s.parts.field)}${s.pen?` · 민원 −${s.pen}`:''}`)}">${s.grade} <b>${s.total}</b></span>${trainOn()&&!s.trainOk?` <span class="chip x" title="인정 기간 공통과정 연수 ${s.th}/${s.need}차시">연수 미충족</span>`:''}`; };
 /* 대체 강의 기록 · 강사 직접 취소 · 배치 확정을 강사 기록으로 옮겨 둠(다음 시기에도 남게). 이미 있으면 건너뜀 */
 function tSyncHist(){ if(!S||!S.rows||!S.instructors) return; const T={}; S.instructors.forEach(t=>T[t.id]=t); const sn=season().name;
   S.rows.forEach(r=>{ const P=prog(r.prog)||{};
@@ -3516,14 +3516,12 @@ function tSyncHist(){ if(!S||!S.rows||!S.instructors) return; const T={}; S.inst
     if(r.status==='final'&&!r.schPend) [['주강사',r.inst],['보조강사',r.asstPend?'':r.asst]].forEach(([role,tid])=>{ const t=T[tid]; if(!t) return; const k=`${rowSeason(r)}:${r.id}:${role}`; t.places=t.places||[]; if(!t.places.some(z=>z.k===k)) t.places.push({k,season:sn,biz:rowBiz(r),school:r.school,prog:P.name||'',role,at:now()}); }); }); }
 /* 강사별 평가·이력 칸 (강사 명단에서 펼침) */
 function instProfRow(t){ const s=tScoreOf(t), Z=tsSet(), u=S.ui, tab=u.iProfTab||'sum';
-  const tabs=[['sum','점수 내역'],['train',`연수 이력 ${(t.trainings||[]).length}`],['issue',`이슈 ${tIssues(t).length}`],['eval',`운영 평가 ${(t.evals||[]).length}`],['place',`배치 실적 ${tPlaceN(t)}`]];
-  const body=tab==='sum'?`<table class="tsum"><tbody>${[['경력',`${t.years??'-'}년`,s.parts.years,Z.w.years,`${Z.w.yearsFull}년 이상 만점`],['연수',`${s.th}/${s.need}차시${trainOn()?(s.trainOk?' · 충족':' · <b class="lv-crit">미충족</b>'):' · 인정 기간 미설정'}`,s.parts.train,Z.w.train,`인정 기간 공통과정 ${s.need}차시 이상 만점`],['운영 평가',s.ev==null?'평가 없음 (기본 3점)':`평균 ${s.ev.toFixed(1)}점 / 5`,s.parts.eval,Z.w.eval,'운영기관 평가 평균'],['배치 실적',`${s.pl}회`,s.parts.place,Z.w.place,`${Z.w.placeFull}회 이상 만점`],['분야',fieldsOf(t).join(', ')||'미등록',s.parts.field,Z.w.field,'학급 배치 때는 그 학급 분야와 맞으면 만점']].map(([a,b,c,d,e])=>`<tr><th>${a}</th><td>${b}</td><td class="mono">${Math.round(c)} / ${d}</td><td class="muted">${e}</td></tr>`).join('')}<tr><th>이슈 감점</th><td>${tIssues(t).length}건</td><td class="mono lv-crit">−${s.pen}</td><td class="muted">최근 ${Z.pen.years}년 · 대체 −${Z.pen.sub} · 배정 후 취소 −${Z.pen.cancel} · 민원 등 경미 −${Z.pen.c1} / 중대 −${Z.pen.c2} / 심각 −${Z.pen.c3}</td></tr><tr class="tot"><th>합계</th><td>${tGradeChip(t)}</td><td class="mono"><b>${s.total}</b> / 100</td><td></td></tr></tbody></table>`
+  const tabs=[['sum','점수 내역'],['train',`연수 이력 ${(t.trainings||[]).length}`],['issue',`민원 ${tIssues(t).length}`],['eval',`운영 평가 ${(t.evals||[]).length}`],['place',`배치 실적 ${tPlaceN(t)}`]];
+  const body=tab==='sum'?`<table class="tsum"><tbody>${[['경력',`${t.years??'-'}년`,s.parts.years,Z.w.years,`${Z.w.yearsFull}년 이상 만점`],['연수',`${s.th}/${s.need}차시${trainOn()?(s.trainOk?' · 충족':' · <b class="lv-crit">미충족</b>'):' · 인정 기간 미설정'}`,s.parts.train,Z.w.train,`인정 기간 공통과정 ${s.need}차시 이상 만점`],['운영 평가',s.ev==null?'평가 없음 (기본 3점)':`평균 ${s.ev.toFixed(1)}점 / 5`,s.parts.eval,Z.w.eval,'운영기관 평가 평균'],['배치 실적',`${s.pl}회`,s.parts.place,Z.w.place,`${Z.w.placeFull}회 이상 만점`],['분야',fieldsOf(t).join(', ')||'미등록',s.parts.field,Z.w.field,'학급 배치 때는 그 학급 분야와 맞으면 만점']].map(([a,b,c,d,e])=>`<tr><th>${a}</th><td>${b}</td><td class="mono">${Math.round(c)} / ${d}</td><td class="muted">${e}</td></tr>`).join('')}<tr><th>민원 감점</th><td>${tIssues(t).length}건</td><td class="mono lv-crit">−${s.pen}</td><td class="muted">최근 ${Z.pen.years}년 · 대체 −${Z.pen.sub} · 배정 후 취소 −${Z.pen.cancel} · 민원 등 경미 −${Z.pen.c1} / 중대 −${Z.pen.c2} / 심각 −${Z.pen.c3}</td></tr><tr class="tot"><th>합계</th><td>${tGradeChip(t)}</td><td class="mono"><b>${s.total}</b> / 100</td><td></td></tr></tbody></table>`
    :tab==='train'?`${t.trainSum?`<div class="small muted">연수 사이트 누적(이전 연도 포함, 참고용): 전체 ${t.trainSum.hours}시간 · ${t.trainSum.count}회 참여 · 최근 ${esc(t.trainSum.last||'')} <span>(${esc(t.trainSum.file||'')})</span></div>`:''}<div class="tw"><table><thead><tr><th>이수일</th><th>연수명</th><th>과정</th><th>차시</th><th>인정</th><th></th></tr></thead><tbody>${(t.trainings||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(x=>{ const C=Z.train, ok=trainCourseOk(x,C)&&(!C.from||x.date>=C.from)&&(!C.to||x.date<=C.to); return `<tr><td class="mono">${esc(x.date||'')}</td><td>${esc(x.name||'')}</td><td>${esc(x.course||'')}</td><td class="mono">${esc(x.hours)}</td><td>${ok?'<span class="lv-ok">인정</span>':'<span class="muted">기간·과정 외</span>'}</td><td><button class="btn sm" data-act="trdel" data-t="${t.id}" data-v="${x.id}">삭제</button></td></tr>`; }).join('')||'<tr><td colspan="6" class="muted">연수 이력이 없습니다</td></tr>'}</tbody></table></div>
      <div class="row" style="gap:6px;flex-wrap:wrap"><input type="date" id="tr-date" aria-label="이수일"><input id="tr-name" placeholder="연수명" style="flex:1;min-width:160px"><select id="tr-course"><option>공통</option><option>선택</option><option>기타</option></select><input id="tr-hours" type="number" min="0" step="0.5" placeholder="차시" style="width:80px"><button class="btn sm pri" data-act="tradd" data-t="${t.id}">연수 추가</button></div>`
-   :tab==='issue'?`<div class="tw"><table><thead><tr><th>일자</th><th>구분</th><th>정도</th><th>학교 · 기관</th><th>내용 · 조치</th><th>입력</th><th></th></tr></thead><tbody>${tIssues(t).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(x=>`<tr><td class="mono">${esc(x.date||'')}</td><td>${esc(x.kind)}</td><td>${x.kind==='대체강사 진행'||x.kind==='배정 후 취소'?'-':esc((ISSUE_LV.find(l=>l[0]===String(x.level))||ISSUE_LV[0])[1])}</td><td>${esc(x.school||'')}</td><td class="small">${esc(x.desc||'')}${x.action?`<div class="muted">조치: ${esc(x.action)}</div>`:''}${x.noPen?' <span class="chip">감점 제외</span>':''}</td><td class="small muted">${x.auto?'자동':esc(x.by||'')} ${esc(x.at||'')}</td><td class="nowrap"><button class="btn sm" data-act="isnopen" data-t="${t.id}" data-v="${x.id}">${x.noPen?'감점 포함':'감점 제외'}</button> <button class="btn sm" data-act="isdel" data-t="${t.id}" data-v="${x.id}">삭제</button></td></tr>`).join('')||'<tr><td colspan="7" class="muted">이슈 기록이 없습니다</td></tr>'}</tbody></table></div>
-     <div class="fgrid"><label class="f">일자<input type="date" id="is-date"></label><label class="f">구분<select id="is-kind">${ISSUE_KINDS.map(k=>`<option>${k}</option>`).join('')}</select></label><label class="f">정도 <span class="muted small">(민원 등)</span><select id="is-level">${ISSUE_LV.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></label><label class="f">학교 · 기관<input id="is-school"></label></div>
-     <label class="f">내용<textarea id="is-desc" rows="2" placeholder="예: 수업 시간 미준수로 학부모 민원 접수"></textarea></label><label class="f">조치 결과<input id="is-action" placeholder="예: 강사 면담, 재발 방지 안내"></label>
-     <div><button class="btn sm pri" data-act="isadd" data-t="${t.id}">이슈 기록 추가</button> </div>`
+   :tab==='issue'?`<div class="tw"><table><thead><tr><th>일자</th><th>유형</th><th>정도</th><th>학교 · 기관</th><th>내용 · 조치</th><th>입력</th><th></th></tr></thead><tbody>${tIssues(t).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(x=>`<tr><td class="mono">${esc(x.date||'')}</td><td>${esc(x.kind)}${x.mw?` <span class="chip sm">${esc(MW_SL(x.status))}</span>`:''}</td><td>${x.kind==='대체강사 진행'||x.kind==='배정 후 취소'?'-':esc((ISSUE_LV.find(l=>l[0]===String(x.level))||ISSUE_LV[0])[1])}</td><td>${esc(x.school||'')}</td><td class="small">${esc(x.desc||'')}${x.action?`<div class="muted">조치: ${esc(x.action)}</div>`:''}${x.noPen?' <span class="chip">감점 제외</span>':''}${x.pend?' <span class="chip">처리 중 · 감점 전</span>':''}</td><td class="small muted">${x.auto?'자동':esc(x.by||'')} ${esc(x.at||'')}</td><td class="nowrap">${x.mw?`<button class="btn sm" data-act="mwgo" data-v="${esc(x.id)}">대장에서 보기</button>`:`<button class="btn sm" data-act="isnopen" data-t="${t.id}" data-v="${x.id}">${x.noPen?'감점 포함':'감점 제외'}</button> <button class="btn sm" data-act="isdel" data-t="${t.id}" data-v="${x.id}">삭제</button>`}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">민원 기록이 없습니다</td></tr>'}</tbody></table></div>
+     <div class="row" style="gap:8px;align-items:center"><button class="btn sm pri" data-act="mwnew" data-k="inst" data-t="${t.id}">민원 기록 추가</button><span class="small muted">민원 관리 대장에 기록되고, 「종결」하면 이 강사 평가에 반영됩니다.</span></div>`
    :tab==='eval'?`<div class="tw"><table><thead><tr><th>시기</th><th>점수</th><th>의견</th><th>입력</th><th></th></tr></thead><tbody>${(t.evals||[]).slice().reverse().map(x=>`<tr><td>${esc(x.season||'')}</td><td class="mono">${esc(x.score)}점</td><td class="small">${esc(x.comment||'')}</td><td class="small muted">${esc(x.by||'')} ${esc(x.at||'')}</td><td><button class="btn sm" data-act="evdel" data-t="${t.id}" data-v="${x.id}">삭제</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">운영 평가가 없습니다 (점수 계산 때 기본 3점)</td></tr>'}</tbody></table></div>
      <div class="row" style="gap:6px;flex-wrap:wrap"><select id="ev-score" aria-label="점수">${[5,4,3,2,1].map(v=>`<option value="${v}">${v}점 ${['','매우 미흡','미흡','보통','우수','매우 우수'][v]}</option>`).join('')}</select><input id="ev-comment" placeholder="의견 (수업 준비, 학교 만족도, 소통 등)" style="flex:1;min-width:200px"><button class="btn sm pri" data-act="evadd" data-t="${t.id}">평가 추가 (${esc(season().name)})</button></div>`
    :`<div class="tw"><table><thead><tr><th>시기</th><th>사업</th><th>학교 · 기관</th><th>프로그램</th><th>역할</th></tr></thead><tbody>${(t.places||[]).slice().reverse().map(x=>`<tr><td>${esc(x.season||'')}</td><td>${esc(bizOf(x.biz||'anchor').name)}</td><td>${esc(x.school||'')}</td><td>${esc(x.prog||'')}</td><td>${esc(x.role||'')}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">배치 확정 기록이 없습니다 (배치 확정·학교 공개된 학급부터 자동 기록)</td></tr>'}</tbody></table></div>
@@ -3614,7 +3612,7 @@ function pcApply(){ const P=S.ui.pcPend; let add=0, up=0, del=0;
 function pcRowsOut(list){ return list.map(p=>{ const c=progCard(p)||{}; return [p.name,p.field||'',p.org||'',p.cap??'',p.grade||'',(c.acts||[]).join('\n'),c.kit||'',c.place||'',c.isNew?'O':'',(p.conds||[]).filter(x=>x.required!==false).map(x=>x.text).join('\n'),(p.conds||[]).filter(x=>x.required===false).map(x=>x.text).join('\n')]; }); }
 /* 기준정보: 평가 기준 · 연수 요건 · 연수 엑셀 */
 function tsPanel(){ const Z=tsSet(), u=S.ui, T=S.instructors, n=T.filter(t=>!trainOk(t)).length, num=(id,v,w)=>`<input id="${id}" data-ts="${id}" type="number" min="0" value="${esc(v)}" style="width:${w||70}px">`;
-  return `<div class="panel stack"><div class="row" style="gap:6px;align-items:center"><h3>강사 평가 · 연수 <span class="chip sm">사업 공통</span></h3>${qt(['배치 때 강사를 비교하는 점수·등급 기준','100점 = 경력 + 연수 + 운영 평가 + 배치 실적 + 분야 − 이슈 감점','강사 명단 「평가·이력」에서 연수·이슈·운영 평가 입력','검토 · 매칭 후보 강사·신청 강사 칩에 등급·점수 표시'])}</div>
+  return `<div class="panel stack"><div class="row" style="gap:6px;align-items:center"><h3>강사 평가 · 연수 <span class="chip sm">사업 공통</span></h3>${qt(['배치 때 강사를 비교하는 점수·등급 기준','100점 = 경력 + 연수 + 운영 평가 + 배치 실적 + 분야 − 이슈 감점','강사 명단 「평가·이력」에서 연수·민원·운영 평가 입력','검토 · 매칭 후보 강사·신청 강사 칩에 등급·점수 표시'])}</div>
    <div class="conds"><div class="conds-h"><span>연수 요건</span>${trainOn()?`<span class="${n?'lv-warn':'lv-ok'}">미충족 ${n}명 / ${T.length}명</span>`:''}</div><div style="padding:10px 12px" class="stack">
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><span class="small">인정 기간</span><input type="date" id="ts-from" data-ts="ts-from" value="${esc(Z.train.from)}"> ~ <input type="date" id="ts-to" data-ts="ts-to" value="${esc(Z.train.to)}"><span class="small">과정</span><input id="ts-course" data-ts="ts-course" value="${esc(Z.train.course)}" style="width:90px" placeholder="공통"><span class="small">필요</span>${num('ts-need',Z.train.need)}<span class="small">차시 이상</span></div>
     <div class="row" style="gap:8px;align-items:center"><span class="small">미충족 강사</span><span class="st-seg"><button class="${Z.train.mode!=='block'?'on':''}" data-act="tsmode" data-v="warn">경고만 (신청 가능)</button><button class="${Z.train.mode==='block'?'on':''}" data-act="tsmode" data-v="block">주강사 신청 막기</button></span>${qt(['예: 2026년 실적(2026-01-01~2026-12-31)으로 2027년 배치 참여 판단','과정 칸 글자가 연수 이력의 과정에 들어 있으면 인정 (예: 공통)','「주강사 신청 막기」면 미충족 강사는 주강사 신청 불가(서버도 거절)'])}</div>
@@ -3646,7 +3644,7 @@ function tTrainBanner(t){ if(!trainOn()) return ''; const Z=tsSet().train, h=tra
   return `<div class="notice ${ok?'':Z.mode==='block'?'bad':''} small"><b>연수 이수 현황</b> · 인정 기간 ${esc(rng)} ${esc(Z.course||'')}과정 <b>${h}</b> / ${Z.need}차시 ${ok?'<span class="lv-ok">충족</span>':Z.mode==='block'?'<span class="lv-crit">미충족 · 주강사 신청 불가</span>':'<span class="lv-warn">미충족 · 배치 때 참고됩니다</span>'} ${qt(['연 '+Z.need+'차시 이상 공통과정 연수 이수 실적이 있어야 다음 해 강사 배치에 참여할 수 있습니다','연수 이력이 빠져 있으면 운영 담당자에게 알려 주세요'])}</div>`; }
 function tCompareHtml2(r){ const ids=Object.keys(S.ui.cmpSel||{}).filter(k=>S.ui.cmpSel[k]); if(ids.length<2) return '';
   const L=ids.map(id=>S.instructors.find(t=>t.id===id)).filter(Boolean).map(t=>({t,s:tScoreOf(t,r),cl:teacherClash(t.id,r)})).sort((a,b)=>b.s.total-a.s.total), best=L[0].s.total;
-  const rowsD=[['등급 · 점수',x=>tGradeChip(x.t,r)],['경력',x=>`${x.t.years??'-'}년 <span class="muted">(${Math.round(x.s.parts.years)})</span>`],['연수',x=>`${x.s.th}/${x.s.need}차시 ${trainOn()?(x.s.trainOk?'<span class="lv-ok">충족</span>':'<span class="lv-crit">미충족</span>'):''} <span class="muted">(${Math.round(x.s.parts.train)})</span>`],['운영 평가',x=>`${x.s.ev==null?'없음':x.s.ev.toFixed(1)+'점'} <span class="muted">(${Math.round(x.s.parts.eval)})</span>`],['배치 실적',x=>`${x.s.pl}회 <span class="muted">(${Math.round(x.s.parts.place)})</span>`],['이 학급 분야',x=>x.s.fieldOk?'<span class="lv-ok">일치</span>':'<span class="muted">분야 외</span>'],['이슈',x=>{ const I=tIssues(x.t); return I.length?`${I.length}건 <span class="lv-crit">−${x.s.pen}</span><div class="small muted">${I.slice(-2).map(z=>esc(z.kind)).join(', ')}</div>`:'없음'; }],['유형 · 지역',x=>`${esc(tKindTxt(x.t)||'-')} · ${esc(x.t.region||'')}`],['일정',x=>x.cl.length?`<span class="lv-crit">겹침 ${x.cl.length}건</span>`:'<span class="lv-ok">가능</span>'],['신청',x=>r.apps.some(a=>a.tid===x.t.id)?'신청함':'<span class="muted">미신청</span>']];
+  const rowsD=[['등급 · 점수',x=>tGradeChip(x.t,r)],['경력',x=>`${x.t.years??'-'}년 <span class="muted">(${Math.round(x.s.parts.years)})</span>`],['연수',x=>`${x.s.th}/${x.s.need}차시 ${trainOn()?(x.s.trainOk?'<span class="lv-ok">충족</span>':'<span class="lv-crit">미충족</span>'):''} <span class="muted">(${Math.round(x.s.parts.train)})</span>`],['운영 평가',x=>`${x.s.ev==null?'없음':x.s.ev.toFixed(1)+'점'} <span class="muted">(${Math.round(x.s.parts.eval)})</span>`],['배치 실적',x=>`${x.s.pl}회 <span class="muted">(${Math.round(x.s.parts.place)})</span>`],['이 학급 분야',x=>x.s.fieldOk?'<span class="lv-ok">일치</span>':'<span class="muted">분야 외</span>'],['민원',x=>{ const I=tIssues(x.t); return I.length?`${I.length}건 <span class="lv-crit">−${x.s.pen}</span><div class="small muted">${I.slice(-2).map(z=>esc(z.kind)).join(', ')}</div>`:'없음'; }],['유형 · 지역',x=>`${esc(tKindTxt(x.t)||'-')} · ${esc(x.t.region||'')}`],['일정',x=>x.cl.length?`<span class="lv-crit">겹침 ${x.cl.length}건</span>`:'<span class="lv-ok">가능</span>'],['신청',x=>r.apps.some(a=>a.tid===x.t.id)?'신청함':'<span class="muted">미신청</span>']];
   return `<div class="panel stack tcmp"><div class="row between"><b>강사 비교 (${L.length}명)</b><button class="btn sm" data-act="cmpclear">비교 해제</button></div><div class="tw"><table><thead><tr><th></th>${L.map(x=>`<th class="${x.s.total===best?'best':''}">${esc(x.t.name)}</th>`).join('')}</tr></thead><tbody>${rowsD.map(([l,f])=>`<tr><th scope="row">${l}</th>${L.map(x=>`<td>${f(x)}</td>`).join('')}</tr>`).join('')}<tr><th></th>${L.map(x=>`<td><button class="btn sm ${r.inst===x.t.id?'danger':'pri'}" data-act="${r.inst===x.t.id?'uninst':'assign'}" data-id="${r.id}" data-t="${x.t.id}" >${r.inst===x.t.id?'주강사 해제':'주강사로'}</button></td>`).join('')}</tr></tbody></table></div></div>`; }
 const emailOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim());
 function tLoginRead(){ const v=id=>((document.getElementById(id)||{}).value||'').trim(), name=v('tl-name'), phone=v('tl-phone'), pin=v('tl-pin');
@@ -3988,7 +3986,7 @@ function instEditRow(t){ const regs=[...new Set(['천안','아산','천안·아�
   </div></td></tr>`; }
 /* 기준정보 강사 명단: 필터 · 정렬 */
 const tHasPin = t => t.hasPin!=null?t.hasPin:!!t.pin;
-const IFLAGS = [['trn','연수 미충족',t=>trainOn()&&!trainOk(t)],['iss','이슈 있음',t=>tIssues(t).length>0],['gd','C·D 등급',t=>'CD'.includes(tScoreOf(t).grade)],['asst','보조 전용(가입)',t=>!!t.asstOnly],['car','차량 가능',t=>t.car==='yes'],['phone','연락처 확인 필요',t=>phoneBad(t)],['fld','분야 확인 필요',t=>t.fieldsSelf&&!t.fieldsReviewed],['new','신규 검토 대기',t=>t.isNew&&!t.reviewed],['app','이번 차수 신청함',t=>S.rows.some(r=>r.apps.some(a=>a.tid===t.id))],['asg','배정됨',t=>S.rows.some(r=>r.status!=='cancel'&&(r.inst===t.id||r.asst===t.id))],['his','대체·취소 이력',t=>subCount(t.id)||cancelCount(t.id)],['noinfo','정보 미입력',t=>!String(t.email||'').trim()||!T_KINDS.includes(tKind(t))||t.years==null||t.years===''],['man','매뉴얼 미확인',t=>manualNeed(t)]];
+const IFLAGS = [['trn','연수 미충족',t=>trainOn()&&!trainOk(t)],['iss','민원 있음',t=>tIssues(t).length>0],['gd','C·D 등급',t=>'CD'.includes(tScoreOf(t).grade)],['asst','보조 전용(가입)',t=>!!t.asstOnly],['car','차량 가능',t=>t.car==='yes'],['phone','연락처 확인 필요',t=>phoneBad(t)],['fld','분야 확인 필요',t=>t.fieldsSelf&&!t.fieldsReviewed],['new','신규 검토 대기',t=>t.isNew&&!t.reviewed],['app','이번 차수 신청함',t=>S.rows.some(r=>r.apps.some(a=>a.tid===t.id))],['asg','배정됨',t=>S.rows.some(r=>r.status!=='cancel'&&(r.inst===t.id||r.asst===t.id))],['his','대체·취소 이력',t=>subCount(t.id)||cancelCount(t.id)],['noinfo','정보 미입력',t=>!String(t.email||'').trim()||!T_KINDS.includes(tKind(t))||t.years==null||t.years===''],['man','매뉴얼 미확인',t=>manualNeed(t)]];
 function instView(){ const f=S.ui.if||{}, q=String(f.q||'').trim().toLowerCase();
   let L=S.instructors.filter(t=>(!q||[t.name,t.phone,digits(t.phone),t.email,t.note,t.region].join(' ').toLowerCase().includes(q))
     &&(!f.region||t.region===f.region)&&(!f.field||fieldsOf(t).includes(f.field))&&(!f.kind||(f.kind==='-'?!T_KINDS.includes(tKind(t)):tKind(t)===f.kind))
@@ -4966,6 +4964,7 @@ function renderLayer(){ const L=document.getElementById('layer'), d0=L.querySele
 function renderLayer0(){
   const L=document.getElementById('layer'), r=S.rows.find(x=>x.id===S.ui.drawer);
   if(S.ui.role==='teacher'){ L.innerHTML=teacherLayer(); return; }
+  if(S.ui.role==='admin'&&S.ui.mwForm){ L.innerHTML=mwFormHtml(); return; }
   if(S.ui.role==='admin'&&S.ui.smsBrDlg){ L.innerHTML=smsBrDlg(); return; }
   if(S.ui.role==='admin'&&S.ui.jLayer){ L.innerHTML=joinLayerHtml(); return; }
   if(S.ui.role==='admin'&&S.ui.rLayer){ L.innerHTML=resultLayerHtml(); return; }
@@ -4977,7 +4976,7 @@ function renderLayer0(){
   L.innerHTML=`<div class="ov" data-act="close"><div class="drawer" role="dialog" aria-label="학급 상세"><div class="stack">
    <div class="row between"><div><h2>${esc(r.school)}</h2><div class="muted small">${esc(clsName(r))} · ${esc(rowGrade(r))} · ${isOut(r)?'목록':'교육청'} 순번 ${esc(r.no)}</div>${isOut(r)?`<div class="small" style="margin-top:2px">기관 주소: ${(S.contacts[r.school]||{}).addr?esc(S.contacts[r.school].addr):'<span class="muted">아직 입력 전</span>'}</div>`:''}</div><button class="btn" data-act="close">닫기</button></div>
    <div class="row">${stPill(r.status)}<select id="d-status" aria-label="상태 바꾸기">${ST_ORDER.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${ST[s][0]}</option>`).join('')}</select>
-    <button class="btn sm" data-act="split" data-id="${r.id}">학급 나누기</button>${r.splitFrom?`<button class="btn sm danger" data-act="delsplit" data-id="${r.id}">이 학급 삭제</button>`:''}</div>
+    <button class="btn sm" data-act="split" data-id="${r.id}">학급 나누기</button><button class="btn sm" data-act="mwnew" data-k="site" data-r="${r.id}">민원 기록</button>${r.splitFrom?`<button class="btn sm danger" data-act="delsplit" data-id="${r.id}">이 학급 삭제</button>`:''}</div>
    ${matchRows().includes(r)?bundleBox(r,'open'):''}
    ${dInfoBox(r)}
    ${r.splitFrom?`<div class="small muted">학급 나누기로 추가한 학급입니다${R(r.splitFrom)?` (원래 학급: ${esc(clsName(R(r.splitFrom)))})`:''}. 잘못 만들었으면 삭제할 수 있습니다.</div>`:''}
@@ -6276,10 +6275,161 @@ function csAuto(o,q){ const g=csGoal(o,q).p, p=csProg(o,q).p, b=csBud(o,q).p, P=
   if(P.score<c.cut&&k!=='r'){ k=k==='g'?'y':'r'; why.push(`성실도 ${P.score}점 (${c.cut}점 미만)`); }
   return {k,why,P}; }
 function csFinal(o,q){ const J=((S.consJudge||{})[q]||{})[o]||{}; return J.fin||(q>=1?csAuto(o,q).k:'n'); }
+/* ===== 민원 관리 대장 (10번 운영 점검 › 관리) =====
+   한 건 = {id, biz, season, seasonName, date, src, kind(org 운영기관/site 참여기관/inst 강사), target, targetName, role(주/보조), rowId, school, org(운영 대학),
+            type, level(1~3), desc, acts:[{d,who,t}], status(open/doing/done), reflect(평가 반영, 기본 true), by, at, upd}
+   강사 민원은 강사 평가 감점에 들어감(종결 + 평가 반영인 것만). 강사 명단에 예전부터 있던 이슈 기록도 대장에 함께 보여 줌 */
+const MW_KIND=[['org','운영기관'],['site','참여기관'],['inst','강사']];
+const MW_KL=k=>(MW_KIND.find(x=>x[0]===k)||['',''])[1];
+const MW_TYPES={org:['강사 미배치·배치 지연','일정 임의 변경','보고·제출 지연','교구 미준비','민원 대응 미흡','기타'],
+  site:['운영 조건 미충족(장비·교실)','일정 임의 변경·취소','학생 수 급변','연락 두절','협조 미흡','기타'],
+  inst:['지각·조퇴','결강','대체강사 진행','배정 후 취소','수업 품질','안전사고','태도·복무','서류 미비','민원','기타']};
+const MW_ST=[['open','접수'],['doing','조치 중'],['done','종결']];
+const MW_SL=s=>(MW_ST.find(x=>x[0]===s)||MW_ST[0])[1];
+const MW_SRC=['학교·기관 연락','학부모 민원','강사 연락','모니터링단','운영기관 발견','기타'];
+const mwLvL=v=>(ISSUE_LV.find(l=>l[0]===String(v))||ISSUE_LV[0])[1];
+function mwDB(){ return S.mwDB||(S.mwDB={list:[],loaded:false}); }
+const mwCacheKey=()=>'anc_mw_'+(S.adminOrg||'hq');
+function mwCachePut(){ const D=S.mwDB; if(!D||!D.loaded||D.cached) return; try{ localStorage.setItem(mwCacheKey(),JSON.stringify({list:D.list,at:now()})); }catch(e){} }
+function mwLoad(fresh){ const D=mwDB(); if((D.loaded&&!D.cached)||D.loading) return;
+  if(!kitOnGas()){ S.mwDB={list:S.mwLocal||[],loaded:true}; return; }
+  if(!fresh&&!D.loaded){ try{ const c=JSON.parse(localStorage.getItem(mwCacheKey())||'null'); if(c&&Array.isArray(c.list)) S.mwDB={list:c.list,loaded:true,cached:true,loading:false}; }catch(e){} }
+  const C=mwDB(); C.loading=true;
+  run('adminMwLoad',ADMIN_KEY).then(d=>{ const old=mwDB(), pend=(old.pend||{}), list=((d&&d.list)||[]).filter(x=>!pend[x.id]); Object.values(pend).forEach(x=>{ if(!x.gone) list.push(x); });
+    S.mwDB={list,loaded:true,pend}; mwCachePut(); render(); })
+  .catch(e=>{ const X=mwDB(); X.loading=false; if(!X.loaded){ X.loaded=true; X.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); } render(); }); }
+/* 저장: 화면에 먼저 반영하고 서버로. 실패하면 알림(화면 값은 남겨 두고 다시 저장 가능) */
+function mwSave(rec){ const D=mwDB(); const i=D.list.findIndex(x=>x.id===rec.id); if(i>=0) D.list[i]=rec; else D.list.push(rec);
+  if(!kitOnGas()){ S.mwLocal=D.list; save(); return; }
+  (D.pend=D.pend||{})[rec.id]=rec; kitSaveMsg('저장 중…');
+  run('adminMwPut',ADMIN_KEY,[rec]).then(()=>{ delete D.pend[rec.id]; kitSaveMsg('저장됨 · '+now()); mwCachePut(); })
+  .catch(e=>{ kitSaveMsg('저장 실패',true); toast('민원 관리 대장을 저장하지 못했습니다: '+String(e&&e.message||e).replace(/^Exception:\s*/,'')); }); }
+function mwRemove(id){ const D=mwDB(); D.list=D.list.filter(x=>x.id!==id);
+  if(!kitOnGas()){ S.mwLocal=D.list; save(); return; }
+  (D.pend=D.pend||{})[id]={id,gone:true};
+  run('adminMwDel',ADMIN_KEY,[id]).then(()=>{ delete D.pend[id]; mwCachePut(); }).catch(e=>toast('삭제하지 못했습니다: '+String(e&&e.message||e).replace(/^Exception:\s*/,''))); }
+const mwMine=()=>S.adminOrg||'';
+const mwCanEdit=x=>!mwMine()||(x.kind!=='org'&&x.org===mwMine());
+/* 강사 평가용: 그 강사의 대장 민원(모든 사업) → 강사 명단 이슈와 같은 모양 */
+function mwInstIssues(t){ return (mwDB().list||[]).filter(x=>x.kind==='inst'&&x.target===t.id).map(x=>({id:x.id,mw:true,date:x.date,kind:x.type,level:x.level,school:x.school||'',desc:x.desc,action:((x.acts||[]).slice(-1)[0]||{}).t||'',noPen:x.reflect===false,pend:x.status!=='done',status:x.status,by:x.by,at:x.at})); }
+/* 강사 명단에만 있는 예전 이슈(대체 강의·강사 취소 자동 기록 포함)를 대장 목록 줄로 */
+function mwLegacy(){ if(mwMine()) return []; const out=[];
+  (S.instructors||[]).forEach(t=>(t.issues||[]).filter(x=>!x.del).forEach(x=>out.push({id:'lg_'+t.id+'_'+x.id,legacy:true,tid:t.id,biz:curBiz(),date:x.date||'',kind:'inst',target:t.id,targetName:t.name,type:x.kind,level:x.level,school:x.school||'',org:'',desc:x.desc||'',acts:x.action?[{d:x.date||'',who:x.by||'',t:x.action}]:[],status:'done',reflect:!x.noPen,by:x.auto?'자동':x.by||'',at:x.at||''})));
+  return out; }
+function mwAll(){ return (mwDB().list||[]).filter(x=>!x.biz||x.biz===curBiz()||x.kind==='inst').concat(mwLegacy()); }
+/* 대상 후보 */
+function mwTargets(kind){
+  if(kind==='org') return ORGS.filter(o=>o!=='미지정').map(o=>[o,o]);
+  if(kind==='site'){ const L=S.rows.filter(r=>rowBiz(r)===curBiz()&&(!mwMine()||orgOfRow(r)===mwMine())); return [...new Set(L.map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko')).map(s=>[s,s]); }
+  const ids=mwMine()?new Set(S.rows.filter(r=>orgOfRow(r)===mwMine()).flatMap(r=>[r.inst,r.asst]).filter(Boolean)):null;
+  return (S.instructors||[]).filter(t=>!ids||ids.has(t.id)).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko')).map(t=>[t.id,t.name]); }
+function mwRowsFor(kind,target){ if(!target) return []; const L=S.rows.filter(r=>rowBiz(r)===curBiz()&&(!mwMine()||orgOfRow(r)===mwMine()));
+  if(kind==='site') return L.filter(r=>r.school===target); if(kind==='inst') return L.filter(r=>r.inst===target||r.asst===target); if(kind==='org') return L.filter(r=>orgOfRow(r)===target).slice(0,0); return []; }
+const mwToday=()=>fmtD(new Date());
+function mwNew(o){ const r=o.rowId?S.rows.find(x=>x.id===o.rowId):null, kind=o.kind||'site';
+  const D={id:'mw'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),biz:curBiz(),season:curSK(),seasonName:season().name,date:mwToday(),src:MW_SRC[0],kind,target:o.target||'',rowId:o.rowId||'',type:MW_TYPES[kind][0],level:'1',desc:'',status:'open',reflect:true,first:'',isNew:true};
+  if(r){ if(kind==='site') D.target=r.school; D.school=r.school; if(kind==='inst'&&!D.target) D.target=r.inst||''; if(kind==='inst') D.role=r.asst===D.target?'보조':'주'; }
+  return D; }
+/* 등록·수정 창 */
+function mwFormRead(){ const F=S.ui.mwForm; if(!F) return; const g=i=>{ const e=document.getElementById(i); return e?e.value:null; };
+  [['date','mwf-date'],['src','mwf-src'],['target','mwf-target'],['rowId','mwf-row'],['type','mwf-type'],['level','mwf-level'],['desc','mwf-desc'],['status','mwf-status'],['first','mwf-first'],['role','mwf-role']].forEach(([k,i])=>{ const v=g(i); if(v!=null) F[k]=v; }); }
+function mwFormHtml(){ const F=S.ui.mwForm; if(!F) return ''; const T=mwTargets(F.kind), RW=mwRowsFor(F.kind,F.target);
+  const opt=(L,cur)=>L.map(([v,l])=>`<option value="${esc(v)}" ${String(cur)===String(v)?'selected':''}>${esc(l)}</option>`).join('');
+  const kinds=MW_KIND.filter(([k])=>!mwMine()||k!=='org');
+  return `<div class="ov" data-act="mwx"><div class="drawer" role="dialog" aria-label="민원 등록" style="max-width:620px"><div class="stack" style="gap:10px">
+   <div class="row between"><h2 style="margin:0">${F.isNew?'민원 등록':'민원 수정'}</h2><button class="btn sm" data-act="mwx">닫기</button></div>
+   <div class="row" style="gap:8px;align-items:center"><span class="small"><b>대상 구분</b></span><div class="seg2" role="tablist">${kinds.map(([k,l])=>`<button class="${F.kind===k?'on':''}" data-act="mwfk" data-v="${k}" ${F.isNew?'':'disabled'}>${l}</button>`).join('')}</div></div>
+   <div class="fgrid">
+    <label class="f">${F.kind==='org'?'운영 대학':F.kind==='site'?'학교 · 기관':'강사'}<select id="mwf-target"><option value="">선택</option>${opt(T,F.target)}</select></label>
+    ${F.kind==='inst'?`<label class="f">구분<select id="mwf-role">${opt([['주','주강사'],['보조','보조강사']],F.role||'주')}</select></label>`:''}
+    ${F.kind!=='org'?`<label class="f">관련 학급 (선택)<select id="mwf-row"><option value="">없음</option>${opt(RW.map(r=>[r.id,`${r.school} · ${clsName(r)} · ${(prog(r.prog)||{}).name||''}`]),F.rowId)}</select></label>`:''}
+    <label class="f">발생일<input type="date" id="mwf-date" value="${esc(F.date||'')}"></label>
+    <label class="f">접수 경로<select id="mwf-src">${opt(MW_SRC.map(x=>[x,x]),F.src)}</select></label>
+    <label class="f">유형<select id="mwf-type">${opt(MW_TYPES[F.kind].map(x=>[x,x]),F.type)}</select></label>
+    <label class="f">정도<select id="mwf-level">${opt(ISSUE_LV,F.level)}</select></label>
+    <label class="f">처리 상태<select id="mwf-status">${opt(MW_ST,F.status)}</select></label>
+   </div>
+   <label class="f">내용<textarea id="mwf-desc" rows="3" placeholder="예: 수업 시작 20분 지각, 학부모 민원 접수">${esc(F.desc||'')}</textarea></label>
+   ${F.isNew?`<label class="f">조치 내용 (선택)<input id="mwf-first" value="${esc(F.first||'')}" placeholder="예: 강사 면담 후 재발 방지 안내"></label>`:''}
+   <div class="row"><button class="btn pri" data-act="mwsave">저장</button><button class="btn" data-act="mwx">취소</button></div>
+  </div></div></div>`; }
+/* 대장 화면 */
+function csMw(){ const D=mwDB(); if(!D.loaded){ mwLoad(); return '<div class="panel">민원 관리 대장을 불러오는 중…</div>'; }
+  const u=S.ui, all=mwAll(), q=String(u.mwQ||'').trim();
+  const f={k:u.mwK||'',s:u.mwS||'',l:u.mwL||'',o:u.mwO||'',sea:u.mwSea||''};
+  const orgOf=x=>x.kind==='org'?x.target:x.org;
+  const pass=(x,skip)=>(skip==='k'||!f.k||x.kind===f.k)&&(skip==='s'||!f.s||x.status===f.s)&&(skip==='l'||!f.l||String(x.level)===f.l)&&(skip==='o'||!f.o||orgOf(x)===f.o)&&(skip==='sea'||!f.sea||x.season===f.sea)
+    &&(!q||[x.targetName,x.target,x.school,x.type,x.desc,orgOf(x),...(x.acts||[]).map(a=>a.t)].some(v=>String(v||'').includes(q)));
+  const L=all.filter(x=>pass(x)).sort((a,b)=>(a.status==='done')-(b.status==='done')||String(b.date).localeCompare(String(a.date)));
+  const cnt=(k,v,fn)=>all.filter(x=>pass(x,k)&&fn(x)===v).length;
+  const seas=[...new Set(all.map(x=>x.season).filter(Boolean))].sort().reverse();
+  const tName=x=>x.kind==='inst'?(instName(x.target)||x.targetName||x.target)+(x.role==='보조'?' (보조)':''):(x.targetName||x.target);
+  const open=all.filter(x=>x.status!=='done'), lvC=v=>v==='3'?'lv-crit':v==='2'?'lv-warn':'muted';
+  const row=x=>{ const last=(x.acts||[]).slice(-1)[0], on=u.mwOpen===x.id;
+    return `<tr class="${on?'sel':''}"><td class="mono nowrap">${esc(x.date||'')}</td><td><span class="chip sm">${esc(MW_KL(x.kind))}</span></td><td><b>${esc(tName(x))}</b>${x.kind!=='site'&&x.school?`<div class="small muted">${esc(x.school)}</div>`:''}</td>
+     <td class="small">${esc(orgShort(orgOf(x)||'')||orgOf(x)||'-')}</td><td class="small">${esc(x.type||'')}</td><td class="small ${lvC(String(x.level))}">${esc(mwLvL(x.level))}</td>
+     <td class="small" style="max-width:320px">${esc(String(x.desc||'').slice(0,80))}${String(x.desc||'').length>80?'…':''}</td>
+     <td><span class="pill ${x.status==='done'?'st-final':x.status==='doing'?'st-recruit':'st-wait'}">${MW_SL(x.status)}</span>${x.legacy?'<div class="small muted">강사 명단 기록</div>':''}${x.status==='done'&&x.reflect===false?'<div class="small muted">평가 미반영</div>':''}</td>
+     <td class="small muted">${last?esc(last.t.slice(0,40)):'-'}</td><td><button class="btn sm" data-act="mwopen" data-v="${esc(x.id)}">${on?'닫기':'열기'}</button></td></tr>${on?`<tr><td colspan="10">${mwDetail(x)}</td></tr>`:''}`; };
+  const sum=MW_KIND.map(([k,l])=>{ const A=all.filter(x=>x.kind===k); return `<div class="panel" style="flex:1;min-width:160px;padding:10px 14px"><div class="small muted">${l}</div><div><b style="font-size:20px">${A.length}</b>건 <span class="small ${A.some(x=>x.status!=='done')?'lv-warn':'muted'}">처리 중 ${A.filter(x=>x.status!=='done').length}</span></div></div>`; }).join('');
+  return `<div class="stack" style="gap:10px">
+   <div class="row between" style="align-items:center"><div class="small muted">${mwMine()?'운영기관 민원 전체와 우리 대학 학급·강사 민원을 봅니다.':'운영기관 · 참여기관 · 강사 민원과 조치를 기록합니다. 강사 민원은 종결하면 강사 평가에 반영됩니다.'} ${qt(['강사 민원: 「종결」이고 「평가 반영」인 것만 강사 평가 감점에 들어감','운영기관 민원: 타대학도 함께 봄','참여기관 민원: 다음 시기 운영 때 참고','학급 상세·강사 상세에서도 바로 등록할 수 있음'])}</div><button class="btn pri" data-act="mwnew">민원 등록</button></div>
+   <div class="row" style="gap:10px;flex-wrap:wrap">${sum}</div>
+   ${open.length?`<div class="notice">처리 중인 민원 <b>${open.length}건</b>${open.filter(x=>String(x.level)==='3').length?` · 심각 ${open.filter(x=>String(x.level)==='3').length}건`:''}</div>`:''}
+   <div class="fbar"><input id="mw-q" class="fq" placeholder="대상 · 학교 · 내용 검색" value="${esc(u.mwQ||'')}">
+    ${fSel('mw-k','대상',f.k,MW_KIND.map(([v,l])=>[v,l,cnt('k',v,x=>x.kind)]))}
+    ${fSel('mw-s','상태',f.s,MW_ST.map(([v,l])=>[v,l,cnt('s',v,x=>x.status)]))}
+    ${fSel('mw-l','정도',f.l,ISSUE_LV.map(([v,l])=>[v,l,cnt('l',v,x=>String(x.level))]))}
+    ${mwMine()?'':fSel('mw-o','운영 대학',f.o,ORGS.filter(o=>o!=='미지정').map(o=>[o,orgShort(o)||o,cnt('o',o,orgOf)]))}
+    ${seas.length>1?fSel('mw-sea','시기',f.sea,seas.map(s=>[s,(all.find(x=>x.season===s)||{}).seasonName||s,cnt('sea',s,x=>x.season)])):''}</div>
+   ${fActive(all.length,L.length,[f.k&&['대상',MW_KL(f.k),'mwfx','k'],f.s&&['상태',MW_SL(f.s),'mwfx','s'],f.l&&['정도',mwLvL(f.l),'mwfx','l'],f.o&&['운영 대학',orgShort(f.o)||f.o,'mwfx','o'],f.sea&&['시기',f.sea,'mwfx','sea'],q&&['검색',q,'mwfx','q']].filter(Boolean),'mwfx0','건')}
+   <div class="tw"><table><thead><tr><th>발생일</th><th>구분</th><th>대상</th><th>운영 대학</th><th>유형</th><th>정도</th><th>내용</th><th>상태</th><th>최근 조치</th><th></th></tr></thead><tbody>${L.map(row).join('')||'<tr><td colspan="10" class="muted">기록된 민원이 없습니다</td></tr>'}</tbody></table></div></div>`; }
+function mwDetail(x){ const ed=!x.legacy&&mwCanEdit(x);
+  const info=[['접수 경로',x.src],['시기',x.seasonName],['관련 학급',(()=>{ const r=x.rowId&&S.rows.find(z=>z.id===x.rowId); return r?`${r.school} · ${clsName(r)} · ${(prog(r.prog)||{}).name||''}`:''; })()],['등록',[x.by,x.at].filter(Boolean).join(' ')]].filter(([,v])=>v);
+  return `<div class="stack" style="gap:8px;padding:6px 4px">
+   <div class="small">${info.map(([k,v])=>`<span class="muted">${k}</span> ${esc(v)}`).join(' · ')}</div>
+   <div style="white-space:pre-wrap">${esc(x.desc||'')}</div>
+   <div><b class="small">조치 기록</b>${(x.acts||[]).length?`<ul class="small" style="margin:4px 0 0;padding-left:18px;line-height:1.7">${x.acts.map(a=>`<li><span class="mono muted">${esc(a.d||'')}</span> ${esc(a.t)} <span class="muted">${esc(a.who||'')}</span></li>`).join('')}</ul>`:'<div class="small muted">아직 조치 기록이 없습니다</div>'}</div>
+   ${ed?`<div class="row" style="gap:6px;flex-wrap:wrap"><input id="mw-act-${esc(x.id)}" placeholder="조치 내용 추가 (예: 학교와 통화, 일정 재조정)" style="flex:1;min-width:240px"><button class="btn sm" data-act="mwact" data-v="${esc(x.id)}">조치 추가</button></div>
+   <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><span class="small">상태</span>${MW_ST.map(([s,l])=>`<button class="btn sm ${x.status===s?'pri':''}" data-act="mwst" data-v="${esc(x.id)}" data-s="${s}">${l}</button>`).join('')}
+    ${x.kind==='inst'?`<label class="row small" style="gap:4px;margin-left:8px"><input type="checkbox" data-act="mwref" data-v="${esc(x.id)}" ${x.reflect!==false?'checked':''}> 강사 평가에 반영</label>`:''}
+    <span style="flex:1"></span><button class="btn sm" data-act="mwedit" data-v="${esc(x.id)}">수정</button><button class="btn sm danger" data-act="mwdel" data-v="${esc(x.id)}">삭제</button></div>
+   ${S.ui.mwDelAsk===x.id?`<div class="notice bad small">이 민원 기록을 지울까요? 되돌릴 수 없습니다. <button class="btn sm danger" data-act="mwdelok" data-v="${esc(x.id)}">삭제</button> <button class="btn sm" data-act="mwdelno">취소</button></div>`:''}`
+   :x.legacy?'<div class="small muted">강사 명단에 있던 기록입니다. 고치거나 지우려면 강사 관리의 강사 상세 「민원」 탭에서 합니다.</div>':'<div class="small muted">호서대가 관리하는 기록입니다.</div>'}</div>`; }
+function mwAct(a,el){ const U=S.ui, D=mwDB(), find=id=>D.list.find(x=>x.id===id);
+  switch(a){
+    case 'mwnew': mwLoad(); U.mwForm=mwNew({kind:el.dataset.k||(mwMine()?'site':'site'),rowId:el.dataset.r||'',target:el.dataset.t||''}); return true;
+    case 'mwx': U.mwForm=null; return true;
+    case 'mwfk': mwFormRead(); { const k=el.dataset.v, F=U.mwForm; if(F&&F.kind!==k){ F.kind=k; F.target=''; F.rowId=''; F.type=MW_TYPES[k][0]; } } return true;
+    case 'mwsave': { mwFormRead(); const F=U.mwForm; if(!F) return true;
+      if(!F.target){ toast('대상을 골라 주세요'); return false; } if(!F.date){ toast('발생일을 입력해 주세요'); return false; } if(!String(F.desc||'').trim()){ toast('내용을 입력해 주세요'); return false; }
+      const r=F.rowId?S.rows.find(x=>x.id===F.rowId):null;
+      const rec={...F}; delete rec.isNew; delete rec.first;
+      rec.targetName=F.kind==='inst'?instName(F.target):F.target;
+      rec.school=F.kind==='site'?F.target:(r?r.school:(F.school||''));
+      rec.org=F.kind==='org'?F.target:(r?orgOfRow(r):(mwMine()||F.org||''));
+      if(!rec.org&&F.kind==='inst'){ const rr=S.rows.find(x=>rowBiz(x)===curBiz()&&(x.inst===F.target||x.asst===F.target)); if(rr) rec.org=orgOfRow(rr); }
+      if(mwMine()) rec.org=mwMine();
+      if(F.isNew){ rec.by=S.adminName||(mwMine()?orgShort(mwMine()):'호서대'); rec.at=now(); rec.acts=String(F.first||'').trim()?[{d:mwToday(),who:rec.by,t:String(F.first).trim()}]:[]; }
+      mwSave(rec); U.mwForm=null; U.mwOpen=rec.id; toast('민원 관리 대장에 저장했습니다'); return true; }
+    case 'mwopen': U.mwOpen=U.mwOpen===el.dataset.v?'':el.dataset.v; U.mwDelAsk=''; return true;
+    case 'mwact': { const x=find(el.dataset.v), i=document.getElementById('mw-act-'+el.dataset.v), t=i&&i.value.trim(); if(!x||!t){ toast('조치 내용을 적어 주세요'); return false; }
+      const y={...x,acts:[...(x.acts||[]),{d:mwToday(),who:S.adminName||(mwMine()?orgShort(mwMine()):'호서대'),t}]}; if(y.status==='open') y.status='doing'; mwSave(y); return true; }
+    case 'mwst': { const x=find(el.dataset.v); if(!x) return false; mwSave({...x,status:el.dataset.s}); return true; }
+    case 'mwref': { const x=find(el.dataset.v); if(!x) return false; mwSave({...x,reflect:!!el.checked}); return true; }
+    case 'mwedit': { const x=find(el.dataset.v); if(!x) return false; U.mwForm={...x}; return true; }
+    case 'mwdel': U.mwDelAsk=el.dataset.v; return true;
+    case 'mwdelno': U.mwDelAsk=''; return true;
+    case 'mwdelok': mwRemove(el.dataset.v); U.mwDelAsk=''; U.mwOpen=''; toast('삭제했습니다'); return true;
+    case 'mwfx': { const k=el.dataset.k; if(k==='q') U.mwQ=''; else U['mw'+(k==='sea'?'Sea':k.toUpperCase())]=''; return true; }
+    case 'mwfx0': U.mwK=U.mwS=U.mwL=U.mwO=U.mwSea=U.mwQ=''; return true;
+    case 'mwgo': mwLoad(); U.csTab='mw'; U.mwOpen=el.dataset.v||''; U.tDetail=''; goView('cons'); return true;
+  }
+}
 /* ---------- 화면 ---------- */
-const CS_MENU = [['현황',[['dash','종합 현황'],['judge','분기 점검 · 판정']]],['대학 제출 자료',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['공문',[['gong','공문 발송 · 회신'],['gtpl','공문 양식']]],['기준',[['rule','평가 기준']]]];
-const CS_MENU_ORG = [['입력',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['확인',[['mygong','받은 공문']]]];
-const CS_IC = {sum:'<path d="M4 4h16v16H4z"/><path d="M4 10h16M10 4v16"/>',dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',judge:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',mile:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',rep:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',gong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',gtpl:'<path d="M8 3h9l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M10 12h7M10 16h5"/>',mygong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',rule:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
+const CS_MENU = [['현황',[['dash','종합 현황'],['judge','분기 점검 · 판정']]],['대학 제출 자료',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['공문',[['gong','공문 발송 · 회신'],['gtpl','공문 양식']]],['관리',[['mw','민원 관리 대장']]],['기준',[['rule','평가 기준']]]];
+const CS_MENU_ORG = [['입력',[['mile','마일스톤 점검표'],['rep','운영 보고']]],['확인',[['mygong','받은 공문']]],['관리',[['mw','민원 관리 대장']]]];
+const CS_IC = {mw:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M12 7v4M12 14h.01"/>',sum:'<path d="M4 4h16v16H4z"/><path d="M4 10h16M10 4v16"/>',dash:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',judge:'<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/>',mile:'<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/>',rep:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',gong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',gtpl:'<path d="M8 3h9l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M10 12h7M10 16h5"/>',mygong:'<path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/>',rule:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>'};
 function viewCons(){
   if(!S.consCfg&&!csMine()){ S.consCfg=CS_DEF(); }
   if(!S.ui.stLoaded&&!S.ui.stLoading&&typeof statsLoad==='function') setTimeout(statsLoad,0);
@@ -6287,7 +6437,7 @@ function viewCons(){
   const btn=([k,l])=>`<button type="button" role="tab" aria-selected="${cur===k}" class="${cur===k?'on':''}" data-act="cstab" data-v="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CS_IC[k]||''}</svg>${esc(l)}</button>`;
   const menu=`<nav class="lmenu" aria-label="컨소시엄 관리 메뉴">${M.map(([g,L])=>`<div class="lg">${esc(g)}</div>${L.map(btn).join('')}`).join('')}</nav>`;
   const grp=M.find(g=>g[1].some(x=>x[0]===cur)), lab=all.find(x=>x[0]===cur)[1];
-  const body={dash:csDash,sum:csDash,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,gtpl:csGTplV,mygong:csMyGong,rule:csRule}[cur]()+csAskModal();
+  const body={dash:csDash,sum:csDash,judge:csJudge,mile:csMile,rep:csRep,gong:csGongV,gtpl:csGTplV,mygong:csMyGong,rule:csRule,mw:csMw}[cur]()+csAskModal();
   return `<div class="stack noenh"><div class="lwrap">${menu}<div class="lbody"><div class="lcrumb">${csMine()?esc(orgShort(csMine())):'운영 점검'} › ${esc(grp[0])}</div><h2 style="margin:0">${esc(lab)}</h2>${['dash','rep'].includes(cur)?stSyncBar():''}${body}</div></div></div>`; }
 const csQSeg = (k,q) => `<div class="seg2" role="tablist">${[1,2,3,4].map(i=>`<button class="${q===i?'on':''}" data-act="csq" data-k="${k}" data-v="${i}">${CS_QN[i]}</button>`).join('')}</div>`;
 /* 제출 전 확인 창: 제출하면 고칠 수 없음을 한 번 더 확인 */
@@ -7174,8 +7324,9 @@ function tKitHtml(r){ const L=r.kit||[]; if(!L.length) return ''; const nR=L.fil
 
 document.addEventListener('click',async e=>{
   const el=e.target.closest('[data-act]'); if(!el) return; const a=el.dataset.act, r=R(el.dataset.id);
-  if((a==='close'||a==='smsbrx')&&el.classList.contains('ov')&&e.target!==el) return;
+  if((a==='close'||a==='smsbrx'||a==='mwx')&&el.classList.contains('ov')&&e.target!==el) return;
   { const ca=csAct(a,el); if(ca===false) return; if(ca===true){ csNeedR=false; render(); return; } }
+  { const ma=mwAct(a,el); if(ma===false) return; if(ma===true){ render(); return; } }
   switch(a){
     case 'tab': S.ui.view=el.dataset.v; S.ui.drawer=''; break;
     case 'qn-school-go': { const sch=S.ui.qnSchool||[...new Set(myRows().map(r=>r.school))].sort((a,b)=>a.localeCompare(b,'ko'))[0]; if(!sch) return; S.ui.role='school'; S.ui.school=sch; S.ui.drawer=''; goView('school'); break; }
@@ -7559,7 +7710,7 @@ document.addEventListener('click',async e=>{
     case 'iproftab': S.ui.iProfTab=el.dataset.v; break;
     case 'tradd': case 'isadd': case 'evadd': case 'pladd': { const t=S.instructors.find(x=>x.id===el.dataset.t); if(!t) return; const g=id=>((document.getElementById(id)||{}).value||'').trim(), nid=p0=>p0+Date.now().toString(36);
       if(a==='tradd'){ const d=g('tr-date'), n=g('tr-name'), h=+g('tr-hours'); if(!d||!n||!(h>0)){ toast('이수일, 연수명, 차시를 입력해 주세요'); return; } (t.trainings=t.trainings||[]).push({id:nid('tr'),date:d,name:n,course:g('tr-course')||'공통',hours:h,src:'개별',at:now()}); toast('연수 이력을 추가했습니다'); }
-      if(a==='isadd'){ const d=g('is-date'), desc=g('is-desc'); if(!d||!desc){ toast('일자와 내용을 입력해 주세요'); return; } (t.issues=t.issues||[]).push({id:nid('i'),date:d,kind:g('is-kind'),level:g('is-level'),school:g('is-school'),desc,action:g('is-action'),by:S.adminName||'운영기관',at:now()}); toast('이슈 기록을 추가했습니다'); }
+      if(a==='isadd'){ const d=g('is-date'), desc=g('is-desc'); if(!d||!desc){ toast('일자와 내용을 입력해 주세요'); return; } (t.issues=t.issues||[]).push({id:nid('i'),date:d,kind:g('is-kind'),level:g('is-level'),school:g('is-school'),desc,action:g('is-action'),by:S.adminName||'운영기관',at:now()}); toast('민원 기록을 추가했습니다'); }
       if(a==='evadd'){ const sc=+g('ev-score'); (t.evals=t.evals||[]).push({id:nid('e'),season:season().name,biz:curBiz(),score:sc,comment:g('ev-comment'),by:S.adminName||'운영기관',at:now()}); toast('운영 평가를 추가했습니다'); }
       if(a==='pladd'){ const sn=g('pl-season'), sch=g('pl-school'); if(!sn||!sch){ toast('시기와 학교·기관을 입력해 주세요'); return; } (t.places=t.places||[]).push({k:nid('m'),season:sn,school:sch,prog:g('pl-prog'),role:g('pl-role'),manual:true,at:now()}); toast('이전 배치 실적을 추가했습니다'); }
       break; }
@@ -7793,7 +7944,7 @@ document.addEventListener('input',e=>{
   if(S.ui.role==='admin'&&typeof kitInput==='function'&&kitInput(t)) return;
   if(t.id==='smsbody'||t.id==='smsitem'){ const d=S.ui.smsDraft||(S.ui.smsDraft={...smsTpl(smsK())}); d[t.id==='smsbody'?'body':'item']=t.value; smsPvUpdate(); return; }
   /* 검색칸: 값은 바로 저장하고, 화면 다시 그리기는 입력이 멈춘 뒤에만(한글 조합이 끊기지 않게) */
-  const SQ={tq:v=>{ tF().q=v; },'jq-done':v=>{ S.ui.jq=v; },'as-q':v=>{ S.ui.asQ=v; },iq:v=>{ S.ui.if={...(S.ui.if||{}),q:v}; },uq:v=>{ S.ui.uq=v; },mq:v=>{ S.ui.mq=v; },q:v=>{ S.ui.q=v.trim(); }};
+  const SQ={tq:v=>{ tF().q=v; },'jq-done':v=>{ S.ui.jq=v; },'as-q':v=>{ S.ui.asQ=v; },'mw-q':v=>{ S.ui.mwQ=v; },iq:v=>{ S.ui.if={...(S.ui.if||{}),q:v}; },uq:v=>{ S.ui.uq=v; },mq:v=>{ S.ui.mq=v; },q:v=>{ S.ui.q=v.trim(); }};
   if(SQ[t.id]){ SQ[t.id](t.value); liveSearch(t.id); return; }
   if(e.isComposing) return;
   if(t.dataset.c&&/^addr(Do|Si|Rest)$/.test(t.dataset.c)){ const c=contactOf(S.ui.school), k=t.dataset.c; c[k]=t.value; if(k==='addrDo') c.addrSi=t.value==='세종특별자치시'?'세종시':''; c.addr=addrJoin(c); delete c.example; save(); if(t.tagName==='SELECT') render(); return; }
@@ -7824,6 +7975,8 @@ function liveSearch(id,waited){ clearTimeout(SQ_T); SQ_T=setTimeout(()=>{ const 
 document.addEventListener('change',e=>{
   const t=e.target, u=S.ui, r=t.dataset.r?R(t.dataset.r):null;
   if(u.role==='admin'&&typeof kitChange==='function'&&kitChange(t)) return;
+  if(t.id&&/^mw-(k|s|l|o|sea)$/.test(t.id)){ const k=t.id.slice(3); u['mw'+(k==='sea'?'Sea':k.toUpperCase())]=t.value; render(); return; }
+  if(t.id==='mwf-target'||t.id==='mwf-row'){ mwFormRead(); if(t.id==='mwf-target'&&u.mwForm){ u.mwForm.rowId=''; const RW=mwRowsFor(u.mwForm.kind,u.mwForm.target); if(RW.length===1) u.mwForm.rowId=RW[0].id; } render(); return; }
   if(t.dataset.fc&&u.fcDraft){ fcSet(u.fcDraft,t.dataset.fc,t.type==='checkbox'?t.checked:t.value); if(t.type==='checkbox') render(); return; }
   if(t.id==='edutpl'){ const f=t.files[0]; if(!f) return; f.arrayBuffer().then(b=>eduReadTpl(b,f.name)).then(T=>{ const E=u.edu=u.edu||{}; E.tpl=T; E.map={}; eduTplRemember(T); render(); }).catch(err=>toast(err.message||String(err))); return; }
   if(t.dataset.edusrc){ const E=u.edu=u.edu||{}; E.srcKind=t.dataset.edusrc; E.map={}; render(); return; }
@@ -8120,7 +8273,7 @@ function aUse(d, keepUi) {
   const prevS = keepUi && S ? S : null;   /* 자동 새로고침: 서버가 보내지 않는 화면 쪽 자료(통계·프로그램 개발·대학 링크 등)는 그대로 둠 → 보던 화면이 「불러오는 중」으로 되돌아가지 않게 */
   const ui = keepUi && S ? S.ui : { role: 'admin', view: 'board', st: '', q: '', region: '', probOnly: false, sel: '', showWait: false, onlyApps: false, condEdit: '' };
   const set = d.settings || {};
-  S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined };
+  S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined, mwDB: keepUi && S ? S.mwDB : undefined };
   if (prevS) Object.keys(prevS).forEach(k => { if (k !== 'ui' && !(k in S) && prevS[k] != null) S[k] = prevS[k]; });
   S.serverVer = d.serverVer || '';
   MY_ORG = S.adminOrg || '호서대학교';
@@ -8266,7 +8419,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.124';
+const APP_VER = '11.125';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
