@@ -2306,7 +2306,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.126';
+const LIB_VER='11.127';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6556,7 +6556,7 @@ async function hxRepOne(q,o){ await kitEnsure(); const T=await hxTpl('rep_one');
   x=hxCells(x,3,{'1,2':hxN(g('in')),'1,3':hxN(t('in')),'1,4':hxP(t('in'),g('in')),'2,2':hxN(g('out')),'2,3':hxN(t('out')),'2,4':hxP(t('out'),g('out')),'3,2':hxN(g('in')+g('out')),'3,3':hxN(t('in')+t('out')),'3,4':hxP(t('in')+t('out'),g('in')+g('out'))});
   const D=csDevOf(o,q).filter(d=>d.name); x=hxAddRows(x,4,D.length-5); const c4={}; D.forEach((d,i)=>{ const r=i+1; c4[r+',0']=String(r); c4[r+',1']=d.name; c4[r+',2']=d.kind; c4[r+',3']=d.plan; c4[r+',4']=d.lesson; c4[r+',5']=d.ppt; c4[r+',6']=d.note; }); x=hxCells(x,4,c4);
   const B=R.bud||{}, c5={}; let tb=0,ts=0; CS_BUD.forEach((k,i)=>{ const v=B[k]||{}, b=+v.b||0, sp=+v.s||0; tb+=b; ts+=sp; const r=i+1; c5[r+',1']=hxN(b); c5[r+',2']=hxN(sp); c5[r+',3']=b?hxN(b-sp):''; c5[r+',4']=v.note; }); Object.assign(c5,{'9,1':hxN(tb),'9,2':hxN(ts),'9,3':tb?hxN(tb-ts):'','9,4':R.budAt?'기준일 '+R.budAt:''}); x=hxCells(x,5,c5);
-  const E=(R.press||[]).filter(e=>e.t||e.d); x=hxAddRows(x,6,E.length-2); const c6={}; E.forEach((e,i)=>{ const r=i+1; c6[r+',0']=String(r); c6[r+',1']=e.d; c6[r+',2']=e.t; c6[r+',3']=e.by; c6[r+',4']=e.note; }); x=hxCells(x,6,c6);
+  const E=(R.press||[]).filter(e=>e.t||e.d); x=hxAddRows(x,6,E.length-2); const c6={}; E.forEach((e,i)=>{ const r=i+1; c6[r+',0']=String(r); c6[r+',1']=e.d; c6[r+',2']=e.t; c6[r+',3']=e.by; c6[r+',4']=[e.note,e.url].filter(Boolean).join(' '); }); x=hxCells(x,6,c6);
   x=hxParaAfter(x,'나. 우수사례',R.best); x=hxParaAfter(x,'다. 건의사항',R.ask);
   return hxPack(T,x); }
 async function hxRepAll(q,U){ await kitEnsure(); const T=await hxTpl('rep_all'); let x=T.files.find(f=>f.n==='Contents/section0.xml').t; const repOf=o=>((csOrgR(o).rep||{})[q])||{}, col=o=>HX_U.indexOf(csUS(o));
@@ -6568,7 +6568,7 @@ async function hxRepAll(q,U){ await kitEnsure(); const T=await hxTpl('rep_all');
   c3['2,12']=hxP(st.in,sg.in); c3['3,12']=hxP(st.out,sg.out); c3['4,12']=hxP(st.in+st.out,sg.in+sg.out); x=hxCells(x,3,c3);
   const D=[]; U.forEach(o=>csDevOf(o,q).filter(d=>d.name).forEach(d=>D.push({...d,name:'['+csUS(o)+'] '+d.name}))); x=hxAddRows(x,4,D.length-5); const c4={}; D.forEach((d,i)=>{ const r=i+1; c4[r+',0']=String(r); c4[r+',1']=d.name; c4[r+',2']=d.kind; c4[r+',3']=d.plan; c4[r+',4']=d.lesson; c4[r+',5']=d.ppt; c4[r+',6']=d.note; }); x=hxCells(x,4,c4);
   const c5={}; let tb=0,ts=0; CS_BUD.forEach((k,i)=>{ let b=0,sp=0; U.forEach(o=>{ const v=((repOf(o).bud||{})[k])||{}; b+=+v.b||0; sp+=+v.s||0; }); tb+=b; ts+=sp; const r=i+1; c5[r+',1']=hxN(b); c5[r+',2']=hxN(sp); c5[r+',3']=b?hxN(b-sp):''; }); Object.assign(c5,{'9,1':hxN(tb),'9,2':hxN(ts),'9,3':tb?hxN(tb-ts):''}); x=hxCells(x,5,c5);
-  const E=[]; U.forEach(o=>(repOf(o).press||[]).filter(e=>e.t||e.d).forEach(e=>E.push({...e,note:['['+csUS(o)+']',e.note].filter(Boolean).join(' ')}))); x=hxAddRows(x,6,E.length-2); const c6={}; E.forEach((e,i)=>{ const r=i+1; c6[r+',0']=String(r); c6[r+',1']=e.d; c6[r+',2']=e.t; c6[r+',3']=e.by; c6[r+',4']=e.note; }); x=hxCells(x,6,c6);
+  const E=[]; U.forEach(o=>(repOf(o).press||[]).filter(e=>e.t||e.d).forEach(e=>E.push({...e,note:['['+csUS(o)+']',e.note].filter(Boolean).join(' ')}))); x=hxAddRows(x,6,E.length-2); const c6={}; E.forEach((e,i)=>{ const r=i+1; c6[r+',0']=String(r); c6[r+',1']=e.d; c6[r+',2']=e.t; c6[r+',3']=e.by; c6[r+',4']=[e.note,e.url].filter(Boolean).join(' '); }); x=hxCells(x,6,c6);
   const joinF=f=>U.map(o=>repOf(o)[f]?'['+csUS(o)+'] '+repOf(o)[f]:'').filter(Boolean).join('\n');
   x=hxParaAfter(x,'나. 우수사례',joinF('best')); x=hxParaAfter(x,'다. 건의사항',joinF('ask'));
   return hxPack(T,x); }
@@ -6631,7 +6631,7 @@ async function csXlsRep(q,orgs){ if(typeof ExcelJS==='undefined') throw new Erro
     let TB=0,TS=0; CS_BUD.forEach(k=>{ let b=0,sp=0; U.forEach(o=>{ const x=((repOf(o).bud||{})[k])||{}; b+=+x.b||0; sp+=+x.s||0; }); TB+=b; TS+=sp; K.box(ws,r,1,r,3,k,{al:'left'}); K.put(ws,r,4,b,{fmt:'#,##0'}); K.put(ws,r,5,sp,{fmt:'#,##0'}); K.put(ws,r,6,b-sp,{fmt:'#,##0'}); K.put(ws,r,7,csPctN(sp,b),{fmt:P}); r++; });
     K.box(ws,r,1,r,3,'합계',{h:1}); K.put(ws,r,4,TB,{fmt:'#,##0',b:1}); K.put(ws,r,5,TS,{fmt:'#,##0',b:1}); K.put(ws,r,6,TB-TS,{fmt:'#,##0',b:1}); K.put(ws,r,7,csPctN(TS,TB),{fmt:P,b:1}); r+=2;
     K.sec(ws,r,'5. 기타사항'); r++; ws.getCell(r,1).value='가. 보도자료'; r++; ['순','대학','일자','기사명','','','보도기관','비고'].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); ws.mergeCells(r,4,r,6); r++;
-    no=0; U.forEach(o=>(repOf(o).press||[]).forEach(x=>{ no++; K.put(ws,r,1,no); K.put(ws,r,2,csUS(o)); K.put(ws,r,3,x.d||''); K.box(ws,r,4,r,6,x.t||'',{al:'left'}); K.put(ws,r,7,x.by||''); K.put(ws,r,8,x.note||''); r++; })); if(!no){ K.put(ws,r,1,1); K.box(ws,r,4,r,6,''); [2,3,7,8].forEach(c=>K.put(ws,r,c,'')); r++; } r++;
+    no=0; U.forEach(o=>(repOf(o).press||[]).forEach(x=>{ no++; K.put(ws,r,1,no); K.put(ws,r,2,csUS(o)); K.put(ws,r,3,x.d||''); K.box(ws,r,4,r,6,x.t||'',{al:'left'}); K.put(ws,r,7,x.by||''); K.put(ws,r,8,[x.note,x.url].filter(Boolean).join(' ')); r++; })); if(!no){ K.put(ws,r,1,1); K.box(ws,r,4,r,6,''); [2,3,7,8].forEach(c=>K.put(ws,r,c,'')); r++; } r++;
     [['나. 우수사례','best'],['다. 건의사항','ask']].forEach(([l,f])=>{ ws.getCell(r,1).value=l; r++; const txt=U.map(o=>repOf(o)[f]?`[${csUS(o)}] ${repOf(o)[f]}`:'').filter(Boolean).join('\n'); K.box(ws,r,1,r+3,4+n*3>8?8:4+n*3,txt,{al:'left'}); ws.getCell(r,1).alignment={vertical:'top',horizontal:'left',wrapText:true}; r+=5; });
   }
   U.forEach(o=>{ /* 대학별 양식 */
@@ -6650,7 +6650,7 @@ async function csXlsRep(q,orgs){ if(typeof ExcelJS==='undefined') throw new Erro
     let TB=0,TS=0; CS_BUD.forEach(k=>{ const x=((R.bud||{})[k])||{}, b=+x.b||0, sp=+x.s||0; TB+=b; TS+=sp; K.box(ws,r,1,r,3,k,{al:'left'}); K.put(ws,r,4,b||'',{fmt:'#,##0'}); K.put(ws,r,5,sp||'',{fmt:'#,##0'}); K.put(ws,r,6,b?b-sp:'',{fmt:'#,##0'}); K.box(ws,r,7,r,8,x.note||'',{al:'left'}); r++; });
     K.box(ws,r,1,r,3,'합계',{h:1}); K.put(ws,r,4,TB,{fmt:'#,##0',b:1}); K.put(ws,r,5,TS,{fmt:'#,##0',b:1}); K.put(ws,r,6,TB-TS,{fmt:'#,##0',b:1}); K.box(ws,r,7,r,8,R.budAt?`기준일 ${R.budAt}`:''); r+=2;
     K.sec(ws,r,'5. 기타사항'); r++; ws.getCell(r,1).value='가. 보도자료'; r++; ['순','일자','기사명','','','보도기관','비고',''].forEach((h,i)=>K.put(ws,r,1+i,h,{h:1})); ws.mergeCells(r,3,r,5); ws.mergeCells(r,7,r,8); r++;
-    const E=R.press||[]; for(let i=0;i<Math.max(2,E.length);i++){ const x=E[i]||{}; K.put(ws,r,1,i+1); K.put(ws,r,2,x.d||''); K.box(ws,r,3,r,5,x.t||'',{al:'left'}); K.put(ws,r,6,x.by||''); K.box(ws,r,7,r,8,x.note||''); r++; } r++;
+    const E=R.press||[]; for(let i=0;i<Math.max(2,E.length);i++){ const x=E[i]||{}; K.put(ws,r,1,i+1); K.put(ws,r,2,x.d||''); K.box(ws,r,3,r,5,x.t||'',{al:'left'}); K.put(ws,r,6,x.by||''); K.box(ws,r,7,r,8,[x.note,x.url].filter(Boolean).join(' ')); r++; } r++;
     [['나. 우수사례','best'],['다. 건의사항','ask']].forEach(([l,f])=>{ ws.getCell(r,1).value=l; r++; K.box(ws,r,1,r+3,8,R[f]||'',{al:'left'}); ws.getCell(r,1).alignment={vertical:'top',horizontal:'left',wrapText:true}; r+=5; });
   });
   wb.worksheets.forEach(w=>{ w.pageSetup={paperSize:9,orientation:w.name==='통합'?'landscape':'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}}; });
@@ -6704,7 +6704,7 @@ function csRep(){ const o=csPickOrg(), q=S.ui.csRq||csQNow(), R=((csOrgR(o).rep|
      <tr class="cs-qh"><td>합계</td><td>${b.b.toLocaleString()}</td><td>${b.s.toLocaleString()}</td><td>${(b.b-b.s).toLocaleString()}</td><td class="${csRateC(b.p)}">${b.p==null?'-':b.p+'%'}</td><td></td></tr></tbody></table></div>
      <div class="row small" style="gap:6px">기준일 ${inp('budAt',R.budAt,'130px','예: 2026.11.24',false)}</div>`; }
   if(sec==='etc'){ const E=R.press||[];
-    body=`<b>가. 보도자료</b><div class="tw"><table><thead><tr><th>일자</th><th>기사명</th><th>보도기관</th><th>비고</th><th></th></tr></thead><tbody>${E.map((x,i)=>`<tr>${['d','t','by','note'].map(f=>`<td>${inp(`press.${i}.${f}`,x[f],f==='t'?'260px':'110px','',false)}</td>`).join('')}<td><button class="btn sm" ${D_} data-act="cspdel" data-o="${esc(o)}" data-q="${q}" data-i="${i}">삭제</button></td></tr>`).join('')||'<tr><td colspan="5" class="small muted">아직 없음</td></tr>'}</tbody></table></div>
+    body=`<b>가. 보도자료</b><div class="tw"><table><thead><tr><th>일자</th><th>기사명</th><th>보도기관</th><th>기사 링크</th><th>비고</th><th></th></tr></thead><tbody>${E.map((x,i)=>`<tr>${['d','t','by','url','note'].map(f=>`<td>${f==='url'?`<div class="row" style="gap:6px;flex-wrap:nowrap;margin:0">${inp(`press.${i}.url`,x.url,'240px','https:/'+'/',false)}${/^https?:[/][/]/.test(String(x.url||'').trim())?`<a class="btn sm" href="${esc(String(x.url).trim())}" target="_blank" rel="noopener">열기 ↗</a>`:''}</div>`:inp(`press.${i}.${f}`,x[f],f==='t'?'260px':'110px','',false)}</td>`).join('')}<td><button class="btn sm" ${D_} data-act="cspdel" data-o="${esc(o)}" data-q="${q}" data-i="${i}">삭제</button></td></tr>`).join('')||'<tr><td colspan="6" class="small muted">아직 없음</td></tr>'}</tbody></table></div>
      <div><button class="btn sm" ${D_} data-act="cspadd" data-o="${esc(o)}" data-q="${q}">보도자료 추가</button></div>
      <label class="stack" style="gap:4px"><b>나. 우수사례</b><textarea ${D_} data-cp="${cp}.best" data-cat="${cp}" rows="3">${esc(R.best||'')}</textarea></label>
      <label class="stack" style="gap:4px"><b>다. 건의사항</b><textarea ${D_} data-cp="${cp}.ask" data-cat="${cp}" rows="3">${esc(R.ask||'')}</textarea></label>`; }
