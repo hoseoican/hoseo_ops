@@ -1314,7 +1314,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.26-1';
+var APP_VERSION = '2026.11.26-2';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -3029,7 +3029,7 @@ function rowFile(r){ if(r.file) return r.file; var t=' · '+(r.sheet||''); retur
 function opsFileList(){ var fl=[]; (ops.rows||[]).forEach(function(r){ if(r.src==='직접 추가') return; var f=rowFile(r); if(f && fl.indexOf(f)<0 && fileBiz(f)===docBiz) fl.push(f); }); return fl; }
 function defaultPer(fl){ var c=fl.filter(function(f){ return !/학교\s*밖/.test(f); }); return fl.length>1 ? (c.length ? [c[c.length-1]] : fl.slice()) : null; }   // 처음에는 가장 나중 학기 하나
 /* ---------- 사업(센터) 구분: 운영현황 시트 이름으로 나눔 (방학집중형은 이름에 「방학집중형」) ---------- */
-var BIZ_DEFS=[{k:'anchor',name:'앵커늘봄',center:'앵커늘봄총괄센터',dot:'#89171A'},{k:'vac',name:'방학집중형',center:'AI·SW교육센터',dot:'#1F5A96',re:/방학집중형/}];
+var BIZ_DEFS=[{k:'anchor',name:'앵커늘봄',center:'앵커늘봄총괄센터',dot:'#89171A'},{k:'vac',name:'방학집중형',center:'AI·SW교육센터',dot:'#1F5A96',re:/방학집중형/},{k:'rural',name:'소외지역형',center:'AI·SW교육센터',dot:'#2E7D5B',re:/소외지역형/}];
 var docBiz=(function(){ try{ return localStorage.getItem('lecBiz')||'anchor'; }catch(e){ return 'anchor'; } })(), bizNamesCache=null;
 function bizDef(k){ return BIZ_DEFS.filter(function(b){ return b.k===k; })[0]||BIZ_DEFS[0]; }
 function fileBiz(f){ var t=String(f||''); for(var i=1;i<BIZ_DEFS.length;i++) if(BIZ_DEFS[i].re.test(t)) return BIZ_DEFS[i].k; return 'anchor'; }

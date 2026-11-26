@@ -1649,8 +1649,10 @@ function unmetReq(r){ const out=[], t=S.instructors.find(x=>x.id===r.inst); if(!
   if(r.sc.req.same&&S.rows.some(x=>x!==r&&x.school===r.school&&x.prog===r.prog&&x.inst&&x.inst!==r.inst&&x.status!=='cancel')) out.push('같은 강사 배치');
   return out; }
 /* 사업(센터): 운영 화면은 로그인한 사업만 다룸. 강사 화면은 사업별 탭 */
-const BIZ_DEF = [{k:'anchor',name:'앵커늘봄',center:'앵커늘봄총괄센터',title:'충남 1권역 앵커늘봄'},{k:'vac',name:'초등방과후(방학집중형)',center:'AI·SW교육센터',title:'초등방과후(방학집중형)'}];
-const bizListC = () => (S&&S.bizList&&S.bizList.length)?S.bizList:BIZ_DEF;
+const BIZ_DEF = [{k:'anchor',name:'앵커늘봄',center:'앵커늘봄총괄센터',title:'충남 1권역 앵커늘봄'},{k:'vac',name:'초등방과후(방학집중형)',center:'AI·SW교육센터',title:'초등방과후(방학집중형)'},{k:'rural',name:'초등방과후(소외지역형)',center:'AI·SW교육센터',title:'초등방과후(소외지역형)',sm:'sem'}];
+const bizListC = () => { const L=(S&&S.bizList&&S.bizList.length)?S.bizList:BIZ_DEF; return L.concat(BIZ_DEF.filter(d=>!L.some(b=>b.k===d.k))).map(b=>({...(BIZ_DEF.find(d=>d.k===b.k)||{}),...b})); };
+/* 시기 방식: all = 1학기·여름방학·2학기·겨울방학(앵커늘봄) / vac = 방학(+학기 함께, 방학집중형) / sem = 1학기·2학기만(소외지역형) */
+const bizSM = k => { const b=bizListC().find(x=>x.k===(k||curBiz())); return (b&&b.sm)||((k||curBiz())==='anchor'?'all':'vac'); };
 const curBiz = () => (S&&S.ui&&S.ui.role==='teacher')?(S.ui.tBiz||((S.bizInfo||[])[0]||{}).k||'anchor'):((S&&S.biz)||'anchor');
 const bizOf = k => bizListC().find(b=>b.k===k)||BIZ_DEF[0];
 const bizName = () => bizOf(curBiz()).name;
@@ -1668,7 +1670,7 @@ const curSK = () => (S&&(S.ctxSeason||S.season))||'';
 const rowSeason = r => r.season||S.season;
 const season = () => (S.seasons||[]).find(x=>x.k===curSK())||{name:'2026 겨울방학',link:''};
 const SEASON_SEQ = [['1','1학기'],['s','여름방학'],['2','2학기'],['w','겨울방학']];
-function nextSeason(){ const L=S.seasons||[], last=L[L.length-1]; if(!last) return {k:'2027-1',name:'2027 1학기',link:''}; const m=/^(\d{4})-(\w)$/.exec(last.k)||[0,'2026','w']; let y=+m[1], i=SEASON_SEQ.findIndex(x=>x[0]===m[2]); i=(i+1)%4; if(i===0) y++; return {k:`${y}-${SEASON_SEQ[i][0]}`,name:`${y} ${SEASON_SEQ[i][1]}`,link:''}; }
+function nextSeason(){ const SQ=bizSM()==='sem'?SEASON_SEQ.filter(x=>x[0]==='1'||x[0]==='2'):SEASON_SEQ, L=(S.seasons||[]).filter(x=>SQ.some(q=>new RegExp('-'+q[0]+'$').test(x.k))), last=L[L.length-1]; if(!last) return {k:'2027-1',name:'2027 1학기',link:''}; const m=/^(\d{4})-(\w)$/.exec(last.k)||[0,'2026','w']; let y=+m[1], i=SQ.findIndex(x=>x[0]===m[2]); i=(i+1)%SQ.length; if(i===0) y++; return {k:`${y}-${SQ[i][0]}`,name:`${y} ${SQ[i][1]}`,link:''}; }
 /* 방학집중형 등(앵커늘봄 외 사업): 시기 = 방학, 만들 때 「학기 운영 함께」를 고름(겨울방학 → 다음 해 1학기, 여름방학 → 2학기). season.sem = '1학기'|'2학기'|'' */
 const semOf = sObj => (sObj&&sObj.sem)||'';
 const semName = (y,v,sem) => `${y} ${v==='w'?'겨울방학':'여름방학'}${sem?` + ${v==='w'?y+1:y} ${sem}`:''}`;
@@ -1710,12 +1712,12 @@ function seasonBar(sc){
   return `<div class="seasonbar">${bizSel()}<label class="sb-l" for="seasonSel">시기</label>
    <select id="seasonSel" class="sb-sel" aria-label="관리할 시기">${ys.map(y=>`<optgroup label="${y}년">${L.filter(x=>parseInt(x.k,10)===y).map(x=>`<option value="${esc(x.k)}" ${x.k===cur?'selected':''}>${esc(x.name)}${x.k===pub?' · 공개 중':''}</option>`).join('')}</optgroup>`).join('')}</select>
    ${cur===pub?'<span class="sb-pub" title="학교·강사에게 공개 중">공개 중</span>':''}
-   ${noScope()?`${/-(w|s)$/.test(cur)?`<span class="small muted">학기 운영</span><button class="btn sm" data-act="seasonsem" title="이 시기에 학기 운영을 함께 하는지 바꾸기">${semOf(season())?'함께 ('+esc(semOf(season()))+')':'안 함'} ⇄</button>`:''}<button class="btn sm" data-act="seasonadd" title="새 시기 생성">+ 새 시기 생성…</button>`:`<button class="btn sm" data-act="seasonadd" title="다음 시기 생성">+ ${esc(ny.name)} 생성</button>`}
+   ${noScope()&&bizSM()==='vac'?`${/-(w|s)$/.test(cur)?`<span class="small muted">학기 운영</span><button class="btn sm" data-act="seasonsem" title="이 시기에 학기 운영을 함께 하는지 바꾸기">${semOf(season())?'함께 ('+esc(semOf(season()))+')':'안 함'} ⇄</button>`:''}<button class="btn sm" data-act="seasonadd" title="새 시기 생성">+ 새 시기 생성…</button>`:`<button class="btn sm" data-act="seasonadd" title="다음 시기 생성">+ ${esc(ny.name)} 생성</button>`}
    ${canDel?(S.ui.sdelAsk?`<button class="btn sm danger" data-act="seasondel2">${esc(season().name)} 삭제</button><button class="btn sm" data-act="seasondel">취소</button>`:'<button class="btn sm" data-act="seasondel" title="학급이 없는 시기만 지울 수 있음">이 시기 삭제…</button>'):''}
    ${qt(['시기마다 학급·학교 링크·접속 승인·프로그램·신청 기간을 따로 관리','「공개 중」 시기만 학교 접속 신청과 강사 신청 화면에 보임','강사 명단은 모든 시기 공통','구글 시트: 연도마다 파일 하나, 같은 연도는 「시기」 열로 구분','학급이 없고 공개 중이 아닌 시기는 삭제 가능'],'r')}
    ${dopsBar()}
    ${sc?scopeBar(true):''}${yf?`<a class="btn sm" href="${esc(yf)}" target="_blank" rel="noopener" style="margin-left:auto">${parseInt(cur,10)}년 시트 열기 ↗</a>`:''}</div>
-   ${noScope()&&S.ui.sAddOpen?seasonAddPanel():''}
+   ${noScope()&&bizSM()==='vac'&&S.ui.sAddOpen?seasonAddPanel():''}
    ${dopsPanel()}
    ${cur!==pub?`<div class="notice small row" style="gap:8px;align-items:center;margin:-4px 0 12px"><span><b>${esc(season().name)}</b>은(는) 아직 학교·강사에게 공개되지 않았습니다. 지금 공개 중: <b>${esc(((L.find(x=>x.k===pub))||{}).name||'-')}</b></span>${S.ui.spubAsk?`<button class="btn sm pri" data-act="seasonpub2">${esc(season().name)} 공개로 바꾸기</button><button class="btn sm" data-act="seasonpub">취소</button>`:`<button class="btn sm" data-act="seasonpub">이 시기를 공개 시기로…</button>`} ${qt(['공개 시기를 바꾸면 학교 접속 신청 화면과 강사 신청 화면이 이 시기로 바뀜','이전 시기 학교 링크는 계속 열림','강사 화면에는 바로 앞 시기의 배정 수업(끝나지 않은 것)도 함께 보임'])}</div>`:''}`;
 }
@@ -2317,7 +2319,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.129';
+const LIB_VER='11.130';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4323,7 +4325,7 @@ function stSizeOf(r){
   if(file) return {cat:file,how:'파일 기재',file,byAddr,addr:ad.a,asrc:ad.src};
   return {cat:'',how:'판정 불가',file,byAddr,addr:ad.a,asrc:ad.src};
 }
-const ST_BIZ = {anchor:'앵커늘봄',vac:'초등방과후(방학집중형)'};
+const ST_BIZ = {anchor:'앵커늘봄',vac:'초등방과후(방학집중형)',rural:'초등방과후(소외지역형)'};
 function stAll(){ const L=stAllRaw(), b=S.ui.stBiz||''; return b?L.filter(r=>(r.biz||'anchor')===b):L; }
 /* 한 번 그릴 때 여러 곳(10번 탭 대학·항목·분기마다)에서 부르므로, 같은 화면 그리기 안에서는 한 번만 계산 */
 let ST_MEMO=null;
@@ -4456,7 +4458,7 @@ function viewStats(){
   ${VW&&S.ui.stBack?`<div class="row"><button class="btn sm" data-act="st-back">← 관리자 화면으로 (체험판)</button></div>`:''}
   ${VW?'':u.stPanel==='data'?stDataPanel():u.stPanel==='kpi'?stKpiPanel(years,orgs):u.stPanel==='rep'?stRepPanel(sel,Y,O):u.stPanel==='share'?stSharePanel():''}
   ${!all.length?VW?`<div class="panel st-empty"><b>아직 공개된 통계가 없습니다.</b></div>`:`<div class="panel st-empty"><b>아직 통계 자료가 없습니다.</b><button class="btn pri sm" data-act="st-panel" data-v="data">자료 업로드</button></div>`:`
-  ${stAllRaw().some(r=>r.biz&&r.biz!=='anchor')?`<div class="row st-filter"><span class="small muted">사업</span><span class="st-seg">${[['','전체'],['anchor',ST_BIZ.anchor],['vac',ST_BIZ.vac]].map(([v,l])=>`<button class="${(S.ui.stBiz||'')===v?'on':''}" data-act="st-biz" data-v="${v}">${esc(l)}</button>`).join('')}</span>${qt(['전체: 두 사업 실적을 합쳐 보기','사업을 고르면 그 사업만 보기','방학집중형 실적은 「자료 관리」에서 운영시트·재단 보고 파일을 올리면 합쳐짐'])}</div>`:''}
+  ${stAllRaw().some(r=>r.biz&&r.biz!=='anchor')?`<div class="row st-filter"><span class="small muted">사업</span><span class="st-seg">${[['','전체'],...Object.entries(ST_BIZ).filter(([k])=>k==='anchor'||stAllRaw().some(r=>r.biz===k))].map(([v,l])=>`<button class="${(S.ui.stBiz||'')===v?'on':''}" data-act="st-biz" data-v="${v}">${esc(l)}</button>`).join('')}</span>${qt(['전체: 두 사업 실적을 합쳐 보기','사업을 고르면 그 사업만 보기','방학집중형 실적은 「자료 관리」에서 운영시트·재단 보고 파일을 올리면 합쳐짐'])}</div>`:''}
   <div class="row st-filter"><span class="small muted">연도</span><span class="st-seg"><button class="${u.stYm!=='multi'?'on':''}" data-act="st-ym" data-v="one">연도별</button><button class="${u.stYm==='multi'?'on':''}" data-act="st-ym" data-v="multi">총괄</button></span>${qt(['연도별: 한 해만 보기','총괄: 여러 해를 골라 합쳐 보기','총괄의 학교 수 = 겹치지 않는 학교 수','총괄 목표 = 고른 연도 목표의 합'])}
    ${years.map(y=>`<button class="fchip ${Y.includes(y)?'on':''}" data-act="st-year" data-v="${y}">${y}</button>`).join('')}${u.stYm==='multi'&&years.length>1?`<button class="lnk small" data-act="st-yall">${Y.length===years.length?'하나만':'모두 선택'}</button>`:''}
    <span class="small muted" style="margin-left:10px">시기</span><button class="fchip ${!PS.length?'on':''}" data-act="st-per" data-v="">전체</button>${ST_PER.map(x=>`<button class="fchip ${PS.includes(x)?'on':''}" data-act="st-per" data-v="${x}">${x.replace('방학','')}</button>`).join('')}
@@ -5694,7 +5696,7 @@ function opsMemo(r,forSchool){
     !forSchool&&r.memo?cut(r.memo,30):''].filter(Boolean).join(' / ');
 }
 /* 늘봄센터 칸: 방학집중형 = 한국과학창의재단, 앵커늘봄 = 충남앵커센터(구 충남RISE센터) */
-const nbCenter = r => rowBiz(r)==='vac'?'한국과학창의재단':'충남앵커센터';
+const nbCenter = r => rowBiz(r)!=='anchor'?'한국과학창의재단':'충남앵커센터';
 /* ===== 전체 운영현황(총괄관리자): 사업·시기·대학을 골라 시스템에 등록된 학급(또는 운영 확정 학급)을 한 파일로 ===== */
 let allBizCall = opt => opt&&opt.list ? Promise.resolve([{biz:curBiz(),name:(ST_BIZ||{})[curBiz()]||curBiz(),pub:S.season,seasons:(S.seasons||[]).map(x=>({k:x.k,name:x.name}))}])
   : Promise.resolve((opt.sel||[]).flatMap(q=>(q.seasons||[S.season]).map(k=>({biz:q.biz,name:(ST_BIZ||{})[q.biz]||q.biz,season:k,seasonName:((S.seasons||[]).find(x=>x.k===k)||{}).name||k,cur:true}))));
@@ -7493,7 +7495,7 @@ document.addEventListener('click',async e=>{
     case 'sa-ok': { const d=S.ui.sAdd, k=`${d.y}-${d.v}`; if((S.seasons||[]).some(x=>x.k===k)){ toast('이미 있는 시기입니다'); return; } const sem=d.sem?(d.v==='w'?'1학기':'2학기'):'', n={k,name:semName(d.y,d.v,sem),link:'',sem};
       S.seasons=[...(S.seasons||[]),n].sort((a,b)=>{ const o=x=>{ const m=/^(\d{4})-(\w)$/.exec(x.k)||[0,0,'']; return +m[1]*10+({'1':1,'s':2,'2':3,'w':4}[m[2]]||0); }; return o(a)-o(b); }); S.ui.sAddOpen=false; S.ui.sAdd=null; toast(`${n.name}을(를) 만들었습니다. 「시기」에서 골라 들어가세요`); break; }
     case 'seasonsem': { const x=(S.seasons||[]).find(z=>z.k===curSK()); if(!x) return; const m=/^(\d{4})-(\w)$/.exec(x.k); if(!m) return; x.sem=x.sem?'':(m[2]==='w'?'1학기':'2학기'); x.name=semName(+m[1],m[2],x.sem); S.seasons=[...S.seasons]; toast(x.sem?`${x.name}: 학기 운영을 함께 관리합니다`:`${x.name}: 방학만 운영합니다`); break; }
-    case 'seasonadd': if(noScope()){ S.ui.sAddOpen=!S.ui.sAddOpen; if(S.ui.sAddOpen) S.ui.sAdd=null; break; } { const n=nextSeason(); if((S.seasons||[]).some(x=>x.k===n.k)) return; S.seasons=[...(S.seasons||[]),n]; toast(`${n.name}을(를) 만들었습니다. 「시기」에서 골라 들어가세요`); break; }
+    case 'seasonadd': if(noScope()&&bizSM()==='vac'){ S.ui.sAddOpen=!S.ui.sAddOpen; if(S.ui.sAddOpen) S.ui.sAdd=null; break; } { const n=nextSeason(); if((S.seasons||[]).some(x=>x.k===n.k)) return; S.seasons=[...(S.seasons||[]),n]; toast(`${n.name}을(를) 만들었습니다. 「시기」에서 골라 들어가세요`); break; }
     case 'seasondel': S.ui.sdelAsk=!S.ui.sdelAsk; break;
     case 'dops-edit': S.ui.dopsOpen=!S.ui.dopsOpen; break;
     case 'dops-save': { const v=((document.getElementById('dops-url')||{}).value||'').trim(); if(!v){ toast('구글 시트 링크를 넣어 주세요'); return; } dopsSave(v); return; }
@@ -8445,7 +8447,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.129';
+const APP_VER = '11.130';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
