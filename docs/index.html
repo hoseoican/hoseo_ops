@@ -742,6 +742,13 @@ if(EMBED) document.documentElement.classList.add('embed');
   html.embed #phStep::before { content: "강사서류 › "; }
   html.embed #phName { font-size: 21px; font-weight: 700; letter-spacing: -.02em; margin: 6px 0 2px; }
   html.embed .work { padding: 0 0 8px; }
+  /* 운영 관리 다른 탭과 같은 크기·너비: 운영 화면은 PC에서 10% 키워 보이므로(zoom 1.1) 여기도 같게, 카드 최대 너비 제한은 풀어 오른쪽 빈 곳 없앰 */
+  @media (min-width: 900px) {
+    html.embed body { zoom: 1.1; }
+    html.embed #side { max-height: calc(100vh / 1.1 - 24px); }
+  }
+  html.embed .card, html.embed .bizbar, html.embed .bar, html.embed .outgrid, html.embed .impgrid, html.embed .mailgrid, html.embed .smsgrid, html.embed .certgrid,
+  html.embed #gsCard, html.embed #ctSet, html.embed .wide-drop, html.embed #imp, html.embed #perBar, html.embed #main .card[style*="max-width"] { max-width: none !important; }
   #rvSea.on, #rvKind.on { border-color: var(--hs); color: var(--hs); font-weight: 700; }
 </style>
 </head>
@@ -1307,7 +1314,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.25-6';
+var APP_VERSION = '2026.11.26-1';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
