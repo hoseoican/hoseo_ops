@@ -345,7 +345,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.138';
+const APP_VER = '11.139';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -677,7 +677,7 @@ document.addEventListener('click', e => {
       const pend = [...new Set(myRows().filter(r => r.status === 'wait').map(r => r.school))].filter(s => (S.contacts[s] || {}).email);
       const list = pend.map(s => { const L = (S.schoolLinks || []).find(x => x.school === s) || {}; return { to: S.contacts[s].email, subject: `[충남 1권역 앵커늘봄] ${season().name} 운영 정보 확인 요청 (${s})`, body: text.replace('확인 링크: (학교별 링크)', '확인 링크: ' + (L.link || '(운영 담당자에게 문의)')) }; });
       msgEl.textContent = '보내는 중…';
-      run('adminSendMail', ADMIN_KEY, list).then(r => { msgEl.textContent = `${r.sent}곳에 보냈습니다${r.fails.length ? ` · 실패 ${r.fails.length}곳` : ''} · 오늘 남은 발송 ${r.remaining}건`; }).catch(err => msgEl.textContent = errMsg(err));
+      run('adminSendMail', ADMIN_KEY, list).then(r => { msgEl.textContent = `${r.sent}곳에 보냈습니다${r.fails.length ? ` · 실패 ${r.fails.length}곳${(r.why||[])[0] ? ` (${r.why[0]}${r.why.length>1?` 외 ${r.why.length-1}건`:''})` : ''}` : ''} · 오늘 남은 발송 ${r.remaining}건`; }).catch(err => msgEl.textContent = errMsg(err));
       return;
     }
   }
