@@ -1649,6 +1649,8 @@ function unmetReq(r){ const out=[], t=S.instructors.find(x=>x.id===r.inst); if(!
   if(r.sc.req.same&&S.rows.some(x=>x!==r&&x.school===r.school&&x.prog===r.prog&&x.inst&&x.inst!==r.inst&&x.status!=='cancel')) out.push('같은 강사 배치');
   return out; }
 /* 사업(센터): 운영 화면은 로그인한 사업만 다룸. 강사 화면은 사업별 탭 */
+/* 사업·대학 관리자 최초 비밀번호: 처음 로그인하면 본인이 새 비밀번호로 바꾸게 함(서버 ADM_INIT_PW_와 같게) */
+const ADM_INIT_PW = '12301230';
 const BIZ_DEF = [{k:'anchor',name:'앵커늘봄',center:'앵커늘봄총괄센터',title:'충남 1권역 앵커늘봄'},{k:'vac',name:'초등방과후(방학집중형)',center:'AI·SW교육센터',title:'초등방과후(방학집중형)'},{k:'rural',name:'초등방과후(소외지역형)',center:'AI·SW교육센터',title:'초등방과후(소외지역형)',sm:'sem'}];
 const bizListC = () => { const L=(S&&S.bizList&&S.bizList.length)?S.bizList:BIZ_DEF; return L.concat(BIZ_DEF.filter(d=>!L.some(b=>b.k===d.k))).map(b=>({...(BIZ_DEF.find(d=>d.k===b.k)||{}),...b})); };
 /* 시기 방식: all = 1학기·여름방학·2학기·겨울방학(앵커늘봄) / vac = 방학(+학기 함께, 방학집중형) / sem = 1학기·2학기만(소외지역형) */
@@ -2232,6 +2234,8 @@ const routesOf = role => ROUTES[role].filter(x=>!(role==='admin'&&S.adminOrg&&!o
 function route(){ const ok=routesOf(S.ui.role).map(x=>x[0]); return ok.includes(S.ui.view)?S.ui.view:homeView(S.ui.role); }
 function homeView(role){ const ok=routesOf(role).map(x=>x[0]); if(role==='admin'&&S.adminOrg&&ok.includes('cons')) return 'cons'; return ok.includes('board')?'board':ok[0]||ROUTES[role][0][0]; }
 let RENDER_EPOCH=0;
+/* 뒤에서 자료가 도착해 다시 그릴 때: 쓰던 입력칸 값은 그대로 (formKeep/formRestore는 App.html) */
+function bgRender(){ const k=typeof formKeep==='function'?formKeep():null; render(); if(k&&typeof formRestore==='function') formRestore(k); }
 function render(){ RENDER_EPOCH++; if(S&&S.ui&&S.ui.role==='admin'&&typeof mwLoad==='function') mwLoad();
   if(S&&S.ui&&S.ui.role!=='admin'&&typeof persist!=='undefined'){ try{ fixPhonesAll(); }catch(e){} }
   const cur=route();
@@ -2319,7 +2323,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.130';
+const LIB_VER='11.132';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4084,13 +4088,13 @@ const accLinkBtn = a => { const L=accLink(a); return L?`<button class="btn sm pr
 function accountsPanel(fo){ const L=(S.admins||[]).filter(a=>fo?a.org===fo:!a.org), B=bizListC(), u=S.ui, nOrg=(S.admins||[]).filter(a=>a.org).length;
   const chatA=c=>c?`<a href="${esc(c)}" target="_blank" rel="noopener">오픈채팅 ↗</a>`:'<span class="muted">-</span>';
   const row=a=>u.accInfo===a.id?`<tr><td>${esc(bizOf(a.biz).name)}</td><td><b>${esc(a.name)}</b></td><td><input id="acc-epos" value="${esc(a.pos||'')}" placeholder="예: 팀장" style="width:90px"></td><td><input id="acc-ephone" value="${esc(a.phone||'')}" placeholder="041-000-0000" style="width:130px"></td><td><input id="acc-echat" value="${esc(a.chat||'')}" placeholder="open.kakao.com/o/..." style="width:100%"></td><td colspan="2" class="nowrap"><label class="small"><input type="checkbox" id="acc-eops"> 이 사업 운영 담당자 연락처로도</label> <button class="btn sm pri" data-act="accinfook" data-id="${a.id}">저장</button> <button class="btn sm" data-act="accinfo" data-id="">취소</button></td></tr>`
-   :`<tr><td>${esc(bizOf(a.biz).name)} <span class="muted small">${esc(bizOf(a.biz).center||'')}</span>${a.org?` ${uTag(a.org,orgShort(a.org)+'만')}`:''}</td><td><b>${esc(a.name)}</b>${S.ops&&S.ops.accId===a.id&&a.biz===curBiz()?' <span class="chip sm ok" title="기준정보 › 운영 담당자 연락처로 쓰는 계정">운영 담당자</span>':''}${a.via==='link'?' <span class="chip">링크로 등록</span>':''}${a.email?`<div class="small muted">${esc(a.email)}</div>`:''}</td><td class="small">${esc(a.pos||'-')}</td><td class="mono small">${esc(a.phone||'-')}</td><td class="small">${chatA(a.chat)}</td><td class="small muted">${esc(a.at||'')}</td><td class="nowrap">${u.accPw===a.id?`<input type="password" id="acc-pw2" placeholder="새 비밀번호 8자 이상" style="width:160px"> <button class="btn sm pri" data-act="accpwok" data-id="${a.id}">바꾸기</button> <button class="btn sm" data-act="accpw" data-id="">취소</button>`:`${accLinkBtn(a)} <button class="btn sm" data-act="accinfo" data-id="${a.id}">정보 수정</button> <button class="btn sm" data-act="accpw" data-id="${a.id}">비밀번호</button> ${u.accDel===a.id?`<button class="btn sm danger" data-act="accdelok" data-id="${a.id}">삭제 확인</button>`:`<button class="btn sm" data-act="accdel" data-id="${a.id}">삭제</button>`}`}</td></tr>`;
+   :`<tr><td>${esc(bizOf(a.biz).name)} <span class="muted small">${esc(bizOf(a.biz).center||'')}</span>${a.org?` ${uTag(a.org,orgShort(a.org)+'만')}`:''}</td><td><b>${esc(a.name)}</b>${a.mustPw?' <span class="chip sm warn" title="최초 비밀번호 상태 · 처음 로그인하면 새 비밀번호로 바꾸게 됨">최초 비밀번호</span>':''}${S.ops&&S.ops.accId===a.id&&a.biz===curBiz()?' <span class="chip sm ok" title="기준정보 › 운영 담당자 연락처로 쓰는 계정">운영 담당자</span>':''}${a.via==='link'?' <span class="chip">링크로 등록</span>':''}${a.email?`<div class="small muted">${esc(a.email)}</div>`:''}</td><td class="small">${esc(a.pos||'-')}</td><td class="mono small">${esc(a.phone||'-')}</td><td class="small">${chatA(a.chat)}</td><td class="small muted">${esc(a.at||'')}</td><td class="nowrap">${u.accPw===a.id?`<input type="password" id="acc-pw2" placeholder="새 비밀번호 8자 이상" style="width:160px"> <button class="btn sm pri" data-act="accpwok" data-id="${a.id}">바꾸기</button> <button class="btn sm" data-act="accpwinit" data-id="${a.id}" title="최초 비밀번호(${ADM_INIT_PW})로 되돌리고, 다음 로그인 때 새 비밀번호로 바꾸게 함">최초 비밀번호로 초기화</button> <button class="btn sm" data-act="accpw" data-id="">취소</button>`:`${accLinkBtn(a)} <button class="btn sm" data-act="accinfo" data-id="${a.id}">정보 수정</button> <button class="btn sm" data-act="accpw" data-id="${a.id}">비밀번호</button> ${u.accDel===a.id?`<button class="btn sm danger" data-act="accdelok" data-id="${a.id}">삭제 확인</button>`:`<button class="btn sm" data-act="accdel" data-id="${a.id}">삭제</button>`}`}</td></tr>`;
   if(fo) return `<div class="stack" style="gap:8px"><div class="tw"><table><thead><tr><th>사업 · 센터</th><th>관리자 이름</th><th>직위</th><th>내선번호</th><th>오픈채팅</th><th>만든 날</th><th></th></tr></thead><tbody>
     ${L.length?L.map(row).join(''):`<tr><td colspan="7" class="muted small">${esc(orgShort(fo))} 관리자 계정이 아직 없습니다.</td></tr>`}</tbody></table></div>
    <div class="stack" style="gap:6px;border-top:1px dashed var(--line);padding-top:10px"><b class="small">새 관리자 추가 <span class="muted" style="font-weight:400">— ${esc(orgShort(fo))} 담당자 정보를 넣으세요. * 는 꼭 넣어야 합니다</span></b>
     <div class="acc-new"><label class="f small"><span>사업 *</span><select id="acc-biz">${B.map(b=>`<option value="${esc(b.k)}">${esc(b.center||'')} · ${esc(b.name)}</option>`).join('')}</select></label><select id="acc-org" hidden><option value="${esc(fo)}" selected>${esc(fo)}</option></select>
      <label class="f small"><span>이름 * <span class="muted">로그인할 때 고르는 이름</span></span><input id="acc-name" placeholder="예: 홍길동" autocomplete="off" name="ua-new-name"></label>
-     <label class="f small"><span>비밀번호 * <span class="muted">8자 이상 · 담당자에게 따로 알림</span></span><input id="acc-pw" type="password" placeholder="새 비밀번호" autocomplete="new-password" name="ua-new-pw"></label>
+     <label class="f small"><span>비밀번호 <span class="muted">비우면 ${ADM_INIT_PW} · 처음 로그인 때 본인이 바꿈</span></span><input id="acc-pw" type="password" placeholder="비우면 최초 비밀번호 ${ADM_INIT_PW}" autocomplete="new-password" name="ua-new-pw"></label>
      <label class="f small"><span>직위</span><input id="acc-pos" placeholder="예: 연구원" autocomplete="off"></label>
      <label class="f small"><span>내선번호</span><input id="acc-phone" placeholder="예: 041-623-0000" inputmode="tel" autocomplete="off" value="${esc((UNIV_CONTACT[fo]||{}).phone||'')}"></label>
      <label class="f small" style="grid-column:span 2"><span>오픈채팅 링크 <span class="muted">강사·학교 문의용</span></span><input id="acc-chat" placeholder="open.kakao.com/o/…" inputmode="url" autocomplete="off" value="${esc((UNIV_CONTACT[fo]||{}).chat||'')}"></label></div>
@@ -4101,7 +4105,7 @@ function accountsPanel(fo){ const L=(S.admins||[]).filter(a=>fo?a.org===fo:!a.or
     ${L.length?L.map(row).join(''):'<tr><td colspan="7" class="muted small">아직 계정이 없습니다.</td></tr>'}
    </tbody></table></div>
    <div class="stack" style="gap:6px;border-top:1px dashed var(--line);padding-top:10px"><b class="small">새 관리자</b>
-    <div class="row" style="gap:6px;flex-wrap:wrap"><select id="acc-biz" aria-label="사업">${B.map(b=>`<option value="${esc(b.k)}">${esc(b.center||'')} · ${esc(b.name)}</option>`).join('')}</select><select id="acc-org" hidden><option value="" selected></option></select><input id="acc-name" placeholder="관리자 이름" style="width:130px" autocomplete="off" name="acc-new-name"><input id="acc-pw" type="password" placeholder="비밀번호 8자 이상" style="width:160px" autocomplete="new-password" name="acc-new-pw"></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap"><select id="acc-biz" aria-label="사업">${B.map(b=>`<option value="${esc(b.k)}">${esc(b.center||'')} · ${esc(b.name)}</option>`).join('')}</select><select id="acc-org" hidden><option value="" selected></option></select><input id="acc-name" placeholder="관리자 이름" style="width:130px" autocomplete="off" name="acc-new-name"><input id="acc-pw" type="password" placeholder="비우면 최초 ${ADM_INIT_PW}" style="width:170px" title="비워 두면 최초 비밀번호 ${ADM_INIT_PW}로 만들고, 처음 로그인 때 본인이 새 비밀번호로 바꿈" autocomplete="new-password" name="acc-new-pw"></div>
     <div class="row" style="gap:6px;flex-wrap:wrap"><input id="acc-pos" placeholder="직위 (예: 팀장)" style="width:130px"><input id="acc-phone" placeholder="내선번호 (예: 041-540-0000)" style="width:200px" inputmode="tel"><input id="acc-chat" placeholder="오픈채팅 링크 (open.kakao.com/o/...)" style="flex:1 1 260px" inputmode="url"></div>
     <div class="row" style="gap:10px;flex-wrap:wrap"><label class="small"><input type="checkbox" id="acc-ops" checked> 이 사업 운영 담당자 연락처로도 쓰기 <span class="muted">(대학 관리자는 제외)</span></label><button class="btn sm pri" data-act="accadd">계정 생성</button></div></div></div>`; }
 /* 지금 보고 있는 사업이면 운영 담당자 칸도 바로 바꿈(서버는 adminAccounts에서 저장) */
@@ -5982,8 +5986,8 @@ function kitLoad(fresh){ const D=kitDB(); if((D.loaded&&!D.cached)||D.loading) r
     run('adminKitLoad',ADMIN_KEY).then(d=>{ const L=S.kitDB||{items:[],dev:[]}, wasC=!!L.cached;
       const items=(d&&d.items)||[], dev=(d&&d.dev)||[];
       S.kitDB={items:wasC?kitMerge(items,L.items||[],'kit',x=>x.pk):items,dev:wasC?kitMerge(dev,L.dev||[],'dev',x=>x.key):dev,loaded:true};
-      KIT_SEEN.kit.clear(); KIT_SEEN.dev.clear(); kitCachePut(); render(); })
-    .catch(e=>{ const X=S.kitDB||D; X.loading=false; if(X.cached){ X.stale=true; render(); return; } X.loaded=true; X.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); render(); }); return; }
+      KIT_SEEN.kit.clear(); KIT_SEEN.dev.clear(); kitCachePut(); bgRender(); })
+    .catch(e=>{ const X=S.kitDB||D; X.loading=false; if(X.cached){ X.stale=true; bgRender(); return; } X.loaded=true; X.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); render(); }); return; }
   D.loaded=true; setTimeout(render,0); }
 /* 캐시로 보여 주는 중 안내(7·8번 탭 위) */
 function kitCacheNote(){ const D=kitDB(); if(!D.cached) return ''; return `<div class="small muted" style="margin:0 0 8px">${D.stale?`최신 자료를 받지 못해 지난번 받은 자료(${esc(D.cacheAt||'')})로 보여 주는 중 <button class="lnk" data-act="kitreload">다시 불러오기</button>`:`지난번 받은 자료(${esc(D.cacheAt||'')})로 먼저 보여 주는 중 · 최신 자료 확인 중…`}</div>`; }
@@ -6298,7 +6302,7 @@ function mwLoad(fresh){ const D=mwDB(); if((D.loaded&&!D.cached)||D.loading) ret
   if(!fresh&&!D.loaded){ try{ const c=JSON.parse(localStorage.getItem(mwCacheKey())||'null'); if(c&&Array.isArray(c.list)){ const P=mwPendLoad(), L=c.list.filter(x=>!P[x.id]).concat(Object.values(P).filter(x=>!x.gone)); S.mwDB={list:L,loaded:true,cached:true,loading:false,pend:P}; } }catch(e){} }
   const C=mwDB(); C.loading=true;
   run('adminMwLoad',ADMIN_KEY).then(d=>{ const old=mwDB(), pend={...mwPendLoad(),...(old.pend||{})}, list=((d&&d.list)||[]).filter(x=>!pend[x.id]); Object.values(pend).forEach(x=>{ if(!x.gone) list.push(x); });
-    S.mwDB={list,loaded:true,pend}; mwCachePut(); render();
+    S.mwDB={list,loaded:true,pend}; mwCachePut(); bgRender();
     const P=Object.values(pend); if(P.length){ const put=P.filter(x=>!x.gone), del=P.filter(x=>x.gone).map(x=>x.id);
       Promise.all([put.length?run('adminMwPut',ADMIN_KEY,put):null,del.length?run('adminMwDel',ADMIN_KEY,del):null]).then(()=>{ const D=mwDB(); P.forEach(x=>{ if(D.pend[x.id]===x) delete D.pend[x.id]; }); mwPendSync(); mwCachePut(); if(put.length) toast(`보관해 둔 민원 기록 ${put.length}건을 저장했습니다`); }).catch(()=>{}); } })
   .catch(e=>{ const X=mwDB(); X.loading=false; if(!X.loaded){ X.loaded=true; X.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); } render(); }); }
@@ -7767,10 +7771,11 @@ document.addEventListener('click',async e=>{
     case 'taask': S.ui.taAsk=el.dataset.id||''; break;
     case 'aapply': { const tid=S.ui.teacher; if(!canAsstNow()){ toast('지금은 보조강사 신청 기간이 아닙니다'); render(); return; } if(!r||!asOk(r)||!r.aOpen){ toast('지금은 신청할 수 없는 수업입니다'); render(); return; } const c=document.getElementById('asc-'+r.id); if(!c||!c.checked){ toast('수업일 참여 확인에 체크해 주세요'); return; } const cx=document.getElementById('asx-'+r.id); if(cx&&!cx.checked){ toast('배치 취소 안내 확인에 체크해 주세요'); return; } if(fi(r)===tid){ toast('이 수업의 주강사입니다'); return; } const cl=teacherClash(tid,r,true); if(cl.length){ toast(`${shortSch(cl[0].x.school)} ${clsName(cl[0].x)} 수업과 시간이 겹쳐 신청할 수 없습니다`); return; } r.aApps=r.aApps||[]; if(!r.aApps.some(a=>a.tid===tid)) r.aApps.push({tid,at:now(),note:((document.getElementById('asn-'+r.id)||{}).value||'').trim().slice(0,200)}); S.ui.taAsk=''; toast('보조강사로 신청했습니다'); break; }
     case 'aunapply': { const tid=S.ui.teacher; if(!r) return; if(!canAsstNow()){ toast('보조강사 신청 기간이 아니라 신청을 취소할 수 없습니다'); render(); return; } if(fa(r)===tid){ toast('이미 배정된 수업입니다. 해당 수업의 운영 대학 담당자에게 문의해 주세요'); return; } r.aApps=(r.aApps||[]).filter(a=>a.tid!==tid); if(r.asst===tid){ r.asst=''; delete r.asstPend; } toast('보조강사 신청을 취소했습니다'); break; }
-    case 'accadd': { const g=id=>(document.getElementById(id)||{}).value||'', d={biz:g('acc-biz'),org:g('acc-biz')==='anchor'?g('acc-org'):'',name:g('acc-name').trim(),pw:g('acc-pw'),pos:g('acc-pos').trim(),phone:g('acc-phone').trim(),chat:g('acc-chat').trim(),asOps:!!(document.getElementById('acc-ops')||{}).checked}; if(!d.name){ toast('관리자 이름을 적어 주세요'); return; } if(d.pw.length<8){ toast('비밀번호는 8자 이상으로 정해 주세요'); return; } if(d.chat&&!/^https?:[/][/]/.test(d.chat)){ toast('오픈채팅 링크는 https 주소로 넣어 주세요'); return; } adminAcc('add',d).then(()=>{ accOpsLocal(d); toast(`${bizOf(d.biz).name} 관리자 「${d.name}」 계정을 만들었습니다${d.asOps?' · 운영 담당자 연락처에도 넣었습니다':''}`); }).catch(()=>{}); return; }
+    case 'accadd': { const g=id=>(document.getElementById(id)||{}).value||'', d={biz:g('acc-biz'),org:g('acc-biz')==='anchor'?g('acc-org'):'',name:g('acc-name').trim(),pw:g('acc-pw'),pos:g('acc-pos').trim(),phone:g('acc-phone').trim(),chat:g('acc-chat').trim(),asOps:!!(document.getElementById('acc-ops')||{}).checked}; if(!d.name){ toast('관리자 이름을 적어 주세요'); return; } if(!d.pw) d.init=true; else if(d.pw.length<8){ toast('비밀번호는 8자 이상으로 정해 주세요 (비워 두면 최초 비밀번호 '+ADM_INIT_PW+')'); return; } if(d.chat&&!/^https?:[/][/]/.test(d.chat)){ toast('오픈채팅 링크는 https 주소로 넣어 주세요'); return; } adminAcc('add',d).then(()=>{ accOpsLocal(d); toast(`${bizOf(d.biz).name} 관리자 「${d.name}」 계정을 만들었습니다${d.init?` · 최초 비밀번호 ${ADM_INIT_PW}`:''}${d.asOps?' · 운영 담당자 연락처에도 넣었습니다':''}`); }).catch(()=>{}); return; }
     case 'accinfo': S.ui.accInfo=el.dataset.id||''; break;
     case 'accinfook': { const a=(S.admins||[]).find(x=>x.id===el.dataset.id)||{}, d={id:el.dataset.id,biz:a.biz,name:a.name,pos:((document.getElementById('acc-epos')||{}).value||'').trim(),phone:((document.getElementById('acc-ephone')||{}).value||'').trim(),chat:((document.getElementById('acc-echat')||{}).value||'').trim(),asOps:!!(document.getElementById('acc-eops')||{}).checked}; if(d.chat&&!/^https?:[/][/]/.test(d.chat)){ toast('오픈채팅 링크는 https 주소로 넣어 주세요'); return; } S.ui.accInfo=''; adminAcc('info',d).then(()=>{ accOpsLocal(d); toast(`연락처를 저장했습니다${d.asOps?' · 운영 담당자 연락처에도 넣었습니다':''}`); }).catch(()=>{}); return; }
     case 'accpw': S.ui.accPw=el.dataset.id||''; break;
+    case 'accpwinit': { S.ui.accPw=''; adminAcc('pw',{id:el.dataset.id,init:true}).then(()=>toast(`최초 비밀번호(${ADM_INIT_PW})로 초기화했습니다 · 다음 로그인 때 새 비밀번호로 바꾸게 됩니다`)).catch(()=>{}); return; }
     case 'accpwok': { const pw=(document.getElementById('acc-pw2')||{}).value||''; if(pw.length<8){ toast('비밀번호는 8자 이상으로 정해 주세요'); return; } S.ui.accPw=''; adminAcc('pw',{id:el.dataset.id,pw}).then(()=>toast('비밀번호를 바꿨습니다')).catch(()=>{}); return; }
     case 'accdel': S.ui.accDel=el.dataset.id; break;
     case 'accdelok': S.ui.accDel=''; adminAcc('del',{id:el.dataset.id}).then(()=>toast('계정을 지웠습니다')).catch(()=>{}); return;
@@ -8210,6 +8215,20 @@ const errMsg = e => { const m = (e && e.message) ? e.message.replace(/^Exception
 function setSave(t, bad) { const el = document.getElementById('saveState'); el.textContent = t; el.className = 'savestate' + (bad ? ' bad' : ''); }
 function fatal(e) { const box = document.createElement('div'); box.className = 'notice bad'; box.style.marginTop = '24px'; box.textContent = '열 수 없습니다. ' + ((e && e.message) || String(e)); const app = document.getElementById('app'); app.innerHTML = ''; app.appendChild(box); }
 function typing() { const a = document.activeElement; return a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); }
+/* 자동 새로 고침(1분마다 최신 내용 받기) 때 쓰던 입력칸 내용이 지워지지 않게: 그리기 전에 고친 칸 값을 적어 두었다가 다시 넣음
+   (사용자가 버튼을 눌러 다시 그릴 때는 쓰지 않음: 저장 후 입력칸 비우기 등은 그대로) */
+function formKeep() { const m = {}; document.querySelectorAll('#app input[id], #app textarea[id], #app select[id], #layer input[id], #layer textarea[id], #layer select[id]').forEach(e => {
+    if (e.type === 'file' || e.type === 'hidden') return; const ck = e.type === 'checkbox' || e.type === 'radio';
+    const dirty = ck ? e.checked !== e.defaultChecked : e.tagName === 'SELECT' ? [...e.options].some(o => o.selected !== o.defaultSelected) : e.value !== e.defaultValue;
+    if (dirty) m[e.id] = { v: e.value, c: e.checked, d: ck ? e.defaultChecked : e.tagName === 'SELECT' ? null : e.defaultValue }; });
+  const a = document.activeElement; return { m, f: a && a.id || '', s: a && a.selectionStart, e: a && a.selectionEnd, y: window.scrollY }; }
+function formRestore(k) { if (!k) return; Object.entries(k.m).forEach(([id, x]) => { const e = document.getElementById(id); if (!e) return;
+    if (e.type === 'checkbox' || e.type === 'radio') { if (e.defaultChecked === x.d) e.checked = x.c; }
+    else if (e.tagName === 'SELECT') { if ([...e.options].some(o => o.value === x.v)) e.value = x.v; }
+    else if (e.defaultValue === x.d) e.value = x.v; });
+  if (k.f) { const e = document.getElementById(k.f); if (e) { try { e.focus({ preventScroll: true }); if (k.s != null) e.setSelectionRange(k.s, k.e); } catch (_) {} } }
+  if (Math.abs(window.scrollY - k.y) > 2) window.scrollTo(0, k.y); }
+const formDirty = () => Object.keys(formKeep().m).length > 0;
 function copyText(t) {
   const fallback = () => { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('복사했습니다'); } catch (e) { toast('복사하지 못했습니다. 직접 선택해 복사해 주세요'); } ta.remove(); };
   if (navigator.clipboard) navigator.clipboard.writeText(t).then(() => toast('복사했습니다')).catch(fallback); else fallback();
@@ -8420,11 +8439,11 @@ function showAdminLogin(pwSet, after, bizL) {
   ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation()));
   document.body.appendChild(box); draw();
 }
-/* 관리자 비밀번호 직접 바꾸기: 최초 비밀번호(연락처 뒤 4자리)로 들어오면 꼭 바꾸게 함 · 위쪽 「비밀번호 변경」에서도 */
+/* 관리자 비밀번호 직접 바꾸기: 최초 비밀번호(12301230)로 들어오면 꼭 바꾸게 함 · 위쪽 「비밀번호 변경」에서도 */
 function pwChangeForm(box, oldPw, must, done) {
   box.innerHTML = `<form class="admcard stack" autocomplete="off">
     <span class="logo-h" role="img" aria-label="호서대학교"></span>
-    <div><h2>${must ? '새 비밀번호 정하기' : '비밀번호 변경'}</h2><div class="small muted" style="margin-top:4px">${must ? '처음 접속하셨습니다. 연락처 뒤 4자리로 된 최초 비밀번호를 앞으로 쓸 비밀번호로 바꿔 주세요.' : '지금 비밀번호와 새 비밀번호를 넣어 주세요.'}</div></div>
+    <div><h2>${must ? '새 비밀번호 정하기' : '비밀번호 변경'}</h2><div class="small muted" style="margin-top:4px">${must ? '처음 접속하셨습니다. 최초 비밀번호(12301230)를 앞으로 쓸 비밀번호로 바꿔 주세요.' : '지금 비밀번호와 새 비밀번호를 넣어 주세요.'}</div></div>
     ${oldPw ? '' : '<label class="f">지금 비밀번호<input type="password" id="pc-old" autocomplete="current-password" required></label>'}
     <label class="f">새 비밀번호 <span class="small muted">8자 이상</span><input type="password" id="pc-new" autocomplete="new-password" required></label>
     <label class="f">새 비밀번호 한 번 더<input type="password" id="pc-new2" autocomplete="new-password" required></label>
@@ -8447,7 +8466,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.130';
+const APP_VER = '11.132';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -8520,7 +8539,7 @@ function adminBoot() {
     ADM_TIMER = setInterval(() => {
       if (!S || !ADMIN_KEY) return;
       if (ORG_PREV || saving || dirtyPayload() || S.ui.drawer || typing() || S.ui.pending || S.ui.idbPending) return;
-      run('adminLoad', ADMIN_KEY, false, S.ui.loadH || '').then(d2 => { if (d2 && d2.same) { setSave('최신 내용 · ' + now()); return; } if (saving || dirtyPayload() || typing() || S.ui.drawer) return; aUse(d2, true); S.ui.loadH = d2.h || ''; render(); setSave('최신 내용 · ' + now()); }).catch(() => {});
+      run('adminLoad', ADMIN_KEY, false, S.ui.loadH || '').then(d2 => { if (d2 && d2.same) { setSave('최신 내용 · ' + now()); return; } if (saving || dirtyPayload() || typing() || S.ui.drawer) return; const fk = formKeep(); aUse(d2, true); S.ui.loadH = d2.h || ''; render(); formRestore(fk); setSave('최신 내용 · ' + now()); }).catch(() => {});
     }, 60000);
   };
   if (ADM_PRELOAD) { const d = ADM_PRELOAD; ADM_PRELOAD = null; use(d); }
@@ -8533,7 +8552,7 @@ function adminBoot() {
       const keep = saving || dirtyPayload() || typing() || S.ui.drawer;
       if (keep) { admCachePut(d); tick(); setSave('지난 내용 표시 중 · 곧 최신 내용으로 바뀝니다'); return; }
       /* 지난 자료를 보는 동안 옮겨 간 메뉴·하위 탭·필터를 그대로 두고 자료만 바꿈 */
-      aUse(d, true); S.ui.loadH = d.h || ''; render(); setSave('불러옴 · ' + now()); showMissing(d.missing); admCachePut(d); tick();
+      { const fk = formKeep(); aUse(d, true); S.ui.loadH = d.h || ''; render(); formRestore(fk); } setSave('불러옴 · ' + now()); showMissing(d.missing); admCachePut(d); tick();
     }).catch(e => {
       if (/만료/.test(errMsg(e))) { try { sessionStorage.removeItem(ADM_SS); sessionStorage.removeItem(ADM_CACHE); } catch (_) {} ADMIN_KEY = ''; S = null; document.getElementById('app').innerHTML = ''; adminAskLogin(adminBoot); return; }
       if (shown) { setSave('최신 내용을 불러오지 못했습니다', true); toast(errMsg(e)); return; }
@@ -8654,7 +8673,7 @@ function resultSend(sch) {
 const stCacheKey = () => 'anc_stats_' + (S.biz || 'anchor') + '_' + (S.adminOrg || 'hq');
 function statsLoad() { if (S.ui.stLoading) return; S.ui.stLoading = true;
   if (!S.stats) { try { const c = JSON.parse(localStorage.getItem(stCacheKey()) || 'null'); if (c && c.ds) { S.stats = c; S.ui.stLoaded = true; S.ui.stCached = true; setTimeout(render, 0); } } catch (e) {} }
-  run('adminStatsLoad', ADMIN_KEY).then(d => { S.stats = d || { ds: [] }; S.ui.stLoaded = true; S.ui.stLoading = false; S.ui.stCached = false; try { localStorage.setItem(stCacheKey(), JSON.stringify(S.stats)); } catch (e) { try { localStorage.removeItem(stCacheKey()); } catch (_) {} } render(); }).catch(err => { S.ui.stLoading = false; if (S.ui.stCached && S.stats && S.stats.ds) { toast('최신 통계를 불러오지 못해 지난번 받은 자료로 보여 줍니다: ' + errMsg(err)); render(); return; } S.stats = { ds: [], err: errMsg(err) }; S.ui.stLoaded = true; toast('통계 자료를 불러오지 못했습니다: ' + errMsg(err)); render(); }); }
+  run('adminStatsLoad', ADMIN_KEY).then(d => { S.stats = d || { ds: [] }; S.ui.stLoaded = true; S.ui.stLoading = false; S.ui.stCached = false; try { localStorage.setItem(stCacheKey(), JSON.stringify(S.stats)); } catch (e) { try { localStorage.removeItem(stCacheKey()); } catch (_) {} } bgRender(); }).catch(err => { S.ui.stLoading = false; if (S.ui.stCached && S.stats && S.stats.ds) { toast('최신 통계를 불러오지 못해 지난번 받은 자료로 보여 줍니다: ' + errMsg(err)); render(); return; } S.stats = { ds: [], err: errMsg(err) }; S.ui.stLoaded = true; toast('통계 자료를 불러오지 못했습니다: ' + errMsg(err)); render(); }); }
 function statsPut(d) { return run('adminStatsPut', ADMIN_KEY, d).then(() => render()); }
 function statsDel(id) { return run('adminStatsDel', ADMIN_KEY, id).then(() => render()); }
 function loginFailsLoad() { toast('강사 확인 실패 기록을 불러오는 중…'); return run('adminLoginFails', ADMIN_KEY).then(L => { S.ui.lfails = L || []; render(); }).catch(err => toast('기록을 불러오지 못했습니다: ' + errMsg(err))); }
