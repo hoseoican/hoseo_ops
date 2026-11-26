@@ -2317,7 +2317,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.127';
+const LIB_VER='11.128';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6293,21 +6293,27 @@ const mwCacheKey=()=>'anc_mw_'+(S.adminOrg||'hq');
 function mwCachePut(){ const D=S.mwDB; if(!D||!D.loaded||D.cached) return; try{ localStorage.setItem(mwCacheKey(),JSON.stringify({list:D.list,at:now()})); }catch(e){} }
 function mwLoad(fresh){ const D=mwDB(); if((D.loaded&&!D.cached)||D.loading) return;
   if(!kitOnGas()){ S.mwDB={list:S.mwLocal||[],loaded:true}; return; }
-  if(!fresh&&!D.loaded){ try{ const c=JSON.parse(localStorage.getItem(mwCacheKey())||'null'); if(c&&Array.isArray(c.list)) S.mwDB={list:c.list,loaded:true,cached:true,loading:false}; }catch(e){} }
+  if(!fresh&&!D.loaded){ try{ const c=JSON.parse(localStorage.getItem(mwCacheKey())||'null'); if(c&&Array.isArray(c.list)){ const P=mwPendLoad(), L=c.list.filter(x=>!P[x.id]).concat(Object.values(P).filter(x=>!x.gone)); S.mwDB={list:L,loaded:true,cached:true,loading:false,pend:P}; } }catch(e){} }
   const C=mwDB(); C.loading=true;
-  run('adminMwLoad',ADMIN_KEY).then(d=>{ const old=mwDB(), pend=(old.pend||{}), list=((d&&d.list)||[]).filter(x=>!pend[x.id]); Object.values(pend).forEach(x=>{ if(!x.gone) list.push(x); });
-    S.mwDB={list,loaded:true,pend}; mwCachePut(); render(); })
+  run('adminMwLoad',ADMIN_KEY).then(d=>{ const old=mwDB(), pend={...mwPendLoad(),...(old.pend||{})}, list=((d&&d.list)||[]).filter(x=>!pend[x.id]); Object.values(pend).forEach(x=>{ if(!x.gone) list.push(x); });
+    S.mwDB={list,loaded:true,pend}; mwCachePut(); render();
+    const P=Object.values(pend); if(P.length){ const put=P.filter(x=>!x.gone), del=P.filter(x=>x.gone).map(x=>x.id);
+      Promise.all([put.length?run('adminMwPut',ADMIN_KEY,put):null,del.length?run('adminMwDel',ADMIN_KEY,del):null]).then(()=>{ const D=mwDB(); P.forEach(x=>{ if(D.pend[x.id]===x) delete D.pend[x.id]; }); mwPendSync(); mwCachePut(); if(put.length) toast(`보관해 둔 민원 기록 ${put.length}건을 저장했습니다`); }).catch(()=>{}); } })
   .catch(e=>{ const X=mwDB(); X.loading=false; if(!X.loaded){ X.loaded=true; X.err=typeof errMsg==='function'?errMsg(e):String(e&&e.message||e); } render(); }); }
 /* 저장: 화면에 먼저 반영하고 서버로. 실패하면 알림(화면 값은 남겨 두고 다시 저장 가능) */
+/* 저장 못 한 기록은 이 브라우저에 남겨 두었다가(새로 고침해도) 다음에 불러올 때 다시 저장 */
+const mwPendKey=()=>'anc_mw_pend_'+(S.adminOrg||'hq');
+function mwPendSync(){ const D=mwDB(); try{ const P=D.pend||{}; if(Object.keys(P).length) localStorage.setItem(mwPendKey(),JSON.stringify(P)); else localStorage.removeItem(mwPendKey()); }catch(e){} }
+function mwPendLoad(){ try{ return JSON.parse(localStorage.getItem(mwPendKey())||'null')||{}; }catch(e){ return {}; } }
 function mwSave(rec){ const D=mwDB(); const i=D.list.findIndex(x=>x.id===rec.id); if(i>=0) D.list[i]=rec; else D.list.push(rec);
   if(!kitOnGas()){ S.mwLocal=D.list; save(); return; }
-  (D.pend=D.pend||{})[rec.id]=rec; kitSaveMsg('저장 중…');
-  run('adminMwPut',ADMIN_KEY,[rec]).then(()=>{ delete D.pend[rec.id]; kitSaveMsg('저장됨 · '+now()); mwCachePut(); })
-  .catch(e=>{ kitSaveMsg('저장 실패',true); toast('민원 관리 대장을 저장하지 못했습니다: '+String(e&&e.message||e).replace(/^Exception:\s*/,'')); }); }
+  (D.pend=D.pend||{})[rec.id]=rec; mwPendSync(); kitSaveMsg('저장 중…');
+  run('adminMwPut',ADMIN_KEY,[rec]).then(()=>{ if(D.pend[rec.id]===rec) delete D.pend[rec.id]; mwPendSync(); kitSaveMsg('저장됨 · '+now()); mwCachePut(); })
+  .catch(e=>{ const m=String(e&&e.message||e).replace(/^Exception:\s*/,''); kitSaveMsg('저장 실패',true); toast(/알 수 없는 요청/.test(m)?'민원 관리 대장은 운영 서버를 새 버전(2026.11.26-2 이상)으로 배포해야 저장됩니다. 적은 내용은 이 브라우저에 보관했다가 배포 후 자동으로 저장합니다.':'민원 관리 대장을 저장하지 못했습니다: '+m); }); }
 function mwRemove(id){ const D=mwDB(); D.list=D.list.filter(x=>x.id!==id);
   if(!kitOnGas()){ S.mwLocal=D.list; save(); return; }
-  (D.pend=D.pend||{})[id]={id,gone:true};
-  run('adminMwDel',ADMIN_KEY,[id]).then(()=>{ delete D.pend[id]; mwCachePut(); }).catch(e=>toast('삭제하지 못했습니다: '+String(e&&e.message||e).replace(/^Exception:\s*/,''))); }
+  (D.pend=D.pend||{})[id]={id,gone:true}; mwPendSync();
+  run('adminMwDel',ADMIN_KEY,[id]).then(()=>{ delete D.pend[id]; mwPendSync(); mwCachePut(); }).catch(e=>toast('삭제하지 못했습니다: '+String(e&&e.message||e).replace(/^Exception:\s*/,''))); }
 const mwMine=()=>S.adminOrg||'';
 const mwCanEdit=x=>!mwMine()||(x.kind!=='org'&&x.org===mwMine());
 /* 강사 평가용: 그 강사의 대장 민원(모든 사업) → 강사 명단 이슈와 같은 모양 */
@@ -6333,6 +6339,8 @@ function mwFindHtml(q){ const F=S.ui.mwForm; if(!F) return ''; const k=String(q|
   const L=mwTargets(F.kind).filter(([id,l])=>{ if(String(l).replace(/\s/g,'').includes(k)) return true; if(F.kind==='inst'&&/^\d{2,}$/.test(k)){ const t=(S.instructors||[]).find(x=>x.id===id); return String((t&&t.phone)||'').replace(/\D/g,'').includes(k); } return false; });
   if(!L.length) return '<div class="small muted">찾는 대상이 없습니다</div>';
   return L.slice(0,12).map(([id,l])=>`<button type="button" class="btn sm" style="justify-content:flex-start;text-align:left" data-act="mwfpick" data-v="${esc(id)}"><b>${esc(l)}</b>&nbsp;<span class="small muted">${esc(mwTDetail(F.kind,id))}</span></button>`).join('')+(L.length>12?`<div class="small muted">${L.length-12}건 더 있음 · 더 자세히 입력해 주세요</div>`:''); }
+/* 강사 민원에 운영 대학이 비어 있으면(관련 학급 없음·예전 기록) 그 강사가 배치된 학급의 운영 대학으로 */
+function mwInstOrg(id){ const L=S.rows.filter(r=>r.inst===id||r.asst===id); const c={}; L.forEach(r=>{ const o=orgOfRow(r); if(o&&o!=='미지정') c[o]=(c[o]||0)+1; }); return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]||''; }
 const mwToday=()=>fmtD(new Date());
 function mwNew(o){ const r=o.rowId?S.rows.find(x=>x.id===o.rowId):null, kind=o.kind||'site';
   const D={id:'mw'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),biz:curBiz(),season:curSK(),seasonName:season().name,date:mwToday(),src:MW_SRC[0],kind,target:o.target||'',rowId:o.rowId||'',type:MW_TYPES[kind][0],level:'1',desc:'',status:'open',reflect:true,first:'',isNew:true};
@@ -6367,7 +6375,7 @@ function mwFormHtml(){ const F=S.ui.mwForm; if(!F) return ''; const T=mwTargets(
 function csMw(){ const D=mwDB(); if(!D.loaded){ mwLoad(); return '<div class="panel">민원 관리 대장을 불러오는 중…</div>'; }
   const u=S.ui, all=mwAll(), q=String(u.mwQ||'').trim();
   const f={k:u.mwK||'',s:u.mwS||'',l:u.mwL||'',o:u.mwO||'',sea:u.mwSea||''};
-  const orgOf=x=>x.kind==='org'?x.target:x.org;
+  const orgOf=x=>x.kind==='org'?x.target:(x.org||(x.kind==='inst'?mwInstOrg(x.target):''));
   const pass=(x,skip)=>(skip==='k'||!f.k||x.kind===f.k)&&(skip==='s'||!f.s||x.status===f.s)&&(skip==='l'||!f.l||String(x.level)===f.l)&&(skip==='o'||!f.o||orgOf(x)===f.o)&&(skip==='sea'||!f.sea||x.season===f.sea)
     &&(!q||[x.targetName,x.target,x.school,x.type,x.desc,orgOf(x),...(x.acts||[]).map(a=>a.t)].some(v=>String(v||'').includes(q)));
   const L=all.filter(x=>pass(x)).sort((a,b)=>(a.status==='done')-(b.status==='done')||String(b.date).localeCompare(String(a.date)));
@@ -6377,7 +6385,7 @@ function csMw(){ const D=mwDB(); if(!D.loaded){ mwLoad(); return '<div class="pa
   const open=all.filter(x=>x.status!=='done'), lvC=v=>v==='3'?'lv-crit':v==='2'?'lv-warn':'muted';
   const row=x=>{ const last=(x.acts||[]).slice(-1)[0], on=u.mwOpen===x.id;
     return `<tr class="${on?'sel':''}"><td class="mono nowrap">${esc(x.date||'')}</td><td><span class="chip sm">${esc(MW_KL(x.kind))}</span></td><td><b>${esc(tName(x))}</b>${x.kind!=='site'&&x.school?`<div class="small muted">${esc(x.school)}</div>`:''}</td>
-     <td class="small">${esc(orgShort(orgOf(x)||'')||orgOf(x)||'-')}</td><td class="small">${esc(x.type||'')}</td><td class="small ${lvC(String(x.level))}">${esc(mwLvL(x.level))}</td>
+     <td class="small">${orgOf(x)?esc(orgShort(orgOf(x))):'<span class="muted">-</span>'}</td><td class="small">${esc(x.type||'')}</td><td class="small ${lvC(String(x.level))}">${esc(mwLvL(x.level))}</td>
      <td class="small" style="max-width:320px">${esc(String(x.desc||'').slice(0,80))}${String(x.desc||'').length>80?'…':''}</td>
      <td><span class="pill ${x.status==='done'?'st-final':x.status==='doing'?'st-recruit':'st-wait'}">${MW_SL(x.status)}</span>${x.legacy?'<div class="small muted">강사 명단 기록</div>':''}${x.status==='done'&&x.reflect===false?'<div class="small muted">평가 미반영</div>':''}</td>
      <td class="small muted">${last?esc(last.t.slice(0,40)):'-'}</td><td><button class="btn sm" data-act="mwopen" data-v="${esc(x.id)}">${on?'닫기':'열기'}</button></td></tr>${on?`<tr><td colspan="10">${mwDetail(x)}</td></tr>`:''}`; };
@@ -6420,7 +6428,7 @@ function mwAct(a,el){ const U=S.ui, D=mwDB(), find=id=>D.list.find(x=>x.id===id)
       rec.targetName=F.kind==='inst'?instName(F.target):F.target;
       rec.school=F.kind==='site'?F.target:(r?r.school:(F.school||''));
       rec.org=F.kind==='org'?F.target:(r?orgOfRow(r):(mwMine()||F.org||''));
-      if(!rec.org&&F.kind==='inst'){ const rr=S.rows.find(x=>rowBiz(x)===curBiz()&&(x.inst===F.target||x.asst===F.target)); if(rr) rec.org=orgOfRow(rr); }
+      if(!rec.org&&F.kind==='inst') rec.org=mwInstOrg(F.target);
       if(mwMine()) rec.org=mwMine();
       if(F.isNew){ rec.by=S.adminName||(mwMine()?orgShort(mwMine()):'호서대'); rec.at=now(); rec.acts=String(F.first||'').trim()?[{d:mwToday(),who:rec.by,t:String(F.first).trim()}]:[]; }
       mwSave(rec); U.mwForm=null; U.mwOpen=rec.id; toast('민원 관리 대장에 저장했습니다'); return true; }
@@ -8432,7 +8440,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.127';
+const APP_VER = '11.128';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
