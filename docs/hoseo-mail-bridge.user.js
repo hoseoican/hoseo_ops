@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         앵커늘봄 강사서류 → 호서대 메일 보내기
+// @name         호서대 운영 관리 · 강사서류 → 호서대 메일 보내기
 // @namespace    https://hoseoican.github.io/hoseo_docs/
-// @version      0.3.3
-// @description  강사서류 작성 프로그램의 「웹메일 발송」를 누르면 호서대 웹메일 쓰기 창에 받는 사람·제목·본문·ZIP 첨부를 채웁니다.
+// @version      0.4.0
+// @description  운영 관리(접속 승인 메일)와 강사서류(학교별 발송)에서 메일을 보내면 호서대 웹메일 쓰기 창에 받는 사람·제목·본문·첨부를 채웁니다.
 // @match        https://hoseoican.github.io/hoseo_ops/*
 // @match        https://hoseoican.github.io/hoseo_docs/*
 // @match        https://mail.hoseo.edu/*
@@ -19,7 +19,7 @@
 // ==/UserScript==
 (function () {
   'use strict';
-  var VERSION = '0.3.3';
+  var VERSION = '0.4.0';
   var MAIL_HOME = 'https://mail.hoseo.edu/mail/allmail';
   var JOB_TTL = 20 * 60 * 1000; // 20분 지난 작업은 버림
 
@@ -31,9 +31,9 @@
       var d = e.data;
       if (e.origin !== location.origin || !d || d.type !== 'hs-mail-send') return;
       try {
-        var b64 = bufToB64(d.data);
+        var b64 = d.data ? bufToB64(d.data) : '';
         GM_setValue('hsJob', { id: d.id, school: d.school, names: d.names, to: d.to, toName: d.toName, subject: d.subject, body: d.body, bodyHtml: d.bodyHtml || '',
-          fileName: d.fileName, data: b64, auto: !!d.auto, created: Date.now(), state: 'new' });
+          fileName: d.fileName || '', data: b64, auto: !!d.auto, kind: d.kind || 'docs', reqId: d.reqId || '', label: d.label || '', created: Date.now(), state: 'new' });
         GM_deleteValue('hsResult');
         GM_openInTab(MAIL_HOME, { active: true, insert: true });
         window.postMessage({ type: 'hs-mail-ack', id: d.id }, location.origin);
@@ -186,8 +186,8 @@
     }
     body = bodyOk ? body : null;
 
-    var ok = await attach();
-    log('ZIP 첨부', ok, job.fileName);
+    var ok = true;
+    if (job.data) { ok = await attach(); log('ZIP 첨부', ok, job.fileName); }
 
     job.state = 'filled'; GM_setValue('hsJob', job);
     watchSend();
@@ -236,8 +236,8 @@
       waitFor(function () { return !inputByLabel(['제목']) || /(메일을|메일이)?\s*(보냈습니다|발송되었습니다|전송되었습니다|발송 완료|전송 완료)/.test(document.body.innerText); }, 30000).then(function (done) {
         if (!done) return;
         job.state = 'done'; GM_setValue('hsJob', job);
-        GM_setValue('hsResult', { ok: true, id: job.id, school: job.school, names: job.names, at: Date.now() });
-        steps.push({ name: '보내기 완료', ok: true, note: '강사서류 프로그램에 발송 완료 처리했습니다' }); render();
+        GM_setValue('hsResult', { ok: true, id: job.id, kind: job.kind || 'docs', reqId: job.reqId || '', school: job.school, names: job.names, at: Date.now() });
+        steps.push({ name: '보내기 완료', ok: true, note: (job.kind === 'join' ? '운영 관리' : '강사서류 프로그램') + '에 발송 완료로 기록했습니다' }); render();
       });
     }, true);
   }
@@ -250,7 +250,7 @@
       box.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;width:300px;background:#fff;border:2px solid #89171A;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);font:13px/1.5 sans-serif;color:#222;padding:12px 14px';
       document.body.appendChild(box);
     }
-    box.innerHTML = '<div style="font-weight:700;color:#89171A;margin-bottom:6px">앵커늘봄 강사서류 메일 · ' + esc(job.school) + '</div>' +
+    box.innerHTML = '<div style="font-weight:700;color:#89171A;margin-bottom:6px">' + esc(job.label || ('강사서류 메일 · ' + job.school)) + '</div>' +
       (msg ? '<div style="margin-bottom:6px">' + esc(msg) + '</div>' : '') +
       list.map(function (s) { return '<div>' + (s.ok ? '<span style="color:#1a7f37;font-weight:700">완료</span>' : '<span style="color:#b42318;font-weight:700">확인</span>') + ' <b>' + esc(s.name) + '</b>' + (s.note ? ' <span style="color:#666">' + esc(s.note) + '</span>' : '') + '</div>'; }).join('') +
       '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' +
@@ -259,7 +259,7 @@
       '<button data-a="cancel" style="border:1px solid #ccc;background:#fff;border-radius:6px;padding:4px 8px;cursor:pointer">취소</button></div>' +
       '<div style="margin-top:6px;color:#888;font-size:11px">확인한 뒤 웹메일의 「보내기」를 누르세요 · v' + VERSION + '</div>';
     box.querySelector('[data-a=refill]').onclick = function () { fill(); };
-    box.querySelector('[data-a=mark]').onclick = function () { job.state = 'done'; GM_setValue('hsJob', job); GM_setValue('hsResult', { ok: true, id: job.id, school: job.school, names: job.names, at: Date.now() }); panel('발송 완료 처리했습니다.', steps); };
+    box.querySelector('[data-a=mark]').onclick = function () { job.state = 'done'; GM_setValue('hsJob', job); GM_setValue('hsResult', { ok: true, id: job.id, kind: job.kind || 'docs', reqId: job.reqId || '', school: job.school, names: job.names, at: Date.now() }); panel('발송 완료 처리했습니다.', steps); };
     box.querySelector('[data-a=cancel]').onclick = function () { GM_deleteValue('hsJob'); box.remove(); box = null; };
   }
   function render() { panel('', steps); }

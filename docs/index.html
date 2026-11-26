@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.26-4';
+var APP_VERSION = '2026.11.26-5';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -3620,6 +3620,7 @@ async function bridgeSend(){
 }
 window.addEventListener('message', function(e){
   var d=e.data; if((e.source!==window && e.origin!==location.origin) || !d || typeof d.type!=='string' || d.type.indexOf('hs-mail-')!==0 || d.type==='hs-mail-send') return;
+  if(d.kind && d.kind!=='docs') return; /* 운영 관리 접속 승인 메일 결과는 무시 */
   if(d.type==='hs-mail-sent' && d.school && d.names){ markSent(d.school, d.names, true); if(typeof renderMail==='function') renderMail(); toast(d.school+' · '+d.names.length+'명 메일을 보내고 발송 완료 처리했습니다'); }
   if(d.type==='hs-mail-error') toast('메일 연결 오류: '+(d.msg||''));
 });

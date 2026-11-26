@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.139';
+const LIB_VER='11.140';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5320,6 +5320,18 @@ const MAIL_NAME_DEFAULT='충남 1권역 앵커늘봄(호서대학교)', MAIL_REP
 const mailName = () => (S.mailFromName||'').trim()||MAIL_NAME_DEFAULT;
 const mailReply = () => S.mailReplyTo!=null?String(S.mailReplyTo).trim():MAIL_REPLY_DEFAULT;
 const joinAutoMail = () => S.joinAutoMail!==false;
+/* 호서 웹메일 연동(Tampermonkey 「호서대 메일 보내기」 0.4 이상) */
+const mbVer = () => document.documentElement.dataset.hsMailBridge==='1' ? (document.documentElement.dataset.hsMailBridgeVer||'0') : '';
+const mbOn = () => { const v=mbVer(); return !!v && v.split('.').map(Number).reduce((a,x,i)=>a+x*[1e6,1e3,1][i],0)>=4000; };
+const MB_URL = 'docs/hoseo-mail-bridge.user.js';
+function mbGuideHtml(){ const v=mbVer(), old=v&&!mbOn();
+  return `<div class="notice ${old?'warn':'info'} stack" style="gap:8px;margin:0"><div class="row between" style="gap:8px;flex-wrap:wrap"><b>${old?`호서 웹메일 스크립트를 새 버전으로 바꿔 주세요 (지금 ${esc(v)})`:'호서 웹메일 연동 방법'}</b><button class="btn sm" data-act="mbguide">닫기</button></div>
+   <ol class="small" style="margin:0;padding-left:18px;line-height:1.8">
+    <li><a href="https:/${''}/chromewebstore.google.com/detail/dhdgffkkebhmkfjojejmpbldmpobfkfo" target="_blank" rel="noopener"><b>Tampermonkey</b></a>를 Chrome에 추가합니다. (강사서류에서 이미 쓰고 있으면 건너뜀)</li>
+    <li>Chrome 주소창에 <code>chrome:/${''}/extensions</code> → Tampermonkey <b>세부정보</b> → <b>「사용자 스크립트 허용」</b>을 켭니다.</li>
+    <li><a href="${MB_URL}" target="_blank" rel="noopener"><b>메일 보내기 스크립트 ${old?'업데이트':'설치'}</b></a>를 열고 「${old?'업데이트':'설치'}」를 누릅니다.</li>
+    <li>이 화면을 새로고침하고, 같은 Chrome에서 <b>호서 웹메일(mail.hoseo.edu)</b>에 로그인해 둡니다.</li></ol>
+   <div class="small muted">메일은 지금 로그인한 호서 웹메일 계정에서 나가고, 답장도 그 계정으로 옵니다. 사업마다 그 사업 담당자의 호서 메일로 보내집니다.</div></div>`; }
 const mailState = q => q.mailedAt?`<span class="lv-ok">메일 보냄 ${esc(String(q.mailedAt).slice(5,16))}</span>`:'<span class="muted">메일 아직 안 보냄</span>';
 const jqShown = list => { const k=String(S.ui.jq||'').replace(/\s+/g,''); if(!k) return list; const d=v=>String(v||'').replace(/\s+/g,''); const kd=k.replace(/\D/g,''); return list.filter(q=>d(q.school).includes(k)||d(q.name).includes(k)||d(q.email).includes(k)||(kd.length>=3&&(String(q.phone||'')+String(q.mobile||'')).replace(/\D/g,'').includes(kd))); };
 /* 승인된 신청은 학교 담당자 정보(운영자·학교가 고친 최신 값)를 우선해서 보여 주고 보냄 */
@@ -5532,14 +5544,15 @@ function viewJoinAdmin(){
   if(cur.startsWith('s')||cur==='all') u.alSt=cur==='all'?'':cur.slice(1);
   const alarm=['all','s0','s2','s3','s4'].includes(cur);
   const acts=alarm?`<button class="btn" data-act="aledit">${u.alEdit?'알람 문구 닫기':'알람 문구 수정'}</button>`:cur==='s4'?'':'';
-  const body=alarm?alarmPanel({embed:true}):cur==='s1'?joinPanel()+`<details class="panel inner"><summary class="small"><b>승인 안내 메일 · 문자 설정</b> <span class="muted">자동 발송 · 발신자 · 미리 보기</span></summary><div class="stack" style="margin-top:10px"><div class="stack">
+  const body=alarm?alarmPanel({embed:true}):cur==='s1'?joinPanel()+`<details class="panel inner"><summary class="small"><b>승인 안내 메일 · 문자 설정</b> <span class="muted">자동 발송 · 호서 웹메일 · 미리 보기</span></summary><div class="stack" style="margin-top:10px"><div class="stack">
     <div class="conds"><div style="padding:10px 12px" class="stack"><label class="row small" style="gap:8px"><input type="checkbox" id="jautomail" ${joinAutoMail()?'checked':''}> <b>승인하면 이 문구로 학교 담당자에게 메일 자동 발송</b></label>
-     <div class="fgrid"><label class="f" style="grid-column:span 2">발신자 이름<input id="mail-name" data-mset="mailFromName" value="${esc(mailName())}"></label><label class="f" style="grid-column:span 2">답장 받을 주소<input id="mail-reply" data-mset="mailReplyTo" type="email" value="${esc(mailReply())}" placeholder="비우면 보내는 계정으로 답장"></label></div>
-     <div class="small muted">보내는 계정: <b>${esc((S.mailInfo&&S.mailInfo.from)||'웹앱을 배포한 구글 계정')}</b>${S.mailInfo&&S.mailInfo.remaining!=null?` · 오늘 남은 발송 ${S.mailInfo.remaining}건`:''}. ${qt([`수신자에게 「${mailName()}」으로 보임`,`답장 받는 주소: ${mailReply()||'보내는 계정'}`,'자동 발송을 끄면 학교 줄의 「메일 보내기」로 하나씩'])}</div></div></div>
+     <label class="row small" style="gap:8px"><input type="checkbox" id="jmbauto" ${S.joinMbAuto===true?'checked':''}> 웹메일 쓰기 창이 다 채워지면 「보내기」까지 자동으로 누르기</label>
+     <div class="small">${mbOn()?'<b class="lv-ok">호서 웹메일 연동됨</b>':`<b class="lv-crit">${mbVer()?'호서 웹메일 스크립트 업데이트 필요':'호서 웹메일 미연동'}</b> <button class="btn sm" data-act="mbguide">연동 방법</button>`} <span class="muted">· 이 Chrome에서 로그인한 호서 웹메일 계정으로 보내고 답장도 그 계정으로 받습니다</span></div></div></div>
     <div class="conds"><div class="conds-h"><span>메일 미리 보기 · ${esc(sample.school)}</span></div><div style="padding:10px 12px"><div class="small"><b>${esc(pv.subject)}</b></div><pre class="small" style="white-space:pre-wrap;margin:8px 0 0;font-family:inherit">${esc(pv.body)}</pre></div></div>
     <div class="conds"><div class="conds-h"><span>문자 미리 보기 · ${esc(sample.school)}</span><span class="muted small">${smsBytes(joinSmsOf(sample))}바이트 · ${smsKind(smsBytes(joinSmsOf(sample)))}</span></div><div style="padding:10px 12px"><pre class="small" style="white-space:pre-wrap;margin:0;font-family:inherit">${esc(joinSmsOf(sample))}</pre></div></div></div></div></details>`:joinPanel();
   return `<div class="stack" style="gap:16px">
    ${pageHead(season().name+' · 공문 대표 주소로 받은 접속 신청','접속 승인',`<button class="btn" data-act="copytext" data-t="${esc(joinUrl())}">대표 주소 복사</button><button class="btn" data-act="jtpl">메일 · 문자 문구</button>`+qt(['공문에는 대표 주소 하나만 안내','학교 담당자가 신청하면 「승인 대기」에서 확인 후 승인','승인하면 학교 확인 링크가 만들어짐','신청 전 · 입력 전 · 입력 중 기관에는 알람 문자를 보냄']))}
+   ${S.ui.mbGuide?mbGuideHtml():''}
    ${stageBar(G,D,cur)}
    ${stageCard({title:cur==='all'?'기관 전체':d.t,badge:bt,tone:bc,desc:DESC[cur]||'',acts,body})}
   </div>`;
@@ -7526,6 +7539,7 @@ document.addEventListener('click',async e=>{
       S.ui.joinMineId=q.id; S.ui.role='school'; S.ui.school=q.school; goView('school'); break; }
     case 'jopen': { const m=joinMine(); if(m){ S.ui.role='school'; S.ui.school=m.school; goView('school'); } break; }
     case 'jok': { joinDecideLocal(el.dataset.id,true); const q=joinReqs().find(x=>x.id===el.dataset.id); if(q&&q.status==='approved'&&joinAutoMail()){ q.mailedAt=new Date().toISOString().slice(0,16).replace('T',' '); q.mailCount=(q.mailCount||0)+1; toast(`${q.school} 승인 · (시연) 담당자에게 메일을 보낸 것으로 표시했습니다`); } break; }
+    case 'mbguide': S.ui.mbGuide=!S.ui.mbGuide; break;
     case 'jsend': { const q=joinReqs().find(x=>x.id===el.dataset.id); if(!q) return; q.mailedAt=new Date().toISOString().slice(0,16).replace('T',' '); q.mailCount=(q.mailCount||0)+1; toast(`(시연) ${q.school} 담당자에게 메일을 보낸 것으로 표시했습니다`); break; }
     case 'jno': S.ui.jRej=el.dataset.id; render(); setTimeout(()=>{ const x=document.getElementById('jrej-why'); if(x) x.focus(); },30); return;
     case 'jnox': S.ui.jRej=''; break;
@@ -8196,6 +8210,7 @@ document.addEventListener('change',e=>{
   if(t.id==='sttpl'){ const f=t.files[0]; if(!f) return; f.arrayBuffer().then(b=>stTplRead(b,f.name)).then(T=>{ u.stTpl=T; render(); }).catch(err=>toast(err.message||String(err))); return; }
   if(t.id==='qn-school'||t.id==='qn-univ'){ u[{'qn-school':'qnSchool','qn-univ':'qnUniv'}[t.id]]=t.value; render(); return; }
   if(t.dataset.mset){ const v=t.value.trim(); if(t.dataset.mset==='mailReplyTo'&&v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){ toast('답장 받을 주소를 확인해 주세요'); return; } S[t.dataset.mset]=v; save(); render(); toast('메일 설정을 저장했습니다'); return; }
+  if(t.id==='jmbauto'){ S.joinMbAuto=t.checked; save(); render(); toast(t.checked?'웹메일 창이 다 채워지면 자동으로 보냅니다':'웹메일 창에서 직접 「보내기」를 누릅니다'); return; }
   if(t.id==='jautomail'){ S.joinAutoMail=t.checked; save(); render(); toast(t.checked?'승인하면 메일을 자동으로 보냅니다':'자동 발송을 껐습니다. 「메일 보내기」로 하나씩 보내 주세요'); return; }
   if(t.dataset.jsel){ (u.jSel=u.jSel||{})[t.dataset.jsel]=t.checked; render(); return; }
   if(t.dataset.mg&&u.pending&&u.pending.mg){ u.pending.mg[t.dataset.mg][+t.dataset.i]=t.checked; render(); return; }

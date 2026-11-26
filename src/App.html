@@ -345,7 +345,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.139';
+const APP_VER = '11.140';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -508,16 +508,24 @@ function enterSchool(tok) {
 }
 /* i-ONE 문자 보내기 스크립트에서 「보냄」 알림이 오면 서버에 기록 */
 window.joinSmsMark = id => { if (MODE === 'admin' && ADMIN_KEY) run('adminJoinMarkSms', ADMIN_KEY, id).catch(() => {}); };
-/* 운영기관: 접속 승인 메일 보내기 (웹앱을 배포한 지메일 계정에서 발송) */
+/* 운영기관: 접속 승인 메일 보내기 — 호서 웹메일(Tampermonkey 「호서대 메일 보내기」 스크립트)로, 지금 Chrome에서 로그인한 호서 메일 계정에서 발송.
+   웹메일에서 「보내기」를 누르면(또는 스크립트 상자의 「발송 완료 처리」) 서버에 보낸 시각을 남김 */
 function joinSend(id, auto) {
   const q = joinCur((S.joinReqs || []).find(x => x.id === id)); if (!q) return Promise.resolve();
-  const m = joinMailOf(q);
-  return run('adminJoinSendMail', ADMIN_KEY, id, m.subject, m.body).then(r => {
-    const i = S.joinReqs.findIndex(x => x.id === id); if (i >= 0) S.joinReqs[i] = r.req;
-    if (r.mailInfo) S.mailInfo = r.mailInfo;
-    render(); toast(`${q.school} 담당자(${q.email})에게 메일을 보냈습니다${r.mailInfo && r.mailInfo.remaining != null ? ` · 오늘 남은 발송 ${r.mailInfo.remaining}건` : ''}`);
-  }).catch(err => toast(`${auto ? '승인은 되었지만 ' : ''}메일을 보내지 못했습니다: ${errMsg(err)}`));
+  const m = joinMailOf(q), ce = String(((S.contacts || {})[q.school] || {}).email || '').trim(), to = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ce) ? ce : m.to;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(to || ''))) { toast(`${q.school} 담당자 메일 주소가 올바르지 않습니다`); return Promise.resolve(); }
+  if (!mbOn()) { S.ui.mbGuide = true; render(); toast(`${auto ? '승인은 되었지만 ' : ''}메일을 보내려면 호서 웹메일 연동이 필요합니다. 안내를 확인해 주세요`); return Promise.resolve(); }
+  window.postMessage({ type: 'hs-mail-send', id: 'join-' + id + '-' + Date.now(), kind: 'join', reqId: id, label: `접속 승인 메일 · ${q.school}`, school: q.school, names: [],
+    to, toName: q.name || '', subject: m.subject, body: m.body, auto: S.joinMbAuto === true }, (location.protocol === 'file:' || location.origin === 'null') ? '*' : location.origin);
+  toast(`${q.school} 담당자(${to}) 메일을 호서 웹메일 쓰기 창에 채웁니다`);
+  return Promise.resolve();
 }
+window.addEventListener('message', e => {
+  const d = e.data; if ((e.origin !== location.origin && e.source !== window) || !d || typeof d.type !== 'string' || !/^hs-mail-(sent|error)$/.test(d.type) || !/^join-/.test(String(d.id || ''))) return;
+  if (d.type === 'hs-mail-error') { toast('메일 연결 오류: ' + (d.msg || '')); return; }
+  if (!d.reqId || MODE !== 'admin' || !ADMIN_KEY) return;
+  run('adminJoinMarkMail', ADMIN_KEY, d.reqId).then(r => { const i = (S.joinReqs || []).findIndex(x => x.id === d.reqId); if (i >= 0 && r && r.req) S.joinReqs[i] = r.req; render(); toast(`${d.school || ''} 승인 메일을 보내고 기록했습니다`); }).catch(err => toast(errMsg(err)));
+});
 /* 운영기관: 프로그램 계획안 올리기 · 드라이브 링크 연결 (파일은 계획안 폴더에 저장, 프로그램 설정에는 파일 정보만) */
 function planUpload(i, file) {
   const p = S.programs[i]; if (!p || !file) return;
