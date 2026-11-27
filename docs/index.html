@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.26-5';
+var APP_VERSION = '2026.11.27-1';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2266,7 +2266,11 @@ function smsText(x){
   if(x.unreg){ docs=SMS_NEW_DOCS.slice(); all='- '+docs.join('\n- '); }
   var v={ '성명':x.name, '요청서류':all, '부족서류':docs.join('\n- '), '보완서류':fixes.join('\n- '), '배치학교':x.schools.join(', '), '제출기한':smsCfg.due||smsDueDefault(), '담당자':smsCfg.who||'', '연락처':smsCfg.tel||'', '이메일':smsCfg.email||'', '제출링크':linkOf(x.p) };
   // 목록 자리표시자만 있는 줄이 비면 그 줄을 지운다(예: 「- {보완서류}」인데 보완할 서류가 없을 때)
-  return String((x.unreg ? (smsCfg.bodyNew||DEFAULT_SMS.bodyNew) : smsCfg.body)||'').split('\n').filter(function(line){
+  var tpl=String((x.unreg ? (smsCfg.bodyNew||DEFAULT_SMS.bodyNew) : smsCfg.body)||'');
+  /* 제출 링크가 없는 강사(미등록 강사 · 공유 자료를 안 켠 경우): 「링크」를 말하는 문장을 메일·전화 안내로 바꿈 */
+  if(!v['제출링크']) tpl=tpl.replace(/\(링크 대신 (\{이메일\}|[^()\s]+@[^()\s]+) ?로 보내셔도 됩니다\)/g, '($1 로 보내 주세요)')
+    .replace(/기한 안에 내기 어려운 서류는 링크의 「제출 지연 사유」에 사유와 제출 예정일을 꼭 남겨 주세요/g, '기한 안에 내기 어려운 서류는 사유와 제출 예정일을 꼭 알려 주세요');
+  return tpl.split('\n').filter(function(line){
     var ks=(line.match(/\{(요청서류|부족서류|보완서류|제출링크)\}/g)||[]); if(!ks.length) return true;
     return ks.some(function(t){ return v[t.slice(1,-1)]; });
   }).join('\n').replace(/^아래 링크에서 직접 입력·제출하실 수 있습니다\(본인만 열람\)\.\n(?!https?:)/m, '').replace(/\{([^{}]+)\}/g, function(m,k){ return v[k]!=null ? v[k] : m; });
