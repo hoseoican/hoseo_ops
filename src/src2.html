@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.149';
+const LIB_VER='11.150';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6384,8 +6384,8 @@ const CS_DEVST = ['','완료','진행 중','예정'];
 /* 운영 보고 3. 프로그램 개발: 7번 탭(프로그램 개발) 그 대학 프로그램에서 자동으로 만듦. 제출하면 그때 내용(devSnap)으로 고정 */
 /* 대학연합 프로그램(우리 고장 탐험놀이·우리 충남 탐험놀이)은 호서대가 관리 → 호서대 운영 보고에 넣음 */
 function csDevAuto(o){ const u=orgShort(o)||o, hs=u===(orgShort(MY_ORG)||'호서대'), st=(r,k)=>(r.docs||{})[k]?'완료':r.stage==='미착수'?'예정':'진행 중';
-  return kitDB().dev.filter(r=>(r.biz||'anchor')==='anchor'&&!r.gone&&r.stage!=='삭제'&&(r.univ===u||(hs&&/^대학\s*연합$/.test(r.univ||'')))).sort((a,b)=>(a.univ===u?0:1)-(b.univ===u?0:1)||a.name.localeCompare(b.name,'ko'))
-   .map(r=>({name:r.name+(r.univ===u?'':' (대학연합)'),kind:r.type||'',plan:st(r,'plan'),lesson:st(r,'lesson'),ppt:st(r,'ppt'),note:[r.term,r.memo].filter(Boolean).join(' · ')})); }
+  return kitDB().dev.filter(r=>(r.biz||'anchor')==='anchor'&&!r.gone&&r.stage!=='삭제'&&devKindY(r)!=='기존 운영'&&(r.univ===u||(hs&&/^대학\s*연합$/.test(r.univ||'')))).sort((a,b)=>(a.univ===u?0:1)-(b.univ===u?0:1)||a.name.localeCompare(b.name,'ko'))
+   .map(r=>({name:devName(r)+(r.univ===u?'':' (대학연합)'),kind:devKindY(r),plan:st(r,'plan'),lesson:st(r,'lesson'),ppt:st(r,'ppt'),note:[r.term,r.memo].filter(Boolean).join(' · ')})); }
 /* 대학 담당자 검토 완료: 확인한 목록의 지문(sig)을 남기고, 7번 탭이 바뀌면 다시 확인하게 함 */
 const csDevSig = L => { const t=JSON.stringify(L||[]); let h=0; for(let i=0;i<t.length;i++) h=(h*31+t.charCodeAt(i))|0; return String(L.length)+'.'+(h>>>0).toString(36); };
 function csDevOkState(o,q){ const R=((csOrgR(o).rep||{})[q])||{}, k=R.devOk; if(!k||!k.at) return {ok:false}; return {ok:R.subAt&&Array.isArray(R.devSnap)?true:k.sig===csDevSig(csDevAuto(o)),k,changed:!(R.subAt&&Array.isArray(R.devSnap))&&k.sig!==csDevSig(csDevAuto(o))}; }
@@ -7152,6 +7152,14 @@ function viewKit(){ const D=kitDB(); if(!D.loaded){ kitLoad(); return `<div clas
    ${cur==='quote'?quotePanel():kitPanel()}</div>`; }
 function progInSeason(lk){ return (S.programs||[]).find(p=>progLK(p.name)===lk||(p.aliases||[]).some(a=>progLK(a)===lk)); }
 /* ===== 7 프로그램 개발: 대시보드 · 이번 시기 운영 프로그램 · 목록 ===== */
+/* 프로그램 이름의 「고도화」는 기록 편의용 → 화면에서는 떼고 칩으로 구분 */
+const devUp = r => r.type==='고도화' || /고도화/.test(r.name||'');
+const devName = r => String(r.name||'').replace(/\s*[(\[]?\s*고도화\s*[)\]]?\s*/g,' ').replace(/\s+/g,' ').trim() || r.name;
+const devMY = r => String(r.mYears||'').split(/[^0-9]+/).filter(x=>/^20\d{2}$/.test(x));
+/* 사업연도(Y) 기준 구분: 신규 · 고도화 · 기존 운영(그해 작업 없음 → 운영 보고 점검 제외) */
+function devKindY(r, Y){ Y=String(Y||csYear()); const inY=String(r.year||'')===Y || devMY(r).includes(Y);
+  if(!inY) return '기존 운영'; if(devUp(r)) return '고도화'; if(r.type==='기존') return devMY(r).includes(Y)?'고도화':'기존 운영'; return '신규'; }
+const devKChip = k => `<span class="chip sm ${k==='신규'?'warn':k==='고도화'?'info':''}" ${k==='기존 운영'?'style="opacity:.7"':''}>${k}</span>`;
 function viewDev(){ const D=kitDB(); if(!D.loaded){ kitLoad(); return `<div class="panel">프로그램 개발 자료를 불러오는 중…</div>`; }
   return `<div class="stack">${kitCacheNote()}<div class="row" style="gap:6px;align-items:center"><h2>프로그램 개발</h2>${qt(['개발 단계와 자료(계획서·지도안·PPT·활동지·완료본) 진행을 한눈에','막대·대학 줄을 누르면 아래 목록이 그 조건으로 걸러짐','시기마다 운영할 프로그램을 골라 기준정보 프로그램 목록과 이어 줌','교구재는 「교구재」 탭'])}</div>
    ${D.err?`<div class="notice bad">자료를 불러오지 못했습니다: ${esc(D.err)} <button class="btn sm" data-act="kitreload">다시 불러오기</button></div>`:''}
@@ -7182,7 +7190,7 @@ function devSeasonPanel(){ const u=S.ui, L=devRecs().filter(r=>r.stage!=='삭제
    ${extra.length?`<div class="ds-g"><div class="ds-gh"><b>개발 현황에 없는 프로그램</b> <span class="small muted">기준정보에만 있음</span></div><div class="ds-list">${extra.map(p=>{ const lock=used(p.key); return `<label class="ds-it ${D.extra[p.key]!==false?'on':''} ${lock?'lock':''}"><input type="checkbox" data-dsx="${esc(p.key)}" ${D.extra[p.key]!==false?'checked':''} ${lock?'disabled':''}> ${esc(p.name)}</label>`; }).join('')}</div></div>`:''}</div>`; }
 function devSeasonSave(){ const D=S.ui.dsDraft, L=devRecs().filter(r=>r.stage!=='삭제'), used=k=>S.rows.some(r=>rowSeason(r)===curSK()&&(r.prog===k||r.origProg===k)); let add=0, del=0, keep=0;
   L.forEach(r=>{ const p=devProg(r), want=!!D.dev[r.key];
-    if(want&&!p){ const nm=r.name.replace(/\s*\(고도화\)\s*$/,'').trim(); S.programs.push({key:nk(nm),name:nm,field:r.field||'',org:orgByName(r.univ||'')||(r.univ?r.univ+(/대$/.test(r.univ)?'학교':''):MY_ORG),cap:'',grade:r.grade||'',aliases:[],conds:[]}); add++; }
+    if(want&&!p){ const nm=devName(r); S.programs.push({key:nk(nm),name:nm,field:r.field||'',org:orgByName(r.univ||'')||(r.univ?r.univ+(/대$/.test(r.univ)?'학교':''):MY_ORG),cap:'',grade:r.grade||'',aliases:[],conds:[]}); add++; }
     else if(!want&&p){ if(used(p.key)) keep++; else { S.programs=S.programs.filter(x=>x!==p); del++; } } });
   Object.entries(D.extra).forEach(([k,v])=>{ if(v!==false) return; const p=S.programs.find(x=>x.key===k); if(!p) return; if(used(k)) keep++; else { S.programs=S.programs.filter(x=>x!==p); del++; } });
   S.ui.dsDraft=null; return {add,del,keep}; }
@@ -7193,7 +7201,7 @@ function devEditForm(r,L){ const DR=S.ui.devDraft||{}, dd=DR.docs||{}, rv=r.revi
    <div class="dvf-g">
     <label class="f dvf-name">프로그램 이름<input data-dd="name" value="${esc(DR.name||'')}" style="font-weight:600"></label>
     <label class="f">유형<select data-dd="type"><option value="">(없음)</option>${['기존','신규','고도화'].map(t=>`<option ${DR.type===t?'selected':''}>${t}</option>`).join('')}</select></label>
-    ${devMine()?`<label class="f">대학<input value="${esc(devMine())}" disabled></label>`:f('univ','대학','예: 호서대')}${f('field','분야','')}${f('grade','대상 학년','예: 1-2학년')}${f('year','개발연도','예: 2026')}
+    ${devMine()?`<label class="f">대학<input value="${esc(devMine())}" disabled></label>`:f('univ','대학','예: 호서대')}${f('field','분야','')}${f('grade','대상 학년','예: 1-2학년')}${f('year','개발연도','최초 개발 · 예: 2025')}${f('mYears','관리 연도','작업한 해 · 예: 2025, 2026')}
     ${f('dev','개발자','')}<label class="f dvf-wide">소통 담당자<input data-dd="liaison" value="${esc(DR.liaison||'')}" placeholder="이름 · 연락처"></label>
     <label class="f">단계<select data-dd="stage">${DEV_STAGES.map(x=>`<option ${DR.stage===x?'selected':''}>${x}</option>`).join('')}</select></label>
    </div>
@@ -7214,7 +7222,8 @@ function devPanel(){ const u=S.ui, L=devRecs(), f=u.devF||{}, IT=kitItems();
   const univs=[...new Set(L.map(r=>r.univ).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko')), fields=[...new Set(L.map(r=>r.field).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
   const flags=[['miss','자료 미비',r=>r.stage!=='삭제'&&miss(r).length>0],['rv','검토 미완료',r=>r.stage!=='삭제'&&!/완료/.test((r.review||{}).state||'')],...DEV_DOCS.map(([d,l])=>['no-'+d,l+' 없음',r=>r.stage!=='삭제'&&!(r.docs||{})[d]])];
   const q=String(f.q||'').trim().toLowerCase();
-  let V=L.filter(r=>(!f.stage||r.stage===f.stage)&&(!f.univ||r.univ===f.univ)&&(!f.field||r.field===f.field)&&(!f.year||String(r.year||'')===f.year)&&(!f.flag||flags.find(x=>x[0]===f.flag)[2](r))&&(!q||[r.name,r.dev,r.liaison,r.memo,r.note,r.year].join(' ').toLowerCase().includes(q)));
+  const Y=String(csYear()), mgOk=r=>!f.mg||(f.mg==='cur'?devKindY(r,Y)!=='기존 운영':devKindY(r,Y)===f.mg);
+  let V=L.filter(r=>mgOk(r)&&(!f.stage||r.stage===f.stage)&&(!f.univ||r.univ===f.univ)&&(!f.field||r.field===f.field)&&(!f.year||String(r.year||'')===f.year)&&(!f.flag||flags.find(x=>x[0]===f.flag)[2](r))&&(!q||[r.name,r.dev,r.liaison,r.memo,r.note,r.year].join(' ').toLowerCase().includes(q)));
   const UO=['호서대','상명대','유원대','단국대','연암대','대학연합'], uo=x=>{ const i=UO.indexOf(x); return i<0?99:i; };
   V=V.sort((a,b)=>uo(a.univ)-uo(b.univ)||String(a.field).localeCompare(String(b.field),'ko')||a.name.localeCompare(b.name,'ko'));
   const SO=u.devSort||{}, sv={univ:r=>String(uo(r.univ)).padStart(3,'0')+(r.univ||''),field:r=>r.field||'',name:r=>r.name,dev:r=>r.dev||'',stage:r=>String(DEV_STAGES.indexOf(r.stage)),rv:r=>String(+((r.review||{}).score)||0).padStart(4,'0'),year:r=>String(r.year||'')};
@@ -7225,15 +7234,16 @@ function devPanel(){ const u=S.ui, L=devRecs(), f=u.devF||{}, IT=kitItems();
   const docCnt=DEV_DOCS.map(([d,l])=>`${l} <b>${live.filter(r=>(r.docs||{})[d]).length}</b>`).join(' · ');
   const rowCnt=lk=>{ const p=progInSeason(lk); return p?S.rows.filter(r=>r.prog===p.key&&r.status!=='cancel').length:0; };
   const ED=u.devEdit, DR=u.devDraft||{};
-  return `<div class="panel stack" id="devlist"><div class="row between" style="flex-wrap:wrap;gap:8px"><div><h3>프로그램 목록</h3><div class="muted small" style="margin-top:2px">${bizName()} 프로그램 ${live.length}개${cnt('삭제')?` (삭제 ${cnt('삭제')}개 제외)`:''} · 자료 업로드: ${docCnt}</div></div>
+  return `<div class="panel stack" id="devlist"><div class="row between" style="flex-wrap:wrap;gap:8px"><div><h3>프로그램 목록</h3><div class="muted small" style="margin-top:2px">${bizName()} 프로그램 ${live.length}개${cnt('삭제')?` (삭제 ${cnt('삭제')}개 제외)`:''} · <b>${csYear()} 관리 ${live.filter(r=>devKindY(r)!=='기존 운영').length}</b> (신규 ${live.filter(r=>devKindY(r)==='신규').length} · 고도화 ${live.filter(r=>devKindY(r)==='고도화').length}) · 기존 운영 ${live.filter(r=>devKindY(r)==='기존 운영').length} · 자료 업로드: ${docCnt}</div></div>
     <div class="row" style="gap:6px;flex-wrap:wrap">${devMine()?'':'<label class="btn pri sm" for="devfile">프로그램 현황 엑셀 업로드</label><input id="devfile" type="file" accept=".xlsx,.xls" hidden>'}<button class="btn sm" data-act="devexport" ${L.length?'':'disabled'}>현황 다운로드</button>${qt(['「프로그램 개발 및 운영 현황」 엑셀을 그대로 올리면 됨','통합 목록(개발 상태·삭제 여부) + 검토(자문) 목록(검토 점수·등급) + 개발 목록(계획서·지도안·PPT·활동지·완료본)을 프로그램 이름으로 합침','띄어쓰기·「고도화」 표기가 달라도 같은 프로그램으로 봄','다시 올려도 화면에서 직접 고친 단계·자료 표시·메모는 그대로 둠'],'r')}</div></div>
    ${u.devPend?devPendHtml():''}
    ${L.length?(()=>{ const years=[...new Set(L.map(r=>String(r.year||'')).filter(Boolean))].sort().reverse(), nOf=fn=>L.filter(fn).length;
      const dsel=(id,k,cur,opts,all)=>`<label class="dvfl ${cur?'on':''}"><span>${all}</span><select id="${id}" aria-label="${all}"><option value="">전체</option>${opts.map(([v,l,n])=>`<option value="${esc(v)}" ${cur===v?'selected':''} ${!n&&cur!==v?'disabled':''}>${esc(l)} (${n})</option>`).join('')}</select></label>`;
-     const lab={stage:'단계',flag:'확인',univ:'대학',field:'분야',year:'개발연도'}, val=(k,v)=>k==='flag'?((flags.find(x=>x[0]===v)||[])[1]||v):v;
+     const lab={mg:'관리',stage:'단계',flag:'확인',univ:'대학',field:'분야',year:'개발연도'}, val=(k,v)=>k==='flag'?((flags.find(x=>x[0]===v)||[])[1]||v):k==='mg'&&v==='cur'?`${csYear()} 관리`:v;
      const act=Object.keys(lab).filter(k=>f[k]);
      return `<div class="dvfbar">
       <input id="devq" class="dvq" placeholder="프로그램·개발자·메모 검색" value="${esc(f.q||'')}" aria-label="프로그램 검색">
+      ${dsel('devf-mg','mg',f.mg||'',[['cur',`${csYear()} 관리 (신규·고도화)`,nOf(r=>devKindY(r)!=='기존 운영')],['신규','신규',nOf(r=>devKindY(r)==='신규')],['고도화','고도화',nOf(r=>devKindY(r)==='고도화')],['기존 운영','기존 운영 (작업 없음)',nOf(r=>devKindY(r)==='기존 운영')]],'관리')}
       ${dsel('devf-stage','stage',f.stage||'',DEV_STAGES.map(x=>[x,x,cnt(x)]),'단계')}
       ${dsel('devf-flag','flag',f.flag||'',flags.map(([k,l,fn])=>[k,l,nOf(fn)]),'확인')}
       ${dsel('devf-univ','univ',f.univ||'',univs.map(x=>[x,x,nOf(r=>r.univ===x)]),'대학')}
@@ -7245,7 +7255,7 @@ function devPanel(){ const u=S.ui, L=devRecs(), f=u.devF||{}, IT=kitItems();
    ${V.map(r=>{ if(ED===r.key) return devEditForm(r,L); const rv=r.review||{}, p=devProg(r), plan=p&&p.plan, ed=false, dd=r.docs||{};
      const devC=r.liaison?`<span class="hovtip" tabindex="0" data-tip="${esc('소통 담당자: '+r.liaison)}">${esc(r.dev||'(개발자 미입력)')}</span>`:(r.dev?esc(r.dev):'<span class="muted">-</span>');
      return `<tr class="${r.stage==='삭제'?'muted':''}"><td class="nowrap small">${uTag(r.univ)}</td><td class="small">${ed?`<input data-dd="field" value="${esc(DR.field||'')}" style="width:80px" aria-label="분야">`:esc(r.field||'')}</td>
-      <td>${ed?`<input data-dd="name" value="${esc(DR.name||'')}" style="width:100%;min-width:180px;font-weight:600" aria-label="프로그램 이름">`:`<b>${esc(r.name)}</b>`}${r.type?` <span class="chip sm ${r.type==='신규'?'warn':''}">${esc(r.type)}</span>`:''}${p?' <span class="chip sm ok" title="이번 시기 운영 프로그램">이번 시기</span>':''}${(r.aliasKeys||[]).length&&!ed?` <span class="small muted" title="예전 이름·합친 프로그램도 이 프로그램으로 읽음">(이름 ${r.aliasKeys.length}개 합침)</span>`:''}${ed?`<div class="row" style="gap:4px;margin-top:4px"><input data-dd="grade" value="${esc(DR.grade||'')}" placeholder="대상 학년 (예: 1-2학년)" style="width:140px" aria-label="대상 학년"></div>`:`<div class="small muted">${[r.grade,r.term].filter(Boolean).map(esc).join(' · ')}</div>`}</td>
+      <td>${ed?`<input data-dd="name" value="${esc(DR.name||'')}" style="width:100%;min-width:180px;font-weight:600" aria-label="프로그램 이름">`:`<b>${esc(devName(r))}</b>`} ${devKChip(devKindY(r))}${p?' <span class="chip sm ok" title="이번 시기 운영 프로그램">이번 시기</span>':''}${(r.aliasKeys||[]).length&&!ed?` <span class="small muted" title="예전 이름·합친 프로그램도 이 프로그램으로 읽음">(이름 ${r.aliasKeys.length}개 합침)</span>`:''}${ed?`<div class="row" style="gap:4px;margin-top:4px"><input data-dd="grade" value="${esc(DR.grade||'')}" placeholder="대상 학년 (예: 1-2학년)" style="width:140px" aria-label="대상 학년"></div>`:`<div class="small muted">${[r.grade,r.term].filter(Boolean).map(esc).join(' · ')}</div>`}</td>
       <td class="small nowrap">${ed?`<input data-dd="year" value="${esc(DR.year||'')}" placeholder="예: 2026" inputmode="numeric" style="width:70px" aria-label="개발연도">`:(r.year?`${esc(r.year)}년`:'<span class="muted">-</span>')}</td>
       <td class="small">${ed?`<input data-dd="dev" value="${esc(DR.dev||'')}" placeholder="개발자" style="width:110px" aria-label="개발자"><input data-dd="liaison" value="${esc(DR.liaison||'')}" placeholder="소통 담당자 (이름·연락처)" style="width:150px;margin-top:4px;display:block" aria-label="소통 담당자">`:devC}</td>
       <td>${ed?`<select data-dd="stage" aria-label="단계">${DEV_STAGES.map(x=>`<option ${DR.stage===x?'selected':''}>${x}</option>`).join('')}</select>`:`<span class="dvst dvst-${DEV_STAGES.indexOf(r.stage)}">${esc(r.stage)}</span>`}</td>
@@ -7443,7 +7453,7 @@ function kitClick(a,el){ const u=S.ui;
     case 'devfreset': u.devF={}; return true;
     case 'devsort': { const k=el.dataset.k, o=u.devSort||{}; u.devSort=o.k===k?(o.d<0?{}:{k,d:-1}):{k,d:1}; return true; }
     case 'devuniv': u.devF={...(u.devF||{}),univ:(u.devF||{}).univ===el.dataset.v?'':el.dataset.v}; setTimeout(()=>{ const x=document.getElementById('devlist'); if(x) x.scrollIntoView({behavior:'smooth',block:'start'}); },60); return true;
-    case 'devedit': { const r=devByKey(el.dataset.k); if(!r) return true; u.devEdit=r.key; u.devDelAsk=''; u.devDraft={stage:r.stage,docs:{...(r.docs||{})},memo:r.memo||'',name:r.name,univ:r.univ||'',field:r.field||'',year:r.year||'',dev:r.dev||'',liaison:r.liaison||'',grade:r.grade||'',type:r.type||'',mergeTo:''}; setTimeout(()=>{ const x=document.getElementById('dv-edit'); if(x) x.scrollIntoView({behavior:'smooth',block:'center'}); const i=x&&x.querySelector('input[data-dd=name]'); if(i) i.focus({preventScroll:true}); },30); return true; }
+    case 'devedit': { const r=devByKey(el.dataset.k); if(!r) return true; u.devEdit=r.key; u.devDelAsk=''; u.devDraft={stage:r.stage,docs:{...(r.docs||{})},memo:r.memo||'',name:r.name,univ:r.univ||'',field:r.field||'',year:r.year||'',dev:r.dev||'',liaison:r.liaison||'',grade:r.grade||'',type:r.type||'',mYears:r.mYears||'',mergeTo:''}; setTimeout(()=>{ const x=document.getElementById('dv-edit'); if(x) x.scrollIntoView({behavior:'smooth',block:'center'}); const i=x&&x.querySelector('input[data-dd=name]'); if(i) i.focus({preventScroll:true}); },30); return true; }
     case 'devdelask': u.devDelAsk=el.dataset.k; return true;
     case 'devdelno': u.devDelAsk=''; return true;
     case 'devdel': { const r=devByKey(el.dataset.k); if(!r) return true; r.gone=true; delete r.mergedInto; u.devEdit=''; u.devDraft=null; u.devDelAsk=''; kitTouch('dev',r.key); toast(`${r.name}을(를) 목록에서 삭제했습니다`); return true; }
@@ -7460,7 +7470,8 @@ function kitClick(a,el){ const u=S.ui;
       const nm=String(d.name||'').replace(/\s+/g,' ').trim(); if(!nm){ toast('프로그램 이름을 적어 주세요'); return false; }
       if(nm!==r.name){ const nk2=progLK(nm); if(nk2!==r.key){ const dup=devByKey(nk2); if(dup){ toast(`「${dup.name}」이(가) 이미 있습니다. 아래 「합치기」로 정리해 주세요`); return false; } const ok=r.key; r.aliasKeys=[...new Set([...(r.aliasKeys||[]),ok])].filter(k=>k!==nk2); r.key=nk2; kitTouch('dev',ok); } r.name=nm; r.nameEdit=true; ch.push('이름'); }
       const yr=String(d.year||'').trim(); if(yr&&!/^20\d{2}$/.test(yr)){ toast('개발연도는 2026처럼 네 자리로 적어 주세요'); return false; } d.year=yr;
-      const INF=[['univ','대학'],['field','분야'],['year','개발연도'],['dev','개발자'],['liaison','소통 담당자'],['grade','대상 학년'],['type','유형']];
+      d.mYears=devMY({mYears:d.mYears}).join(', ');
+      const INF=[['univ','대학'],['field','분야'],['year','개발연도'],['mYears','관리 연도'],['dev','개발자'],['liaison','소통 담당자'],['grade','대상 학년'],['type','유형']];
       if(devMine()) d.univ=devMine();
       INF.forEach(([f,l])=>{ const v=String(d[f]||'').trim(); if(v!==(r[f]||'')){ r[f]=v; r.infoEdit=true; r.infoKeys=[...new Set([...(r.infoKeys||[]),f])]; ch.push(l); } });
       if(d.stage!==r.stage){ r.stage=d.stage; r.stageEdit=true; ch.push('단계'); }
@@ -7520,7 +7531,7 @@ function kitChange(t){ const u=S.ui;
   if(t.dataset.dsx&&u.dsDraft){ u.dsDraft.extra[t.dataset.dsx]=t.checked; render(); return true; }
   if(t.id==='devfile'){ const f=t.files[0]; t.value=''; if(f) f.arrayBuffer().then(b=>{ try{ u.devPend=devParse(b,f.name); }catch(err){ toast(err.message); } render(); }); return true; }
   if(t.id==='kitfile'){ const f=t.files[0]; t.value=''; if(f){ toast(`${f.name} 읽는 중…`); f.arrayBuffer().then(b=>{ try{ u.kitPend=kitParseBook(b,f.name); }catch(err){ toast(err.message); } render(); }); } return true; }
-  if(/^devf-(univ|field|year|stage|flag)$/.test(t.id)){ u.devF={...(u.devF||{}),[t.id.slice(5)]:t.value}; render(); return true; }
+  if(/^devf-(univ|field|year|stage|flag|mg)$/.test(t.id)){ u.devF={...(u.devF||{}),[t.id.slice(5)]:t.value}; render(); return true; }
   if(t.id==='kitf-p'){ u.kitF={...(u.kitF||{}),p:t.value}; u.kitDelAll=''; render(); return true; }
   if(t.id==='kq-b'){ u.kqB=t.value; render(); return true; }
   if(t.id==='kq-rate'){ u.kqRate=Math.max(0,Math.min(50,+t.value||0)); render(); return true; }
