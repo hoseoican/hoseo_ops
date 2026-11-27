@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-7';
+var APP_VERSION = '2026.11.27-8';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1674,7 +1674,7 @@ function rvWire(x){
   $('rvNext').onclick=function(){ rvOpen(rvIdx+1); };
   if($('rvEdit')) $('rvEdit').onclick=function(){ var id=p.id; rvClose(); select(id); go('info'); };
   if(x.unreg) return;
-  each('[data-rvfix]', function(b){ b.onclick=function(){ var k=b.dataset.rvfix, why=prompt(fixName(k)+' 보완 사유', k==='career'?CAREER_FIX_WHY:''); if(why===null) return; p.fix=p.fix||{}; p.fix[k]={ why:why.trim(), at:Date.now() }; rvSaveP(p); re(); toast(fixName(k)+' 보완 필요로 표시했습니다'); }; }, $('rvPane'));
+  each('[data-rvfix]', function(b){ b.onclick=function(){ var k=b.dataset.rvfix, why=prompt(fixName(k)+' 보완 사유', k==='career'?CAREER_FIX_WHY:''); if(why===null) return; p.fix=p.fix||{}; p.fix[k]={ why:why.trim(), at:Date.now() }; rvSaveP(p); re(); toast(fixName(k)+' 보완 필요로 표시했습니다 · 「서류 구비·발송 → 보완 요청 → 보완 재요청」에서 모아 보낼 수 있습니다'); }; }, $('rvPane'));
   each('[data-rvunfix]', function(b){ b.onclick=function(){ clearFix(p, b.dataset.rvunfix); rvSaveP(p); re(); }; }, $('rvPane'));
   each('[data-rvpv]', function(b){ b.onclick=function(){ var box=b.closest('.rvpd'), fr=box.querySelector('iframe.rvpdf'); if(!fr){ fr=document.createElement('iframe'); fr.className='rvpdf'; box.appendChild(fr); } fr.src=b.dataset.rvpv+'#view=FitH'; fr.scrollIntoView({block:'nearest'}); }; }, $('rvPane'));
   if($('rvUndo')) $('rvUndo').onclick=function(){ delete p.rv; rvSaveP(p); re(); toast('검토 완료를 취소했습니다'); };
@@ -2287,12 +2287,15 @@ function smsText(x, prev){
   }).join('\n').replace(/\{([^{}]+)\}/g, function(m,k){ return v[k]!=null ? v[k] : m; }).replace(/^아래 링크에서 직접 입력·제출하실 수 있습니다\(본인만 열람\)\.\n(?!https?:|\(문자를 보낼 때)/m, '');
 }
 function smsBytes(t){ var n=0; for(var i=0;i<t.length;i++) n += t.charCodeAt(i)>127 ? 2 : 1; return n; }
+/* 검토에서 「보완 필요」로 표시한 뒤 아직 요청 문자를 보내지 않은 강사 (마지막 요청 이후에 표시한 보완이 있음) */
+function smsFixNew(x){ if(x.unreg) return false; var lg=smsLog[x.p.id], t=lg ? (lg.at||0) : 0, fx=x.p.fix||{}; return Object.keys(fx).some(function(k){ return fx[k] && (fx[k].at||0) > t; }); }
 function smsMatch(x){
   var sc=$('smSchool').value, it=$('smItem').value, q=($('smQ').value||'').replace(/\s/g,'');
   if(sc && x.schools.indexOf(sc)<0) return false;
   if(it==='unreg'){ if(!x.unreg) return false; } else if(it==='exp'){ if(!x.exp) return false; } else if(it && (it.indexOf('fix:')===0 ? !x.fix.some(function(f){ return 'fix:'+f.k===it; }) : x.miss.indexOf(it)<0)) return false;
   if(q && x.name.replace(/\s/g,'').indexOf(q)<0) return false;
   var rq=$('smReq').value, lg=smsLog[x.p.id];
+  if(rq==='fixnew') return smsFixNew(x);
   if(rq==='none' && lg) return false;
   if(rq==='done' && !lg) return false;
   if(/^d\d+$/.test(rq) && !(lg && reqDays(lg)>=+rq.slice(1))) return false;
@@ -2347,8 +2350,8 @@ function renderSms(){
   var how=$('smSort').value, rk=function(x){ var lg=smsLog[x.p.id]; return how==='school' ? 0 : how==='miss' ? -(x.unreg ? 99 : x.miss.length+x.fix.length) : how==='req' ? (lg ? lg.at||0 : 9e15) : how==='noreq' ? (lg ? 1 : 0) : how==='smart' ? (lg ? lg.at||1 : 0) : 0; };
   /* 상태 탭: 요청 전 · 다시 요청 필요(7일 지남) · 요청함 · 전체 (조건 · 검색은 함께 적용) */
   var rq0=$('smReq').value, cnt=function(v){ $('smReq').value=v; var n=all.filter(smsMatch).length; return n; };
-  var TB=[['none','요청 전'],['d7','다시 요청 필요'],['done','요청함'],['','전체']], TN=TB.map(function(t){ return cnt(t[0]); }); $('smReq').value=rq0;
-  $('smTabs').innerHTML=TB.map(function(t,i){ return '<button type="button" data-smtab="'+t[0]+'" class="'+(rq0===t[0]?'on':'')+'"'+(t[0]==='d7'?' title="요청한 지 7일이 지났는데 아직 서류가 남은 강사"':'')+'><b>'+TN[i]+'</b>'+t[1]+'</button>'; }).join('');
+  var TB=[['none','요청 전'],['fixnew','보완 재요청'],['d7','다시 요청 필요'],['done','요청함'],['','전체']], TN=TB.map(function(t){ return cnt(t[0]); }); $('smReq').value=rq0;
+  $('smTabs').innerHTML=TB.map(function(t,i){ return '<button type="button" data-smtab="'+t[0]+'" class="'+(rq0===t[0]?'on':'')+'"'+(t[0]==='d7'?' title="요청한 지 7일이 지났는데 아직 서류가 남은 강사"':t[0]==='fixnew'?' title="서류 검토에서 「보완 필요」로 표시한 뒤 아직 문자를 보내지 않은 강사"':'')+'><b>'+TN[i]+'</b>'+t[1]+'</button>'; }).join('');
   each('[data-smtab]', function(b){ b.onclick=function(){ $('smReq').value=b.dataset.smtab; renderSms(); }; }, $('smTabs'));
   var cn=($('smSchool').value?1:0)+($('smItem').value?1:0); $('smCondN').textContent=cn?cn:'';
   var list=all.filter(smsMatch).sort(function(a,b){ return (how==='school' ? natSort(a.schools.join(',')||'힣', b.schools.join(',')||'힣') : rk(a)-rk(b)) || natSort(a.name,b.name); });
