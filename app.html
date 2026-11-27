@@ -2345,7 +2345,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.148';
+const LIB_VER='11.149';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6527,7 +6527,7 @@ function mwNew(o){ const r=o.rowId?S.rows.find(x=>x.id===o.rowId):null, kind=o.k
   return D; }
 /* 등록·수정 창 */
 function mwFormRead(){ const F=S.ui.mwForm; if(!F) return; const g=i=>{ const e=document.getElementById(i); return e?e.value:null; };
-  [['date','mwf-date'],['src','mwf-src'],['target','mwf-target'],['rowId','mwf-row'],['type','mwf-type'],['level','mwf-level'],['desc','mwf-desc'],['status','mwf-status'],['first','mwf-first'],['role','mwf-role']].forEach(([k,i])=>{ const v=g(i); if(v!=null) F[k]=v; }); }
+  [['orgSel','mwf-org'],['date','mwf-date'],['src','mwf-src'],['target','mwf-target'],['rowId','mwf-row'],['type','mwf-type'],['level','mwf-level'],['desc','mwf-desc'],['status','mwf-status'],['first','mwf-first'],['role','mwf-role']].forEach(([k,i])=>{ const v=g(i); if(v!=null) F[k]=v; }); }
 function mwFormHtml(){ const F=S.ui.mwForm; if(!F) return ''; const T=mwTargets(F.kind), RW=mwRowsFor(F.kind,F.target);
   const opt=(L,cur)=>L.map(([v,l])=>`<option value="${esc(v)}" ${String(cur)===String(v)?'selected':''}>${esc(l)}</option>`).join('');
   const kinds=MW_KIND.filter(([k])=>!mwMine()||k!=='org');
@@ -6539,6 +6539,7 @@ function mwFormHtml(){ const F=S.ui.mwForm; if(!F) return ''; const T=mwTargets(
         :`<input id="mwf-find" type="search" style="width:100%" autocomplete="off" placeholder="${F.kind==='site'?'학교 · 기관 이름으로 검색':'강사 이름 또는 전화번호 뒤 4자리'}" aria-label="대상 검색"><div id="mwf-found" class="stack" style="gap:2px;margin-top:4px"></div>`}</div>`}
    <div class="fgrid">
     ${F.kind==='inst'?`<label class="f">구분<select id="mwf-role">${opt([['주','주강사'],['보조','보조강사']],F.role||'주')}</select></label>`:''}
+    ${F.kind!=='org'&&!mwMine()?(()=>{ const rr=F.rowId?S.rows.find(x=>x.id===F.rowId):null, auto=rr?orgOfRow(rr):(F.kind==='inst'&&F.target?mwInstOrg(F.target):''), cur=F.orgSel!=null?F.orgSel:(F.org&&F.org!==auto?F.org:''); return `<label class="f">운영 대학<select id="mwf-org"><option value="">${auto&&auto!=='미지정'?`자동 · ${esc(orgShort(auto)||auto)}`:'선택 (관련 학급이 없으면 직접 고르세요)'}</option>${opt(ORGS.filter(o=>o!=='미지정').map(o=>[o,orgShort(o)||o]),cur)}</select></label>`; })():''}
     ${F.kind!=='org'?`<label class="f">관련 학급 (선택)<select id="mwf-row"><option value="">없음</option>${opt(RW.map(r=>[r.id,`${r.school} · ${clsName(r)} · ${(prog(r.prog)||{}).name||''}`]),F.rowId)}</select></label>`:''}
     <label class="f">발생일<input type="date" id="mwf-date" value="${esc(F.date||'')}"></label>
     <label class="f">접수 경로<select id="mwf-src">${opt(MW_SRC.map(x=>[x,x]),F.src)}</select></label>
@@ -6606,7 +6607,7 @@ function mwAct(a,el){ const U=S.ui, D=mwDB(), find=id=>D.list.find(x=>x.id===id)
       const rec={...F}; delete rec.isNew; delete rec.first;
       rec.targetName=F.kind==='inst'?instName(F.target):F.target;
       rec.school=F.kind==='site'?F.target:(r?r.school:(F.school||''));
-      rec.org=F.kind==='org'?F.target:(r?orgOfRow(r):(mwMine()||F.org||''));
+      rec.org=F.kind==='org'?F.target:(mwMine()||F.orgSel||(r?orgOfRow(r):'')||(F.kind==='inst'?mwInstOrg(F.target):'')||''); delete rec.orgSel;
       if(!rec.org&&F.kind==='inst') rec.org=mwInstOrg(F.target);
       if(mwMine()) rec.org=mwMine();
       if(F.isNew){ rec.by=S.adminName||(mwMine()?orgShort(mwMine()):'호서대'); rec.at=now(); rec.acts=String(F.first||'').trim()?[{d:mwToday(),who:rec.by,t:String(F.first).trim()}]:[]; }
@@ -8681,7 +8682,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.148';
+const APP_VER = '11.149';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
