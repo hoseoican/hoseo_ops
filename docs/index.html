@@ -1393,7 +1393,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-25';
+var APP_VERSION = '2026.11.27-26';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2555,11 +2555,12 @@ function smsIndBook(jobs){
   /* 안내문: 「엑셀 작성 시 공란이 없도록」 → 쓰지 않는 개별메시지2~10 칸도 「-」로 채움. 문자에 못 쓰는 글자(EUC-KR 밖)는 비슷한 글자로 바꿈 */
   var aoa=[IND_HEAD].concat(jobs.map(function(j){ var r=[sid(),j.name,j.phone,smsSafeKr(j.body)]; while(r.length<IND_HEAD.length) r.push('-'); return r; }));
   var ws=XLSX.utils.aoa_to_sheet(aoa);
-  for(var i=1;i<aoa.length;i++){ [0,2].forEach(function(col){ var c=ws[XLSX.utils.encode_cell({r:i,c:col})]; if(c){ c.t='s'; c.z='@'; } }); }
+  /* i-ONE 「개별문자 양식」과 같게: 모든 칸을 텍스트(@) 서식의 공유 문자열(bookSST)로 저장 */
+  for(var i=0;i<aoa.length;i++) for(var col=0;col<IND_HEAD.length;col++){ var c=ws[XLSX.utils.encode_cell({r:i,c:col})]; if(c){ c.t='s'; c.z='@'; } }
   ws['!cols']=[{wch:10},{wch:10},{wch:14},{wch:60}]; var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet'); return wb; }
 function smsIndCheck(jobs){ var big=jobs.filter(function(j){ return smsBytes(j.body)>2000; }); if(big.length){ toast('2,000바이트를 넘는 문자가 있습니다: '+big.map(function(j){ return j.name; }).join(', ')+' · 문자 양식을 줄여 주세요'); return false; } return true; }
 function smsIndXlsx(){ var jobs=smsIndList(smsPicked()); if(!jobs.length){ toast('휴대폰번호가 있는 강사가 없습니다'); return; } if(!smsIndCheck(jobs)) return;
-  var out=XLSX.write(smsIndBook(jobs), {bookType:'xlsx', type:'array'}); saveBlob(new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), '개별문자_서류보완요청_'+jobs.length+'명_'+today()+'.xlsx'); }
+  var out=XLSX.write(smsIndBook(jobs), {bookType:'xlsx', type:'array', bookSST:true}); saveBlob(new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), '개별문자_서류보완요청_'+jobs.length+'명_'+today()+'.xlsx'); }
 /* 보내기 전에 제출 링크가 없거나 기간이 지난 강사는 링크를 새로 만듦(공유 자료를 켠 경우) */
 async function smsEnsureLinks(btn, list){ if(!(typeof syReady==='function' && syReady())) return; var need=(list||smsPicked()).filter(smsAutoLink); if(!need.length) return;
   var label=btn?btn.textContent:''; if(btn) btn.disabled=true; var n=0;
@@ -2569,7 +2570,7 @@ async function smsIndSendAuto(){ await smsEnsureLinks($('smSendInd')); smsIndSen
 async function smsOneAuto(){ await smsEnsureLinks($('smSendAll')); smsBrSend(smsPicked()); }
 function smsIndSend(){ var jobs=smsIndList(smsPicked()); if(!jobs.length){ toast('휴대폰번호가 있는 강사가 없습니다'); return; } if(!smsIndCheck(jobs)) return;
   if(!SMS_BR.on || !/^0\.([2-9]|\d{2,})\./.test(SMS_BR.ver||'')){ $('smsBrDlg').classList.add('on'); smsBrPost({ type:'hs-sms-ping' }); if(SMS_BR.on) toast('문자 보내기 스크립트를 0.2.0 이상으로 업데이트해 주세요'); return; }
-  var b64=XLSX.write(smsIndBook(jobs), {bookType:'xlsx', type:'base64'});
+  var b64=XLSX.write(smsIndBook(jobs), {bookType:'xlsx', type:'base64', bookSST:true});
   smsBrPost({ type:'hs-sms-send', mode:'ind', req:'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), label:'강사 서류 요청', title:'강사 서류 제출·보완 요청', file:b64, fname:'개별문자_'+jobs.length+'명.xlsx', jobs:jobs.map(function(j){ return { key:j.key, name:j.name, phone:j.phone, body:j.body }; }) });
   toast('i-ONE 캠퍼스 개별 문자 화면을 엽니다 · '+jobs.length+'명. 미리보기를 확인한 뒤 「전송」을 눌러 주세요'); }
 function renderSms(){
