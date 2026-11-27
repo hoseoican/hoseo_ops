@@ -1358,7 +1358,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-15';
+var APP_VERSION = '2026.11.27-16';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2179,12 +2179,13 @@ function renderSubs(){
     var st=x.ok ? '<span class="badge ok">구비 완료</span>' : '<span class="badge no">미구비 '+(x.miss.length+x.fix.length)+'종</span>'+(lsubWait(p)?' <span class="badge sent">강사 제출 · 검토 대기</span>':'');
     return '<tr><td class="nm"><b>'+esc(p.name)+'</b><small>'+esc(p.role||'')+(p.regNew && !(p.pdfs&&Object.keys(p.pdfs).length) ? ' · 신규' : '')+'</small></td>'+
       '<td>'+esc(r.school)+'<small style="display:block;color:var(--mute)">'+esc(r.prog||'')+(r.cName||r.cMail ? ' · 담당 '+esc([r.cName,r.cTel,r.cMail].filter(Boolean).join(' · ')) : '')+'</small></td>'+
-      '<td class="nw">'+(r.from ? dotDate(r.from) : '')+(r.to ? ' ~ '+dotDate(r.to) : '')+'</td><td class="nw">'+(r.date ? dotDate(r.date) : '')+'</td><td>'+st+(r.dl ? '<small style="display:block;color:var(--mute)">'+dotDate(r.dl)+' 다운로드</small>' : '')+'</td>'+
-      '<td class="nw" style="text-align:right">'+(x.ok ? '<button type="button" class="save sm" data-sbdl="'+esc(p.id)+'|'+esc(r.id)+'">서류 다운로드</button>' : '<button type="button" class="save sm" data-sbreq="'+esc(p.id)+'">서류 요청 문자</button>')+
+      '<td class="nw">'+(r.from ? dotDate(r.from) : '')+(r.to ? ' ~ '+dotDate(r.to) : '')+'</td><td class="nw">'+(r.date ? dotDate(r.date) : '')+'</td><td>'+st+(r.mailAt ? '<small style="display:block;color:var(--ok)">'+dotDate(r.mailAt)+' 학교 발송 완료</small>' : '')+(r.dl ? '<small style="display:block;color:var(--mute)">'+dotDate(r.dl)+' 다운로드</small>' : '')+'</td>'+
+      '<td class="nw" style="text-align:right">'+(x.ok ? '<button type="button" class="save sm" data-sbmail="'+esc(p.id)+'|'+esc(r.id)+'" title="학교 담당자에게 호서 웹메일로 서류를 보냅니다">학교로 메일 발송</button> <button type="button" class="ghost sm" data-sbdl="'+esc(p.id)+'|'+esc(r.id)+'">서류 다운로드</button>' : '<button type="button" class="save sm" data-sbreq="'+esc(p.id)+'">서류 요청 문자</button>')+
       ' <button type="button" class="ghost sm" data-sbopen="'+esc(p.id)+'">강사 서류 보기</button> <button type="button" class="ghost sm" data-sbdel="'+esc(p.id)+'|'+esc(r.id)+'">삭제</button></td></tr>'; }).join('')
     : '<tr><td colspan="6" class="hint" style="text-align:center;padding:14px">아직 대체 강의가 없습니다. 위에서 추가해 주세요</td></tr>');
   var nb=$('nbSubs'), nw=L.filter(function(o){ return !rosterInfo(o.p).ok; }).length; if(nb){ nb.textContent=nw||''; nb.className='nb'+(nw?' r':''); nb.title=nw?'서류가 아직 준비되지 않은 대체 강사 '+nw+'명':''; }
   each('[data-sbdl]', function(b){ b.onclick=function(){ var a=b.dataset.sbdl.split('|'); subsDownload(a[0], a[1], b); }; }, $('sbTable'));
+  each('[data-sbmail]', function(b){ b.onclick=function(){ var a=b.dataset.sbmail.split('|'); subsMail(a[0], a[1], b); }; }, $('sbTable'));
   each('[data-sbreq]', function(b){ b.onclick=function(){ smsPick={}; smsPick[b.dataset.sbreq]=1; go('sms', false, true); toast('보낼 문자에 대체 강사를 골라 두었습니다. 내용을 확인하고 「문자 보내기」를 눌러 주세요'); }; }, $('sbTable'));
   each('[data-sbopen]', function(b){ b.onclick=function(){ select(b.dataset.sbopen); personOpen=true; go('info', false, true); }; }, $('sbTable'));
   each('[data-sbdel]', function(b){ b.onclick=function(){ var a=b.dataset.sbdel.split('|'), p=people.filter(function(y){ return y.id===a[0]; })[0]; if(!p || !confirm('이 대체 강의 기록을 지울까요? (강사 자료는 그대로 둡니다)')) return; p.subs=(p.subs||[]).filter(function(r){ return r.id!==a[1]; }); p.updated=Date.now(); dbPut(p); renderSubs(); renderList(); }; }, $('sbTable'));
@@ -2204,6 +2205,27 @@ function subsAdd(){
   ['sbName','sbPhone','sbSchool','sbProg','sbFrom','sbTo','sbCName','sbCTel','sbCMail'].forEach(function(id){ $(id).value=''; }); $('sbWho').innerHTML='';
   renderSubs(); renderList();
   toast(isNew ? name+' 강사를 신규 등록했습니다. 「서류 요청 문자」로 제출 링크를 보내 주세요' : rosterInfo(p).ok ? name+' 강사 대체 강의를 추가했습니다. 「서류 다운로드」로 '+school+' 서류를 받으세요' : name+' 강사는 서류가 아직 모자랍니다. 「서류 요청 문자」로 요청해 주세요');
+}
+/* 대체 강의 서류를 학교 담당자에게 메일로: 학교별 발송과 같은 메일 양식·호서 웹메일(Tampermonkey) */
+function subsFind(pid, rid){ var p=people.filter(function(y){ return y.id===pid; })[0], r=p && (p.subs||[]).filter(function(y){ return y.id===rid; })[0]; return p && r ? { p:p, r:r } : null; }
+async function subsMail(pid, rid, btn){
+  var o=subsFind(pid, rid); if(!o) return; var p=o.p, r=o.r, c=contacts[r.school]=contacts[r.school]||{};
+  var to=(r.cMail||c.email||'').trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)){ to=(prompt(r.school+' 담당자 이메일을 넣어 주세요', '')||'').trim(); if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)){ if(to) toast('이메일 주소가 올바르지 않습니다'); return; } r.cMail=to; if(!c.email){ c.email=to; kvPut('contacts', contacts); } p.updated=Date.now(); dbPut(p); }
+  if(r.cName && !c.name){ c.name=r.cName; kvPut('contacts', contacts); }
+  if(!bridgeOn()){ $('bridgeDlg').classList.add('on'); return; }
+  var lab=btn.textContent; btn.disabled=true; btn.textContent='ZIP 만드는 중…';
+  try{
+    var q=Object.assign({}, p, { date:r.date||today(), schools:[r.school], programs:r.prog||p.programs });
+    var zip=new JSZip(), warns=[]; await addPersonFiles(zip, q, r.school, '', warns);
+    var buf=await (await zip.generateAsync({type:'blob', compression:'DEFLATE'})).arrayBuffer();
+    var picked=[{ name:p.name, role:p.role||'주강사', classes:[{ program:r.prog||p.programs||'', field:'', start:r.from||'', end:r.to||r.from||'' }].filter(function(cl){ return cl.program; }), person:q }];
+    var v=mailValues(r.school, picked), subj='[대체 강의] '+fillTpl(mailSubjOf(r.school), v), body=fillTpl(mailBodyOf(r.school), v);
+    window.postMessage({ type:'hs-mail-send', id:'sub-'+Date.now(), kind:'sub', reqId:pid+'|'+rid, label:'대체 강의 서류 · '+r.school, school:r.school, names:[p.name],
+      to:to, toName:c.name||r.cName||'', subject:subj, body:body, bodyHtml:mailBodyHtml(v), fileName:cleanFile('대체_'+r.school+'_'+p.name)+'.zip', data:buf, auto:!!mailCfg.autoSend }, (location.protocol==='file:' || location.origin==='null') ? '*' : location.origin);
+    toast(r.school+' 담당자('+to+') 메일 쓰기 창을 엽니다 ('+Math.round(buf.byteLength/1024/1024*10)/10+'MB)'+(warns.length?' · '+warns.join(', '):''));
+  }catch(e){ console.error(e); toast('만들지 못했습니다: '+(e.message||e)); }
+  finally{ btn.disabled=false; btn.textContent=lab; }
 }
 async function subsDownload(pid, rid, btn){
   var p=people.filter(function(y){ return y.id===pid; })[0]; if(!p) return; var r=(p.subs||[]).filter(function(y){ return y.id===rid; })[0]; if(!r) return;
@@ -3761,6 +3783,7 @@ async function bridgeSend(){
 }
 window.addEventListener('message', function(e){
   var d=e.data; if((e.source!==window && e.origin!==location.origin) || !d || typeof d.type!=='string' || d.type.indexOf('hs-mail-')!==0 || d.type==='hs-mail-send') return;
+  if(d.kind==='sub'){ if(d.type==='hs-mail-sent' && d.reqId){ var a=String(d.reqId).split('|'), o=subsFind(a[0], a[1]); if(o){ o.r.mailAt=today(); o.p.updated=Date.now(); dbPut(o.p); if(page==='subs') renderSubs(); toast(o.r.school+' · '+o.p.name+' 대체 강의 서류를 보내고 기록했습니다'); } } else if(d.type==='hs-mail-error') toast('메일 연결 오류: '+(d.msg||'')); return; }
   if(d.kind && d.kind!=='docs') return; /* 운영 관리 접속 승인 메일 결과는 무시 */
   if(d.type==='hs-mail-sent' && d.school && d.names){ markSent(d.school, d.names, true); if(typeof renderMail==='function') renderMail(); toast(d.school+' · '+d.names.length+'명 메일을 보내고 발송 완료 처리했습니다'); }
   if(d.type==='hs-mail-error') toast('메일 연결 오류: '+(d.msg||''));
