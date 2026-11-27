@@ -1358,7 +1358,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-16';
+var APP_VERSION = '2026.11.27-18';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2186,7 +2186,10 @@ function renderSubs(){
   var nb=$('nbSubs'), nw=L.filter(function(o){ return !rosterInfo(o.p).ok; }).length; if(nb){ nb.textContent=nw||''; nb.className='nb'+(nw?' r':''); nb.title=nw?'서류가 아직 준비되지 않은 대체 강사 '+nw+'명':''; }
   each('[data-sbdl]', function(b){ b.onclick=function(){ var a=b.dataset.sbdl.split('|'); subsDownload(a[0], a[1], b); }; }, $('sbTable'));
   each('[data-sbmail]', function(b){ b.onclick=function(){ var a=b.dataset.sbmail.split('|'); subsMail(a[0], a[1], b); }; }, $('sbTable'));
-  each('[data-sbreq]', function(b){ b.onclick=function(){ smsPick={}; smsPick[b.dataset.sbreq]=1; go('sms', false, true); toast('보낼 문자에 대체 강사를 골라 두었습니다. 내용을 확인하고 「문자 보내기」를 눌러 주세요'); }; }, $('sbTable'));
+  each('[data-sbreq]', function(b){ b.onclick=async function(){ var p=people.filter(function(y){ return y.id===b.dataset.sbreq; })[0];
+    /* 이미 제출 링크가 있으면 링크 화면의 수업 정보를 대체 학교로 갱신 (기간 14일 연장) */
+    if(p && linkOk(p) && typeof syReady==='function' && syReady()){ try{ await linkCall(p, false); }catch(e){} }
+    smsPick={}; smsPick[b.dataset.sbreq]=1; go('sms', false, true); toast('보낼 문자에 대체 강사를 골라 두었습니다. 내용을 확인하고 「문자 보내기」를 눌러 주세요'); }; }, $('sbTable'));
   each('[data-sbopen]', function(b){ b.onclick=function(){ select(b.dataset.sbopen); personOpen=true; go('info', false, true); }; }, $('sbTable'));
   each('[data-sbdel]', function(b){ b.onclick=function(){ var a=b.dataset.sbdel.split('|'), p=people.filter(function(y){ return y.id===a[0]; })[0]; if(!p || !confirm('이 대체 강의 기록을 지울까요? (강사 자료는 그대로 둡니다)')) return; p.subs=(p.subs||[]).filter(function(r){ return r.id!==a[1]; }); p.updated=Date.now(); dbPut(p); renderSubs(); renderList(); }; }, $('sbTable'));
 }
@@ -2349,10 +2352,12 @@ function linkOk(p){ return !!(p && p.lnk && p.lnk.t && p.lnk.exp > Date.now() &&
 // 링크 상태: none·ok·exp(기간 지남)·lock(본인 확인 5번 틀림)
 function linkState(p){ var l=p && p.lnk; if(!l || !l.t) return {st:'none', t:'제출 링크 없음'}; if(l.lock) return {st:'lock', t:'잠김(본인 확인 5번 틀림)'}; if(l.exp<=Date.now()) return {st:'exp', t:'기간 지남 ('+dotDate(l.exp)+')'}; var d=Math.ceil((l.exp-Date.now())/86400000); return {st:'ok', t:dotDate(l.exp)+'까지 ('+d+'일 남음)'}; }
 // 링크를 만들거나 14일 연장(같은 주소). renew면 새 주소로 바꾼다(예전 링크는 바로 막힘)
+/* 아직 학교에 서류를 보내지 않은 대체 강의 (요청 문자·제출 링크에는 이 학교가 먼저 들어감) */
+function subsPending(p){ return ((p && p.subs) || []).filter(function(r){ return !r.mailAt; }).slice().sort(function(a,b){ return (b.at||0)-(a.at||0); }); }
 async function linkCall(p, renew){
-  var o=(typeof opsLoaded==='function' && opsLoaded()) ? opsPersonOf(p.name) : null;
+  var o=(typeof opsLoaded==='function' && opsLoaded()) ? opsPersonOf(p.name) : null, sp=subsPending(p);
   return gasCall('link', { id:p.id, days:14, by:sy.me, renew:!!renew, due: smsCfg.due||smsDueDefault(), who: smsCfg.who||sy.me||'', tel: smsCfg.tel||'', email: smsCfg.email||'',
-    cls: o ? o.classes.map(function(c){ return { school:c.school, field:c.field, program:c.program, grade:c.grade, sigi:c.sigi, start:c.start, end:c.end, role:c.role }; }) : undefined });
+    cls: (sp.length || o) ? sp.map(function(r){ return { school:r.school, field:'', program:r.prog||'', grade:'', sigi:'대체 강의', start:r.from||'', end:r.to||'', role:p.role||'주강사' }; }).concat(o ? o.classes.map(function(c){ return { school:c.school, field:c.field, program:c.program, grade:c.grade, sigi:c.sigi, start:c.start, end:c.end, role:c.role }; }) : []) : undefined });
 }
 async function linkAct(act){
   var p=cur; if(!syReady()){ toast('제출 링크는 「다른 직원과 강사 자료 함께 쓰기」를 켠 뒤 쓸 수 있습니다'); return; }
@@ -2406,9 +2411,11 @@ function smsText(x, prev){
   var all=(docs.length ? '[미제출]\n- '+docs.join('\n- ') : '')+(docs.length&&fixes.length ? '\n' : '')+(fixes.length ? '[보완 필요]\n- '+fixes.join('\n- ') : '');
   var isNew = x.unreg || (x.p.regNew && !x.p.lsub && !Object.keys(x.p.pdfs||{}).length && !Object.keys(x.p.imgs||{}).length);
   if(isNew){ docs=SMS_NEW_DOCS.slice(); all='- '+docs.join('\n- '); }
-  var v={ '성명':x.name, '요청서류':all, '부족서류':docs.join('\n- '), '보완서류':fixes.join('\n- '), '배치학교':x.schools.join(', '), '제출기한':smsCfg.due||smsDueDefault(), '담당자':smsCfg.who||'', '연락처':smsCfg.tel||'', '이메일':smsCfg.email||'', '제출링크':linkOf(x.p) || (prev && smsAutoLink(x) ? SMS_LINK_PH : '') };
+  var v={ '성명':x.name, '요청서류':all, '부족서류':docs.join('\n- '), '보완서류':fixes.join('\n- '), '배치학교':(subsPending(x.p).length ? subsPending(x.p).map(function(r){ return r.school; }).filter(function(v,i,a){ return a.indexOf(v)===i; }) : x.schools).join(', '), '제출기한':smsCfg.due||smsDueDefault(), '담당자':smsCfg.who||'', '연락처':smsCfg.tel||'', '이메일':smsCfg.email||'', '제출링크':linkOf(x.p) || (prev && smsAutoLink(x) ? SMS_LINK_PH : '') };
   // 목록 자리표시자만 있는 줄이 비면 그 줄을 지운다(예: 「- {보완서류}」인데 보완할 서류가 없을 때)
   var tpl=String((isNew ? (smsCfg.bodyNew||DEFAULT_SMS.bodyNew) : smsCfg.body)||'');
+  /* 대체 강의: 양식에 학교 자리가 없으면 첫 줄 뒤에 대체 출강 정보를 넣음 */
+  var spd=subsPending(x.p); if(spd.length && tpl.indexOf('{배치학교}')<0){ var sl='[대체 출강] '+spd.map(function(r){ return [r.school, r.prog, (r.from?dotDate(r.from):'')+(r.to?'~'+dotDate(r.to):'')].filter(Boolean).join(' · '); }).join(' / '); var L=tpl.split('\n'); L.splice(1, 0, sl); tpl=L.join('\n'); }
   /* 제출 링크가 없는 강사(미등록 강사 · 공유 자료를 안 켠 경우): 「링크」를 말하는 문장을 메일·전화 안내로 바꿈 */
   if(!v['제출링크']) tpl=tpl.replace(/\(링크 대신 (\{이메일\}|[^()\s]+@[^()\s]+) ?로 보내셔도 됩니다\)/g, '($1 로 보내 주세요)')
     .replace(/기한 안에 내기 어려운 서류는 링크의 「제출 지연 사유」에 사유와 제출 예정일을 꼭 남겨 주세요/g, '기한 안에 내기 어려운 서류는 사유와 제출 예정일을 꼭 알려 주세요');
