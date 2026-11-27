@@ -24,7 +24,7 @@ cut("function freshState(){","  S.rows=buildRows(SEED.raw);\n}\n","""function de
     seasons:[{k:'2026-1',name:'2026 1학기',link:''},{k:'2026-s',name:'2026 여름방학',link:''},{k:'2026-2',name:'2026 2학기',link:''},{k:'2026-w',name:'2026 겨울방학',link:WINTER_LINK}],
     season:'2026-w',retention:'해당 차수 운영 종료 후 1년',ops:{...DEFAULT_OPS},recruitLink:RECRUIT_LINK,addr:{...DEFAULT_ADDR},file:'',webAppUrl:'',joinMail:null,joinSms:null,activeOrgs:['호서대학교'],applyWin:{},asstWin:{},fileOut:'',kpi:{targets:{}},joinAutoMail:true,mailFromName:'충남 1권역 앵커늘봄(호서대학교)',mailReplyTo:'iniini@hoseo.edu',resultMail:null,tScore:null,applyWinOrg:null,outRules:null,formCfg:null,consCfg:null,consOrg:null,gongmun:null,consJudge:null,orgTabs:null};
 }
-const SETTING_KEYS=['programs','holidays','seasons','season','retention','ops','recruitLink','addr','file','webAppUrl','joinMail','joinSms','activeOrgs','joinAutoMail','joinMbAuto','mailFromName','mailReplyTo','resultMail','applyWin','asstWin','fileOut','kpi','tScore','applyWinOrg','outRules','formCfg','consCfg','consOrg','gongmun','consJudge','orgTabs'];
+const SETTING_KEYS=['programs','holidays','seasons','season','retention','ops','recruitLink','addr','file','webAppUrl','joinMail','joinSms','activeOrgs','joinAutoMail','joinMbAuto','bizKpi','mailFromName','mailReplyTo','resultMail','applyWin','asstWin','fileOut','kpi','tScore','applyWinOrg','outRules','formCfg','consCfg','consOrg','gongmun','consJudge','orgTabs'];
 """)
 cut("function demoSeed(){","  S.demo=true;\n}\n","")
 cut("function save(){","return false; }\n","function save(){ if(typeof persist==='function') persist(); }\n")

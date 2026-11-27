@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.151';
+const LIB_VER='11.152';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -4501,9 +4501,11 @@ function viewBizStats(){ const u=S.ui, all=bizStRows(), seas=[...new Set(all.map
   const instR=(()=>{ const m={}; L.forEach(r=>{ [[r.inst,'주강사'],[r.asst,'보조강사']].forEach(([t,role])=>{ if(!t) return; const o=m[t]=m[t]||{t,main:0,asst:0,ses:0,sch:new Set()}; role==='주강사'?o.main++:o.asst++; o.ses+=r.ses; o.sch.add(r.school); }); }); return Object.values(m).sort((a,b)=>b.ses-a.ses); })();
   return `<div class="stack st-page">
    <div class="row between st-head"><div class="row" style="gap:8px;align-items:center"><h2 style="margin:0">운영 통계</h2><span class="chip">${esc(bizName())}</span>${qt(['이 사업에 등록된 학급(취소 제외)을 시기별로 모아 셉니다','학생 = 학교가 입력한 참여 인원(없으면 예상 인원)','차시 = 하루 차시 × 수업일 수','강사 = 배치 확정된 주강사·보조강사'])}</div>
-    <button class="btn sm" data-act="bstxls" ${L.length?'':'disabled'}>통계 엑셀 다운로드</button></div>
-   ${!all.length?`<div class="panel st-empty"><b>아직 이 사업에 등록된 학급이 없습니다.</b><div class="small muted">2번 운영현황에 학급을 올리면 여기서 통계를 볼 수 있습니다.</div></div>`:`
+    <div class="row" style="gap:6px">${(S.bizKpi||[]).length||S.ui.bkpiDraft?'':'<button class="btn sm pri" data-act="bkpiedit">KPI 설정</button>'}<button class="btn sm" data-act="bstxls" ${L.length?'':'disabled'}>통계 엑셀 다운로드</button></div></div>
+   ${!all.length&&S.ui.bkpiDraft?bkpiEditor():''}${!all.length?`<div class="panel st-empty"><b>아직 이 사업에 등록된 학급이 없습니다.</b><div class="small muted">2번 운영현황에 학급을 올리면 여기서 통계를 볼 수 있습니다.</div></div>`:`
    <div class="row st-filter"><span class="small muted">시기</span><button class="fchip ${!SS.length?'on':''}" data-act="bstsea" data-v="">전체</button>${seas.map(k=>`<button class="fchip ${SS.includes(k)?'on':''}" data-act="bstsea" data-v="${esc(k)}">${esc(((S.seasons||[]).find(x=>x.k===k)||{}).name||k)}</button>`).join('')}</div>
+   ${S.ui.bkpiDraft?bkpiEditor():''}
+   ${(S.bizKpi||[]).length?`<div class="row between" style="align-items:center"><h3 style="margin:0">KPI 달성 <span class="small muted" style="font-weight:400">${SS.length?'고른 시기 기준':'전체 시기 기준'}</span></h3>${S.ui.bkpiDraft?'':'<button class="btn sm" data-act="bkpiedit">KPI 설정</button>'}</div>${bkpiCards(L)}<h3 style="margin:4px 0 0">운영 현황</h3>`:''}
    <div class="skcards">${card('학교',T.sch,'개교')}${card('학급',T.cls,'학급',`배치 확정 ${stFmt(T.fin)}학급`)}${card('학생',T.stu,'명')}${card('차시',T.ses,'차시')}${card('강사',T.inst,'명','배치 확정 기준')}</div>
    <div class="st-grid">
     ${seas.length>1&&!SS.length?brk('season','시기'):''}
@@ -4514,10 +4516,32 @@ function viewBizStats(){ const u=S.ui, all=bizStRows(), seas=[...new Set(all.map
     <div class="panel stack st-sec"><h3>강사별 <span class="small muted" style="font-weight:400">${instR.length}명</span></h3><div class="tw"><table class="st-t"><thead><tr><th>강사</th><th class="num">주강사</th><th class="num">보조</th><th class="num">차시</th><th class="num">학교</th></tr></thead><tbody>
      ${(u.bstAll==='inst'?instR:instR.slice(0,12)).map(o=>`<tr><td>${esc(instName(o.t))}</td><td class="num">${o.main}</td><td class="num">${o.asst}</td><td class="num">${stFmt(o.ses)}</td><td class="num">${o.sch.size}</td></tr>`).join('')||'<tr><td colspan="5" class="muted small">배치 확정된 강사가 없습니다</td></tr>'}</tbody></table></div>${instR.length>12?`<button class="lnk small" data-act="bstall" data-v="inst">${u.bstAll==='inst'?'접기':`${instR.length-12}명 더 보기`}</button>`:''}</div>
    </div>`}</div>`; }
+/* 사업별 KPI: 담당자가 항목을 정함. 자동 = 이 화면 통계(고른 시기 기준)로 셈, 직접 = 실적을 손으로 넣음. S.bizKpi(사업별 설정) */
+const BKPI_AUTO=[['sch','학교 수','개교'],['cls','학급 수','학급'],['fin','배치 확정 학급','학급'],['stu','참여 학생 수','명'],['ses','총 차시','차시'],['inst','참여 강사 수','명'],['prog','운영 프로그램 수','개']];
+function bkpiVal(k, L){ if(k==='prog') return new Set(L.map(r=>r.prog)).size; return bizSum(L)[k]||0; }
+function bkpiCards(L){ const K=S.bizKpi||[]; if(!K.length) return ''; const F=v=>Number.isInteger(+v)?stFmt(+v):(Math.round(+v*100)/100).toLocaleString('ko-KR');
+  return `<div class="skcards">${K.map(x=>{ const auto=x.m&&x.m!=='manual', v=auto?bkpiVal(x.m,L):(+x.v||0), t=+x.t||0, p=t?Math.round(v/t*1000)/10:null;
+    return `<div class="skc"><div class="skc-l">${esc(x.n||'(이름 없음)')} ${auto?'<span class="chip sm">자동</span>':'<span class="chip sm warn">직접 입력</span>'}</div><div class="skc-v">${F(v)}<span>${esc(x.u||'')}</span></div>
+     ${t?`<div class="skc-bar ${stRateCls(p)}"><i style="width:${Math.min(100,p)}%"></i></div><div class="skc-t"><b class="${stRateCls(p)}">${p}%</b> · 목표 ${F(t)}${esc(x.u||'')} · ${v>=t?'달성':`남은 ${F(Math.round((t-v)*100)/100)}${esc(x.u||'')}`}</div>`:'<div class="skc-t muted">목표 미설정</div>'}
+     ${x.note?`<div class="skc-t muted">${esc(x.note)}</div>`:''}</div>`; }).join('')}</div>`; }
+function bkpiEditor(){ const D=S.ui.bkpiDraft||[], opt=(v,cur)=>`<option value="${v[0]}" ${cur===v[0]?'selected':''}>${esc(v[1])}</option>`;
+  return `<div class="panel stack"><div class="row between" style="flex-wrap:wrap;gap:8px"><h3>${esc(bizName())} KPI 설정</h3><div class="row" style="gap:6px"><button class="btn sm" data-act="bkpicancel">취소</button><button class="btn sm pri" data-act="bkpisave">저장</button></div></div>
+   <div class="small muted">사업마다 달성 기준에 맞게 항목을 정하세요. 「자동」은 이 화면 통계(위에서 고른 시기)로 실적을 세고, 「직접 입력」은 실적을 손으로 넣습니다.</div>
+   <div class="tw"><table class="noenh"><thead><tr><th>항목 이름</th><th>실적 계산</th><th>단위</th><th class="num">목표</th><th class="num">실적 (직접 입력)</th><th>비고</th><th></th></tr></thead><tbody>
+   ${D.map((x,i)=>`<tr><td><input data-bk="${i}" data-f="n" value="${esc(x.n||'')}" placeholder="예: 참여 학생 수" style="width:100%;min-width:160px"></td>
+     <td><select data-bk="${i}" data-f="m">${[['manual','직접 입력']].concat(BKPI_AUTO.map(a=>[a[0],'자동 · '+a[1]])).map(v=>opt(v,x.m||'manual')).join('')}</select></td>
+     <td><input data-bk="${i}" data-f="u" value="${esc(x.u||'')}" placeholder="명" style="width:70px"></td>
+     <td class="num"><input data-bk="${i}" data-f="t" type="number" min="0" step="any" value="${esc(x.t??'')}" style="width:100px"></td>
+     <td class="num">${x.m&&x.m!=='manual'?'<span class="small muted">자동</span>':`<input data-bk="${i}" data-f="v" type="number" min="0" step="any" value="${esc(x.v??'')}" style="width:100px">`}</td>
+     <td><input data-bk="${i}" data-f="note" value="${esc(x.note||'')}" placeholder="측정 기준 · 근거" style="width:100%;min-width:160px"></td>
+     <td><button class="btn sm" data-act="bkpidel" data-i="${i}">삭제</button></td></tr>`).join('')||'<tr><td colspan="7" class="muted small">아직 KPI 항목이 없습니다. 「항목 추가」를 눌러 주세요.</td></tr>'}
+   </tbody></table></div>
+   <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="bkpiadd">항목 추가</button><span class="small muted">빠른 추가:</span>${BKPI_AUTO.map(a=>`<button class="btn sm" data-act="bkpiadd" data-m="${a[0]}">${esc(a[1])}</button>`).join('')}</div></div>`; }
 async function bizStXlsx(){ const u=S.ui, all=bizStRows(), SS=u.bstSea||[], L=SS.length?all.filter(r=>SS.includes(r.sk)):all; if(!L.length) return;
   const wb=XLSX.utils.book_new(), add=(nm,aoa,w)=>{ const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=w.map(x=>({wch:x})); XLSX.utils.book_append_sheet(wb,ws,nm); };
   const grp=key=>{ const m={}; L.forEach(r=>{ (m[r[key]]=m[r[key]]||[]).push(r); }); return Object.entries(m).map(([k,v])=>[k,bizSum(v)]).sort((a,b)=>b[1].cls-a[1].cls); };
-  const T=bizSum(L); add('요약',[['사업',bizName()],['시기',SS.length?SS.map(k=>((S.seasons||[]).find(x=>x.k===k)||{}).name||k).join(', '):'전체'],['학교',T.sch],['학급',T.cls],['배치 확정 학급',T.fin],['학생',T.stu],['차시',T.ses],['강사',T.inst]],[16,40]);
+  const T=bizSum(L); if((S.bizKpi||[]).length) add('KPI',[['항목','실적 계산','실적','목표','달성률','단위','비고']].concat(S.bizKpi.map(x=>{ const auto=x.m&&x.m!=='manual', v=auto?bkpiVal(x.m,L):(+x.v||0), t=+x.t||0; return [x.n,auto?'자동':'직접 입력',v,t||'',t?Math.round(v/t*1000)/10+'%':'',x.u||'',x.note||'']; })),[24,10,10,10,10,8,30]);
+  add('요약',[['사업',bizName()],['시기',SS.length?SS.map(k=>((S.seasons||[]).find(x=>x.k===k)||{}).name||k).join(', '):'전체'],['학교',T.sch],['학급',T.cls],['배치 확정 학급',T.fin],['학생',T.stu],['차시',T.ses],['강사',T.inst]],[16,40]);
   [['시기','season'],['학교','school'],['프로그램','prog'],['분야','field'],['지역규모','size']].forEach(([nm,k])=>add(nm+'별',[[nm,'학급','학생','차시','학교','강사']].concat(grp(k).map(([x,z])=>[x,z.cls,z.stu,z.ses,z.sch,z.inst])),[28,8,8,8,8,8]));
   add('학급 목록',[['시기','학교','교실','프로그램','분야','학년','시작일','종료일','요일','시간','학생','차시','주강사','보조강사']].concat(L.map(r=>[r.season,r.school,r.room,r.prog,r.field,r.grade,r.start,r.end,r.dow,r.time,r.stu,r.ses,r.inst?instName(r.inst):'',r.asst?instName(r.asst):''])),[14,18,12,24,10,8,11,11,10,12,6,6,8,8]);
   await saveXlsx(wb,`${bizName()} 운영 통계${SS.length===1?' '+(((S.seasons||[]).find(x=>x.k===SS[0])||{}).name||''):''}.xlsx`,{set textContent(v){ toast(v); }}); }
@@ -8154,6 +8178,11 @@ document.addEventListener('click',async e=>{
     case 'bstsea': { const v=el.dataset.v; if(!v) S.ui.bstSea=[]; else { const L=new Set(S.ui.bstSea||[]); L.has(v)?L.delete(v):L.add(v); S.ui.bstSea=[...L]; } break; }
     case 'bstall': S.ui.bstAll=S.ui.bstAll===el.dataset.v?'':el.dataset.v; break;
     case 'bstxls': bizStXlsx(); return;
+    case 'bkpiedit': S.ui.bkpiDraft=JSON.parse(JSON.stringify(S.bizKpi||[])); break;
+    case 'bkpicancel': S.ui.bkpiDraft=null; break;
+    case 'bkpiadd': { const m=el.dataset.m, a=BKPI_AUTO.find(x=>x[0]===m); (S.ui.bkpiDraft=S.ui.bkpiDraft||[]).push(a?{n:a[1],m,u:a[2],t:''}:{n:'',m:'manual',u:'',t:'',v:''}); break; }
+    case 'bkpidel': S.ui.bkpiDraft.splice(+el.dataset.i,1); break;
+    case 'bkpisave': { const D=(S.ui.bkpiDraft||[]).map(x=>({...x,n:String(x.n||'').trim()})).filter(x=>x.n); if((S.ui.bkpiDraft||[]).some(x=>!String(x.n||'').trim()&&(x.t||x.v))){ toast('이름이 없는 항목이 있습니다'); return; } S.bizKpi=D; S.ui.bkpiDraft=null; save(); toast(`${bizName()} KPI ${D.length}개를 저장했습니다`); break; }
     case 'st-org': S.ui.stOrg=(S.ui.stOrg===el.dataset.v?'':el.dataset.v); break;
     case 'st-ky': S.ui.stKy=+el.dataset.v; break;
     case 'st-ksave': { const y=el.dataset.v, T={all:{},orgs:{}}; document.querySelectorAll('.st-kin').forEach(x=>{ const v=x.value.trim(); if(v==='') return; const n=Math.max(0,Number(v)); if(!isFinite(n)) return; if(x.dataset.scope) (T.orgs[x.dataset.scope]=T.orgs[x.dataset.scope]||{})[x.dataset.k]=n; else T.all[x.dataset.k]=n; }); const mb=+((document.getElementById('st-mcbase')||{}).value)||3691, ml=String((document.getElementById('st-mcbasel')||{}).value||'').trim()||'2024년 기준'; S.kpi={...S.kpi,targets:{...(S.kpi.targets||{}),[y]:T},mcBase:mb,mcBaseL:ml,at:now()}; S.ui.stYear=+y; toast(`${y}년 KPI 목표를 저장했습니다`); break; }
@@ -8306,6 +8335,7 @@ document.addEventListener('change',e=>{
   if(t.id==='sttpl'){ const f=t.files[0]; if(!f) return; f.arrayBuffer().then(b=>stTplRead(b,f.name)).then(T=>{ u.stTpl=T; render(); }).catch(err=>toast(err.message||String(err))); return; }
   if(t.id==='qn-school'||t.id==='qn-univ'){ u[{'qn-school':'qnSchool','qn-univ':'qnUniv'}[t.id]]=t.value; render(); return; }
   if(t.dataset.mset){ const v=t.value.trim(); if(t.dataset.mset==='mailReplyTo'&&v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){ toast('답장 받을 주소를 확인해 주세요'); return; } S[t.dataset.mset]=v; save(); render(); toast('메일 설정을 저장했습니다'); return; }
+  if(t.dataset&&t.dataset.bk!=null&&S.ui.bkpiDraft){ const x=S.ui.bkpiDraft[+t.dataset.bk]; if(x){ const f=t.dataset.f; x[f]=(f==='t'||f==='v')?(t.value===''?'':+t.value):t.value; if(f==='m'){ const a=BKPI_AUTO.find(z=>z[0]===t.value); if(a&&!x.u) x.u=a[2]; render(); } } return; }
   if(t.id==='jmbauto'){ S.joinMbAuto=t.checked; save(); render(); toast(t.checked?'웹메일 창이 다 채워지면 자동으로 보냅니다':'웹메일 창에서 직접 「보내기」를 누릅니다'); return; }
   if(t.id==='jautomail'){ S.joinAutoMail=t.checked; save(); render(); toast(t.checked?'승인하면 메일을 자동으로 보냅니다':'자동 발송을 껐습니다. 「메일 보내기」로 하나씩 보내 주세요'); return; }
   if(t.dataset.jsel){ (u.jSel=u.jSel||{})[t.dataset.jsel]=t.checked; render(); return; }
