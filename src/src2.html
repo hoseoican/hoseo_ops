@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER = '11.156';
+const LIB_VER = '11.157';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -3061,7 +3061,7 @@ function viewMatch(){
     else if(cur==='open'){ const rs=M.filter(toOpen); o.desc='공개한 학급에 강사가 신청할 수 있습니다. 신청 기간도 여기서 정합니다.'; o.acts=btn('recruit',`${rs.length}학급 강사 화면에 공개`,true,!rs.length); o.body=applyWinPanel()+gcPanel('main')+(rs.length?MT(rs):done())+hsPubPanel(); }
     else if(cur==='assign'){ const rs=M.filter(r=>['fixed','recruit'].includes(r.status)&&canAssign(r)&&r.status!=='cancel'); o.desc='신청 강사 이름을 누르면 가배치됩니다. 가배치는 운영기관에만 보입니다.'; o.acts=(wish?btn('wishall',`대학 희망대로 가배치 (${wish})`):'')+btn('auto','자동 추천',false,!unassigned)+btn('stgsw','확정할 학급 보기 →',!!ready&&!unassigned,!ready,`data-g="${G}" data-v="confirm"`); o.body=rs.length?MT(rs):done(); }
     else if(cur==='confirm'){ o.desc='확정하면 강사 화면에 배치 결과가 공개됩니다.'; o.acts=btn('afask',S.ui.afAsk?'확정 창 닫기':`${ready}학급 배치 확정…`,true,!ready); o.body=(S.ui.afAsk?afPanel():'')+(ready?MT(afReady()):done()); }
-    else if(cur==='school'){ o.desc='배치 결과를 학교 담당자 화면에 공개하고, 학교마다 배치 완료 메일을 보냅니다.'; o.acts=btn('spask',S.ui.spAsk?'공개 창 닫기':`${nSp}학급 학교에 공개…`,!!nSp,!nSp); o.body=(S.ui.spAsk?spPanel():'')+(R.length||nSp?resultPanel():done()); }
+    else if(cur==='school'){ o.desc='배치 결과를 학교 담당자 화면에 공개하고, 학교마다 배치 완료 메일을 보냅니다.'; o.acts=btn('spask',S.ui.spAsk?'공개 창 닫기':`${nSp}학급 학교에 공개…`,!!nSp,!nSp); o.body=(S.ui.spAsk?spPanel():'')+(()=>{ const tk=u.scTab||'mail', nd=resultSchools().ready.filter(x=>!pdSentAny(x.school)).length; return `<div class="ssub">${[['mail',`배치 결과 메일 (첨부) ${resultSchools().ready.filter(x=>!resultSentMap()[x.school]).length}곳`],['done',`배치 완료 안내 (문자·메일) ${nd}곳`]].map(([k,l])=>`<button class="${tk===k?'on':''}" data-act="sctab" data-v="${k}">${l}</button>`).join('')}</div>`+(tk==='done'?pdPanel():(R.length||nSp?resultPanel():done())); })(); }
     else if(cur==='teacher'){ const tk=u.tsTab||'placed'; o.desc='배치된 강사에게 배치 안내를, 신청했지만 배치되지 않은 강사에게 결과 안내를 보냅니다.';
       o.body=`<div class="ssub">${[['placed',`배치 안내 ${instSmsList().length}명`],['none',`미배치 안내 ${nsList('main').filter(x=>!x.wait).length}명`]].map(([k,l])=>`<button class="${tk===k?'on':''}" data-act="tstab" data-v="${k}">${l}</button>`).join('')}</div>`+(tk==='none'?nsPanel('main',true):instSmsBody('main')); }
   } else {
@@ -5337,6 +5337,71 @@ function planCell(p,i){
 }
 const rmSelected = s => !(S.ui.rmSel&&S.ui.rmSel[s]===false);
 const rmSentTxt = s => { const x=resultSentMap()[s]; return x?`<span class="lv-ok">보냄 ${esc(String(x.at).slice(5,16))}${x.count>1?` (${x.count}회)`:''}</span>`:'<span class="muted">아직 안 보냄</span>'; };
+/* ===== 배치 완료 안내(문자 · 메일): 모든 학급 배치가 끝난 학교 담당자에게 학급별 강사명 · 연락처만 간단히. 자세한 내용은 학교 접속 링크로 =====
+   문구는 S.ops.pdSms / pdSubj / pdMail (관리자 수정). 보낸 기록은 S.smsSent['pdone:sms|mail:시즌:학교'] */
+const PD_SMS_DEF='[충남 1권역 앵커늘봄] {학교} {담당자} 담당자님, 안녕하세요.\n{시즌} 늘봄 프로그램 강사 배치가 완료되었습니다.\n\n{강사목록}\n\n자세한 내용은 이전에 안내드린 학교 접속 링크에서 확인해 주세요.\n문의: 호서대 {운영담당자} {운영연락처}';
+const PD_SUBJ_DEF='[충남 1권역 앵커늘봄] {시즌} 강사 배치 완료 안내 ({학교})';
+const PD_MAIL_DEF='{학교} {담당자} 담당자님, 안녕하세요.\n{시즌} 늘봄 프로그램 강사 배치가 완료되어 안내드립니다.\n\n{강사목록}\n\n학급별 일정 등 자세한 내용은 이전에 안내드린 학교 접속 링크에서 확인해 주세요.\n{접속링크}\n\n문의: 호서대 {운영담당자} {운영연락처} {운영메일}';
+const PD_KEYS=['학교','담당자','시즌','강사목록','강사수','접속링크','운영담당자','운영연락처','운영메일'];
+const pdTpl = k => String((S.ops||{})[k]||({pdSms:PD_SMS_DEF,pdSubj:PD_SUBJ_DEF,pdMail:PD_MAIL_DEF})[k]);
+const pdKey = (w,sch) => `pdone:${w}:${curSK()}:${sch}`;
+const pdSentAny = sch => smsSentOf(pdKey('sms',sch))||smsSentOf(pdKey('mail',sch));
+const pdMobile = c => mobileOf([c.mobile,c.phone].filter(Boolean).join(' / '));
+function pdFill(tpl,sch){ const c=S.contacts[sch]||{}, rs=resultRowsOf(sch), ids=new Set();
+  const list=rs.map(r=>{ const t=S.instructors.find(x=>x.id===r.inst), a=r.asstPend?null:S.instructors.find(x=>x.id===r.asst); [t,a].forEach(x=>x&&ids.add(x.id));
+    const nm=x=>`${x.name} ${fmtPhone(mobileOf(x.phone)||x.phone||'')}`.trim();
+    return `- ${clsName(r)} : ${t?nm(t):'미배정'}${a?` / 보조 ${nm(a)}`:''}`; }).join('\n');
+  const link=schoolLinkOf(sch)||'';
+  const m={학교:shortSch(sch),담당자:c.name||'',시즌:season().name,강사목록:list,강사수:ids.size,접속링크:link,운영담당자:S.ops.name||'',운영연락처:S.ops.phone||'',운영메일:S.ops.email||''};
+  const t0=link?String(tpl||''):String(tpl||'').replace(/^[ \t]*\{접속링크\}[ \t]*\n?/m,'');
+  const out=t0.replace(/\{([^{}\s]+)\}/g,(all,k)=>k in m?m[k]:all);
+  return bizWords(out.split('\n').map(l=>l.replace(/\s+$/,'')).join('\n').replace(/\n{3,}/g,'\n\n').trim()); }
+const pdHow = () => S.ui.pdHow||'sms';
+const pdOn = sch => { const v=(S.ui.pdSel||{})[sch]; if(v!=null) return v; const h=pdHow(), c=S.contacts[sch]||{}; if((h==='sms'&&!pdMobile(c))||(h==='mail'&&!c.email)||(h==='both'&&!pdMobile(c)&&!c.email)) return false; return h==='mail'?!smsSentOf(pdKey('mail',sch)):h==='sms'?!smsSentOf(pdKey('sms',sch)):!pdSentAny(sch); };
+function pdPanel(){ const u=S.ui, L=resultSchools().ready, h=pdHow(), ed=u.pdEdit, P=L.filter(x=>pdOn(x.school));
+  const x0=P[0]||L[0], kk=h==='mail'?'pdMail':'pdSms', D=u.pdDraft||{}, tv=k=>D[k]!=null?D[k]:pdTpl(k);
+  const pv=x0?pdFill(tv(kk),x0.school):'', n=pv?smsBytes(pv):0;
+  return `<div class="panel stack" style="gap:10px">
+   <div class="row between"><div class="row" style="gap:8px;align-items:center"><h3>학교별 배치 완료 안내</h3>${qt(['모든 학급이 배치 완료된 학교','학급별 강사명 · 연락처만 간단히 안내','자세한 내용은 학교 접속 링크로 확인'])}</div><button class="btn sm" data-act="pdedit">${ed?'문구 수정 닫기':'문구 수정'}</button></div>
+   <div class="row small" style="gap:8px;align-items:center"><span>보낼 방법</span><span class="seg">${[['sms','문자'],['mail','메일'],['both','둘 다']].map(([v,l])=>`<button class="${h===v?'on':''}" data-act="pdhow" data-v="${v}">${l}</button>`).join('')}</span><span style="flex:1"></span><span>선택 <b>${P.length}</b>곳</span><button class="lnk" data-act="pdselall" data-v="un">보낼 차례만</button><button class="lnk" data-act="pdselall" data-v="all">모두</button><button class="lnk" data-act="pdselall" data-v="none">해제</button></div>
+   ${L.length?`<div class="tw" style="max-height:340px;overflow:auto"><table class="noenh"><thead><tr><th style="width:30px"></th><th>학교</th><th>담당자</th><th>배치 강사</th><th>보낸 기록</th></tr></thead><tbody>${L.map(x=>{ const c=S.contacts[x.school]||{}, on=pdOn(x.school), ss=smsSentOf(pdKey('sms',x.school)), sm=smsSentOf(pdKey('mail',x.school));
+     const ins=[...new Set(x.rows.flatMap(r=>[r.inst,r.asstPend?'':r.asst]).filter(Boolean))].map(id=>S.instructors.find(t=>t.id===id)).filter(Boolean);
+     return `<tr class="${on?'':'muted'}"><td><input type="checkbox" data-act="pdsel" data-v="${esc(x.school)}" ${on?'checked':''} aria-label="${esc(x.school)} 선택"></td><td class="nowrap"><b>${esc(shortSch(x.school))}</b><div class="small muted">${x.rows.length}학급</div></td>
+      <td class="small">${esc(c.name||'')}<div class="mono ${h!=='mail'&&!pdMobile(c)?'lv-crit':'muted'}">${esc(fmtPhone(pdMobile(c))||'휴대폰 없음')}</div><div class="${h!=='sms'&&!c.email?'lv-crit':'muted'}">${esc(c.email||'메일 없음')}</div></td>
+      <td class="small">${ins.slice(0,2).map(t=>`${esc(t.name)} <span class="mono muted">${esc(fmtPhone(mobileOf(t.phone)||''))}</span>`).join('<br>')}${ins.length>2?`<br><span class="muted">외 ${ins.length-2}명</span>`:''}</td>
+      <td class="small nowrap">${ss?`<span class="lv-ok">문자 ${esc(ss)}</span>`:''}${ss&&sm?'<br>':''}${sm?`<span class="lv-ok">메일 ${esc(sm)}</span>`:''}${!ss&&!sm?'<span class="muted">-</span>':''}</td></tr>`; }).join('')}</tbody></table></div>`:'<div class="muted small">모든 학급 배치가 끝난 학교가 아직 없습니다.</div>'}
+   ${ed?`<div class="stack" style="gap:8px;border-top:1px solid var(--line);padding-top:10px">
+     <label class="small"><b>문자 문구</b></label><textarea class="pdtpl" data-k="pdSms" rows="9" style="width:100%;font-family:inherit">${esc(tv('pdSms'))}</textarea>
+     <label class="small"><b>메일 제목</b></label><input class="pdtpl" data-k="pdSubj" value="${esc(tv('pdSubj'))}">
+     <label class="small"><b>메일 본문</b></label><textarea class="pdtpl" data-k="pdMail" rows="10" style="width:100%;font-family:inherit">${esc(tv('pdMail'))}</textarea>
+     <div class="small">${PD_KEYS.map(t=>`<span class="chip">{${t}}</span>`).join(' ')}</div>
+     <div class="row" style="gap:6px"><button class="btn sm pri" data-act="pdsave">저장</button><button class="btn sm" data-act="pdcancel">취소</button><button class="btn sm" data-act="pddef">기본 문구로 되돌리기</button>${(S.ops||{}).pdAt?`<span class="small muted">마지막 수정 ${esc(S.ops.pdAt)}</span>`:''}</div></div>`:''}
+   ${x0?`<div class="stack" style="gap:6px"><div class="small"><b>미리보기</b> <span class="muted">${esc(shortSch(x0.school))} · ${h==='mail'?'메일':`${n}바이트 · ${smsKind(n)}`}</span></div>${h==='mail'?`<div class="small"><b>제목</b> ${esc(pdFill(tv('pdSubj'),x0.school))}</div>`:''}<pre style="white-space:pre-wrap;background:var(--sunk);border-radius:8px;padding:10px;margin:0;font-family:inherit;font-size:13px">${esc(pv)}</pre></div>`:''}
+   <div class="row" style="gap:6px;justify-content:flex-end">${h!=='mail'?`<button class="btn" data-act="pdxls" ${P.length?'':'disabled'}>문자 엑셀 (${P.length}곳)</button>`:''}<button class="btn pri" data-act="pdsend" ${P.length?'':'disabled'}>선택 ${P.length}곳 ${h==='sms'?'문자':h==='mail'?'메일':'문자 · 메일'} 보내기</button></div>
+  </div>`; }
+function pdSmsJobs(L){ return L.map(x=>{ const c=S.contacts[x.school]||{}; return {key:pdKey('sms',x.school),name:`${shortSch(x.school)} ${c.name||''}`.trim(),phone:pdMobile(c),title:'강사 배치 완료 안내',body:pdFill(pdTpl('pdSms'),x.school)}; }); }
+function pdMailSend(L){ const ok=L.filter(x=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String((S.contacts[x.school]||{}).email||'').trim())); if(!ok.length){ toast('메일 주소가 있는 학교가 없습니다'); return; }
+  mbEnqueue(ok.map(x=>{ const c=S.contacts[x.school]||{}; return {kind:'pdone',label:`배치 완료 안내 · ${shortSch(x.school)}`,school:x.school,to:String(c.email).trim(),toName:c.name||'',subject:pdFill(pdTpl('pdSubj'),x.school).replace(/\s+/g,' '),body:pdFill(pdTpl('pdMail'),x.school),
+    done:()=>{ smsSentMark(pdKey('mail',x.school)); toast(`${shortSch(x.school)} 배치 완료 안내 메일을 보내고 기록했습니다`); render(); }}; }));
+  if(ok.length<L.length) toast(`메일 주소가 없는 ${L.length-ok.length}곳은 건너뜁니다`); }
+async function pdXlsx(L){ const J=pdSmsJobs(L); const aoa=[['연락처','받는 사람','문자 내용','바이트','구분']].concat(J.map(j=>{ const n=smsBytes(j.body); return [digits(j.phone||''),j.name,j.body,n,smsKind(n)]; }));
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[14,20,80,8,12].map(w=>({wch:w})); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'문자 발송');
+  await saveXlsx(wb,`${season().name} 학교 배치 완료 안내 문자 (${J.length}곳).xlsx`,{set textContent(v){ toast(v); }}); }
+function pdAct(a,el){ const U=S.ui;
+  switch(a){
+    case 'sctab': U.scTab=el.dataset.v; return true;
+    case 'pdhow': U.pdHow=el.dataset.v; U.pdSel={}; return true;
+    case 'pdsel': U.pdSel={...(U.pdSel||{}),[el.dataset.v]:el.checked}; return true;
+    case 'pdselall': { const v=el.dataset.v, M={}; U.pdSel={}; resultSchools().ready.forEach(x=>{ M[x.school]=v==='all'?true:v==='none'?false:pdOn(x.school); }); U.pdSel=M; return true; }
+    case 'pdedit': if(U.pdEdit){ U.pdEdit=false; U.pdDraft=null; } else { U.pdEdit=true; U.pdDraft={pdSms:pdTpl('pdSms'),pdSubj:pdTpl('pdSubj'),pdMail:pdTpl('pdMail')}; } return true;
+    case 'pdcancel': U.pdEdit=false; U.pdDraft=null; toast('문구 수정을 취소했습니다'); return true;
+    case 'pddef': U.pdDraft={pdSms:PD_SMS_DEF,pdSubj:PD_SUBJ_DEF,pdMail:PD_MAIL_DEF}; toast('기본 문구를 불러왔습니다. 「저장」을 눌러야 반영됩니다'); return true;
+    case 'pdsave': { const D=U.pdDraft||{}; if(!String(D.pdSms||'').trim()||!String(D.pdMail||'').trim()){ toast('문구를 입력해 주세요'); return false; } S.ops={...S.ops,pdSms:D.pdSms,pdSubj:D.pdSubj,pdMail:D.pdMail,pdAt:now()}; U.pdEdit=false; U.pdDraft=null; save(); toast('배치 완료 안내 문구를 저장했습니다'); return true; }
+    case 'pdxls': pdXlsx(resultSchools().ready.filter(x=>pdOn(x.school))); return false;
+    case 'pdsend': { if(U.pdEdit){ toast('문구 수정을 먼저 저장하거나 취소해 주세요'); return false; } const L=resultSchools().ready.filter(x=>pdOn(x.school)), h=pdHow(); if(!L.length) return false;
+      if(h!=='mail'){ const J=pdSmsJobs(L), bad=J.filter(j=>!j.phone).length; smsBrSend(J,'학교 배치 완료 안내'); if(bad) toast(`휴대폰 번호가 없는 ${bad}곳은 문자에서 빠집니다`); }
+      if(h!=='sms') pdMailSend(L); return false; }
+  } }
 function resultPanel(){
   const {ready,doing}=resultSchools(), unsent=ready.filter(x=>!resultSentMap()[x.school]), sel=ready.filter(x=>rmSelected(x.school)&&(S.contacts[x.school]||{}).email);
   const noPlan=[...new Set(ready.flatMap(x=>resultPlans(x.school).missing))];
@@ -7676,6 +7741,7 @@ document.addEventListener('click',async e=>{
   { const ca=csAct(a,el); if(ca===false) return; if(ca===true){ csNeedR=false; render(); return; } }
   { const ma=mwAct(a,el); if(ma===false) return; if(ma===true){ render(); return; } }
   { const na=nsAct(a,el); if(na===false) return; if(na===true){ render(); return; } }
+  { const pa=pdAct(a,el); if(pa===false) return; if(pa===true){ render(); return; } }
   { const fa=frameAct(a,el); if(fa===false) return; if(fa===true){ render(); return; } }
   switch(a){
     case 'role': S.ui.role=el.dataset.v; S.ui.drawer=''; location.hash=homeView(S.ui.role); break;
@@ -8320,6 +8386,7 @@ document.addEventListener('input',e=>{
   if(t.id==='smsbody'||t.id==='smsitem'){ const d=S.ui.smsDraft||(S.ui.smsDraft={...smsTpl(smsK())}); d[t.id==='smsbody'?'body':'item']=t.value; smsPvUpdate(); return; }
   /* 검색칸: 값은 바로 저장하고, 화면 다시 그리기는 입력이 멈춘 뒤에만(한글 조합이 끊기지 않게) */
   if(t.id==='nsbody'){ nsPvUpdate(); return; }
+  if(t.classList&&t.classList.contains('pdtpl')){ S.ui.pdDraft={...(S.ui.pdDraft||{}),[t.dataset.k]:t.value}; return; }
   if(t.id==='gcbody'){ S.ui.gcDraft={...(S.ui.gcDraft||{}),[t.dataset.k]:t.value}; return; }
   if(t.id==='mwf-find'){ const box=document.getElementById('mwf-found'); if(box) box.innerHTML=mwFindHtml(t.value); return; }
   const SQ={tq:v=>{ tF().q=v; },'jq-done':v=>{ S.ui.jq=v; },'as-q':v=>{ S.ui.asQ=v; },'mw-q':v=>{ S.ui.mwQ=v; },iq:v=>{ S.ui.if={...(S.ui.if||{}),q:v}; },uq:v=>{ S.ui.uq=v; },mq:v=>{ S.ui.mq=v; },q:v=>{ S.ui.q=v.trim(); }};
