@@ -546,6 +546,7 @@
   #nav > label .nb.r { background: var(--hs); color: #fff; }
   #nav > label .nb:empty { display: none; }
   #nav > label .nb:not(:empty) ~ .st { display: none; }
+  .sbgrid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px 14px; } .sbgrid .fld { margin: 0; } .sbwho { font-size: 13px; align-self: end; padding-bottom: 8px; } @media (max-width: 900px){ .sbgrid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
   /* 흐름 단계 탭 (운영 관리 흐름형과 같은 모양) */
   .flow { display: flex; gap: 4px; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 6px; overflow-x: auto; margin: 0 0 16px; }
   .flow[hidden] { display: none; }
@@ -784,6 +785,7 @@ if(EMBED) document.documentElement.classList.add('embed');
     <div class="navg">강사</div>
     <label data-page="person"><input type="radio" name="page" value="person">강사별 서류<i class="st" data-sec="person"></i></label>
     <label data-page="roster"><input type="radio" name="page" value="roster">강사 명단<i class="st" data-sec="roster"></i></label>
+    <label data-page="subs"><input type="radio" name="page" value="subs">대체강사 서류<em class="nb" id="nbSubs"></em><i class="st" data-sec="subs"></i></label>
     <div class="navg">증명서</div>
     <label data-page="cert"><input type="radio" name="page" value="cert">경력·출강증명서 발급<i class="st" data-sec="cert"></i></label>
     <label data-page="certlog"><input type="radio" name="page" value="certlog">발급대장<i class="st" data-sec="certlog"></i></label>
@@ -833,6 +835,29 @@ if(EMBED) document.documentElement.classList.add('embed');
   </div>
   </div>
   <!-- ⓪ 기준정보: 강사 목록 -->
+  <section data-sec="subs" hidden>
+    <div class="card" style="max-width:1280px">
+      <h3>대체 강의 추가</h3>
+      <div class="sbgrid">
+        <label class="fld"><span>강사 이름</span><input type="text" id="sbName" list="sbPeople" autocomplete="off" placeholder="등록 강사는 이름을 고르세요"><datalist id="sbPeople"></datalist></label>
+        <label class="fld"><span>구분</span><select id="sbRole"><option>주강사</option><option>보조강사</option></select></label>
+        <label class="fld"><span>휴대폰 <small class="hint">신규 강사만</small></span><input type="tel" id="sbPhone" autocomplete="off" placeholder="010-0000-0000"></label>
+        <div class="sbwho" id="sbWho"></div>
+        <label class="fld"><span>출강 학교</span><input type="text" id="sbSchool" list="sbSchools" autocomplete="off" placeholder="예: 천안능수초등학교"><datalist id="sbSchools"></datalist></label>
+        <label class="fld"><span>프로그램</span><input type="text" id="sbProg" autocomplete="off" placeholder="예: [AI] 코딩 로봇"></label>
+        <label class="fld"><span>대체 기간</span><span style="display:flex;gap:6px;align-items:center"><input type="date" id="sbFrom" style="flex:1;min-width:0">~<input type="date" id="sbTo" style="flex:1;min-width:0"></span></label>
+        <label class="fld"><span>서류 발송일 <small class="hint">서류의 작성일로 들어갑니다</small></span><input type="date" id="sbDate"></label>
+        <label class="fld"><span>학교 담당자</span><input type="text" id="sbCName" autocomplete="off" placeholder="이름"></label>
+        <label class="fld"><span>담당자 연락처</span><input type="tel" id="sbCTel" autocomplete="off" placeholder="041-000-0000"></label>
+        <label class="fld"><span>담당자 이메일</span><input type="email" id="sbCMail" autocomplete="off" placeholder="name@school.kr"></label>
+        <div style="display:flex;align-items:flex-end"><button type="button" class="save" id="sbAdd">대체 강의 추가</button></div>
+      </div>
+    </div>
+    <div class="card" style="max-width:1280px">
+      <h3>대체 강의 <small id="sbInfo"></small></h3>
+      <div class="gview"><table class="stt" id="sbTable"></table></div>
+    </div>
+  </section>
   <section data-sec="roster" hidden>
     <div class="card" style="max-width:1280px">
       <h3>강사 <small id="rsBasis"></small></h3>
@@ -1333,20 +1358,21 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-14';
+var APP_VERSION = '2026.11.27-15';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
 var FORMS = Forms.FORMS;
 ['verSide','verFoot'].forEach(function(id){ $(id).textContent = '버전 ' + APP_VERSION; });
 
-var PAGES = ['ops','roster','status','review','info','school','cv','imgs','pdf','out','mail','sms','cert','certlog'];
+var PAGES = ['ops','roster','subs','status','review','info','school','cv','imgs','pdf','out','mail','sms','cert','certlog'];
 var PTABS = [['info','인적사항'],['school','배치 학교'],['cv','학력·경력·자격'],['imgs','서명·사진·증빙'],['pdf','증빙서류'],['out','서류 만들기']];   // 강사별 서류 위쪽 탭
 var PTAB_KEYS = PTABS.map(function(x){ return x[0]; });
-var SHARED_PAGES = { ops: 1, roster: 1, status: 1, review: 1, mail: 1, sms: 1, cert: 1, certlog: 1 };   // 강사 한 명이 아니라 전체에 대한 화면
+var SHARED_PAGES = { ops: 1, roster: 1, subs: 1, status: 1, review: 1, mail: 1, sms: 1, cert: 1, certlog: 1 };   // 강사 한 명이 아니라 전체에 대한 화면
 var PAGE_META = {
   cert: ['증명서', '경력·출강증명서 발급', '운영현황에서 강사의 수업을 골라 경력증명서·출강증명서(한글)를 만듭니다. 구글 시트 연동이 되어 있으면 날인대장에 자동으로 기록하고 문서번호를 매깁니다.'],
   certlog: ['증명서', '발급대장', '날인대장(앵커늘봄 탭)에 쌓인 증명서 발급 내역을 봅니다.'],
+  subs: ['강사', '대체강사 서류', '대체 강의를 맡은 강사의 서류를 그 학교와 발송일에 맞춰 만듭니다. 서류가 준비된 강사는 바로 다운로드하고, 신규 강사는 제출 링크 문자로 서류를 받습니다.'],
   roster: ['강사', '강사 명단', '등록한 강사 전체를 부족 서류·발송 상태와 함께 봅니다. 운영현황에는 있는데 아직 등록하지 않은 강사도 「미등록」으로 함께 보입니다. 여러 명을 골라 등록·서류 다운로드·삭제·제출 요청을 한 번에 합니다.'],
   sms: ['현황', '서류 구비·발송', '부족 서류가 있는 강사와 아직 서류를 내지 않은 미등록 강사를 골라 제출 요청 문자를 만듭니다. 문자 내용·전화번호 복사, 휴대폰 문자 열기, 대량 문자용 CSV 다운로드를 제공합니다.'],
   review: ['현황', '서류 검토', '적용 학기 배치 강사의 서류를 한 표로 보고, 칸을 누르면 그 강사의 인적사항·사진·증빙서류를 한 화면에서 확인합니다. 보완 필요 표시와 검토 완료를 여기서 바로 합니다. 이전·다음은 키보드 ←·→, 닫기는 Esc.'],
@@ -2135,6 +2161,64 @@ function renderFix(){
   each('[data-fx]', function(cb){ cb.onchange=function(){ var k=cb.dataset.fx; cur.fix=cur.fix||{}; if(cb.checked) cur.fix[k]={why:'', at:Date.now()}; else delete cur.fix[k]; renderFix(); if(cb.checked){ var w=$('fixTable').querySelector('[data-fxw="'+k+'"]'); if(w) w.focus(); } changed(); }; }, $('fixTable'));
   each('[data-fxw]', function(inp){ inp.oninput=function(){ var k=inp.dataset.fxw; if(cur.fix&&cur.fix[k]){ cur.fix[k].why=inp.value.trim(); changed(); } }; }, $('fixTable'));
 }
+/* ---------- 대체강사 서류 ----------
+ * 대체 강의 기록은 강사 자료(p.subs)에 같이 저장 → 강사 자료 공유를 켜면 다른 직원과 같이 봄.
+ * 서류는 기존 자료에 출강 학교·발송일(작성일)·프로그램만 바꿔 그 학교용으로 만듦 */
+function subsAll(){ var L=[]; people.forEach(function(p){ (p.subs||[]).forEach(function(r){ L.push({ p:p, r:r }); }); }); return L.sort(function(a,b){ return String(b.r.at||0).localeCompare(String(a.r.at||0)) || 0; }); }
+function subsWho(){ var n=$('sbName').value.replace(/\s/g,''), p=n ? personBy(n) : null, el=$('sbWho');
+  if(!n){ el.innerHTML=''; return null; }
+  if(p){ var x=rosterInfo(p); el.innerHTML='<b>등록 강사</b> · '+(x.ok ? '<span style="color:var(--ok)">서류 구비 완료 · 바로 다운로드 가능</span>' : '<span style="color:var(--danger)">미구비 '+(x.miss.length+x.fix.length)+'종 · 추가 후 서류 요청</span>'); $('sbRole').value=p.role||'주강사'; }
+  else el.innerHTML='<b>신규 강사</b> · 추가하면 강사로 등록되고, 제출 링크 문자로 서류를 받습니다';
+  return p; }
+function renderSubs(){
+  $('sbPeople').innerHTML=people.filter(function(p){ return (p.name||'').trim(); }).map(function(p){ return '<option value="'+esc(p.name)+'">'+esc(p.role||'')+'</option>'; }).join('');
+  try{ $('sbSchools').innerHTML=opsSchools().map(function(s){ return '<option value="'+esc(s.school)+'">'; }).join(''); }catch(e){}
+  if(!$('sbDate').value) $('sbDate').value=today();
+  var L=subsAll(); $('sbInfo').textContent=L.length ? L.length+'건' : '';
+  $('sbTable').innerHTML='<tr><th>강사</th><th>출강 학교 · 프로그램</th><th>대체 기간</th><th>서류 발송일</th><th>서류</th><th style="width:300px"></th></tr>'+(L.length ? L.map(function(o){ var p=o.p, r=o.r, x=rosterInfo(p);
+    var st=x.ok ? '<span class="badge ok">구비 완료</span>' : '<span class="badge no">미구비 '+(x.miss.length+x.fix.length)+'종</span>'+(lsubWait(p)?' <span class="badge sent">강사 제출 · 검토 대기</span>':'');
+    return '<tr><td class="nm"><b>'+esc(p.name)+'</b><small>'+esc(p.role||'')+(p.regNew && !(p.pdfs&&Object.keys(p.pdfs).length) ? ' · 신규' : '')+'</small></td>'+
+      '<td>'+esc(r.school)+'<small style="display:block;color:var(--mute)">'+esc(r.prog||'')+(r.cName||r.cMail ? ' · 담당 '+esc([r.cName,r.cTel,r.cMail].filter(Boolean).join(' · ')) : '')+'</small></td>'+
+      '<td class="nw">'+(r.from ? dotDate(r.from) : '')+(r.to ? ' ~ '+dotDate(r.to) : '')+'</td><td class="nw">'+(r.date ? dotDate(r.date) : '')+'</td><td>'+st+(r.dl ? '<small style="display:block;color:var(--mute)">'+dotDate(r.dl)+' 다운로드</small>' : '')+'</td>'+
+      '<td class="nw" style="text-align:right">'+(x.ok ? '<button type="button" class="save sm" data-sbdl="'+esc(p.id)+'|'+esc(r.id)+'">서류 다운로드</button>' : '<button type="button" class="save sm" data-sbreq="'+esc(p.id)+'">서류 요청 문자</button>')+
+      ' <button type="button" class="ghost sm" data-sbopen="'+esc(p.id)+'">강사 서류 보기</button> <button type="button" class="ghost sm" data-sbdel="'+esc(p.id)+'|'+esc(r.id)+'">삭제</button></td></tr>'; }).join('')
+    : '<tr><td colspan="6" class="hint" style="text-align:center;padding:14px">아직 대체 강의가 없습니다. 위에서 추가해 주세요</td></tr>');
+  var nb=$('nbSubs'), nw=L.filter(function(o){ return !rosterInfo(o.p).ok; }).length; if(nb){ nb.textContent=nw||''; nb.className='nb'+(nw?' r':''); nb.title=nw?'서류가 아직 준비되지 않은 대체 강사 '+nw+'명':''; }
+  each('[data-sbdl]', function(b){ b.onclick=function(){ var a=b.dataset.sbdl.split('|'); subsDownload(a[0], a[1], b); }; }, $('sbTable'));
+  each('[data-sbreq]', function(b){ b.onclick=function(){ smsPick={}; smsPick[b.dataset.sbreq]=1; go('sms', false, true); toast('보낼 문자에 대체 강사를 골라 두었습니다. 내용을 확인하고 「문자 보내기」를 눌러 주세요'); }; }, $('sbTable'));
+  each('[data-sbopen]', function(b){ b.onclick=function(){ select(b.dataset.sbopen); personOpen=true; go('info', false, true); }; }, $('sbTable'));
+  each('[data-sbdel]', function(b){ b.onclick=function(){ var a=b.dataset.sbdel.split('|'), p=people.filter(function(y){ return y.id===a[0]; })[0]; if(!p || !confirm('이 대체 강의 기록을 지울까요? (강사 자료는 그대로 둡니다)')) return; p.subs=(p.subs||[]).filter(function(r){ return r.id!==a[1]; }); p.updated=Date.now(); dbPut(p); renderSubs(); renderList(); }; }, $('sbTable'));
+}
+function subsAdd(){
+  var name=$('sbName').value.trim(), school=$('sbSchool').value.trim();
+  if(!name){ toast('강사 이름을 넣어 주세요'); $('sbName').focus(); return; }
+  if(!school){ toast('출강 학교를 넣어 주세요'); $('sbSchool').focus(); return; }
+  if(!$('sbDate').value){ toast('서류 발송일을 골라 주세요'); $('sbDate').focus(); return; }
+  var p=personBy(name.replace(/\s/g,'')), isNew=!p;
+  if(isNew){ var ph=$('sbPhone').value.replace(/\D/g,''); if(ph.length<10){ toast('신규 강사는 휴대폰 번호를 넣어 주세요 (제출 링크 문자를 보냅니다)'); $('sbPhone').focus(); return; }
+    p=blank(); p.name=name; p.role=$('sbRole').value; p.phone=Forms.fmtPhone(ph); p.schools=[school]; p.programs=$('sbProg').value.trim(); p.regNew=1; people.push(p); }
+  var r={ id:'s'+Date.now().toString(36), school:school, prog:$('sbProg').value.trim(), from:$('sbFrom').value, to:$('sbTo').value, date:$('sbDate').value,
+    cName:$('sbCName').value.trim(), cTel:$('sbCTel').value.trim(), cMail:$('sbCMail').value.trim(), at:Date.now(), by:(typeof sy!=='undefined' && sy.me)||'' };
+  p.subs=(p.subs||[]).concat([r]); p.updated=Date.now(); dbPut(p);
+  if(r.cName||r.cTel||r.cMail){ var c=contacts[school]=contacts[school]||{}; if(r.cName && !c.name) c.name=r.cName; if(r.cTel && !c.tel) c.tel=r.cTel; if(r.cMail && !c.email) c.email=r.cMail; kvPut('contacts', contacts); }
+  ['sbName','sbPhone','sbSchool','sbProg','sbFrom','sbTo','sbCName','sbCTel','sbCMail'].forEach(function(id){ $(id).value=''; }); $('sbWho').innerHTML='';
+  renderSubs(); renderList();
+  toast(isNew ? name+' 강사를 신규 등록했습니다. 「서류 요청 문자」로 제출 링크를 보내 주세요' : rosterInfo(p).ok ? name+' 강사 대체 강의를 추가했습니다. 「서류 다운로드」로 '+school+' 서류를 받으세요' : name+' 강사는 서류가 아직 모자랍니다. 「서류 요청 문자」로 요청해 주세요');
+}
+async function subsDownload(pid, rid, btn){
+  var p=people.filter(function(y){ return y.id===pid; })[0]; if(!p) return; var r=(p.subs||[]).filter(function(y){ return y.id===rid; })[0]; if(!r) return;
+  var lab=btn.textContent; btn.disabled=true; btn.textContent='만드는 중…';
+  try{
+    /* 기존 자료는 그대로 두고, 이 학교·발송일·프로그램으로 바꾼 복사본으로 서류를 만듦 */
+    var q=Object.assign({}, p, { date:r.date||today(), schools:[r.school], programs:r.prog||p.programs });
+    var zip=new JSZip(), warns=[]; await addPersonFiles(zip, q, r.school, '', warns);
+    var blob=await zip.generateAsync({type:'blob', compression:'DEFLATE'});
+    await saveBlob(blob, cleanFile('대체_'+r.school+'_'+p.name+'_'+(r.date||today()))+'.zip', warns);
+    r.dl=today(); p.updated=Date.now(); dbPut(p); renderSubs();
+    toast(p.name+' · '+r.school+' 서류를 만들었습니다'+(warns.length?' · '+warns.join(', '):''));
+  }catch(e){ console.error(e); toast('만들지 못했습니다: '+(e.message||e)); }
+  finally{ btn.disabled=false; btn.textContent=lab; }
+}
 /* ---------- 강사 목록 화면 ---------- */
 var rsF='all', rsSel={}, rsLast=[], rsCol={k:'', dir:1};
 var RS_COLS={ name:function(x){ return x.name||'힣'; }, school:function(x){ return x.schools.join(', ')||'힣'; }, miss:function(x){ return x.ok ? -1 : x.unreg ? 99 : x.miss.length+x.fix.length+(x.exp?0.5:0); },
@@ -2289,7 +2373,7 @@ function smsDueSync(){ if(!smsCfg.dueD && smsCfg.due){ var m=String(smsCfg.due).
 function smsDueFill(){ smsDueSync(); $('smDueD').value=smsCfg.dueD||''; $('smDueT').value=smsCfg.dueT||''; $('smDueHint').textContent=smsCfg.dueD ? '' : '(비우면 7일 뒤 '+smsDueDefault()+')'; }
 function smsNeeds(x){ return x.unreg || !!x.exp || x.miss.some(function(k){ return k!=='phone'; }) || x.fix.length>0; }
 /* 지금 고른 적용 학기 운영현황에 배치된 강사만 (운영현황에 없는 등록 강사는 「운영현황에 없는 등록 강사 포함」을 켰을 때만) */
-function inBatch(name){ if(typeof opsHasRows!=='function' || !opsHasRows()) return true; var n=String(name||'').replace(/\s/g,''); var pp=personBy(n); if(pp && xOut(pp)) return false; return !!opsPersonOf(n) || ((opsExtra || xIn(pp)) && !opsAllNames()[n]); }
+function inBatch(name){ if(typeof opsHasRows!=='function' || !opsHasRows()) return true; var n=String(name||'').replace(/\s/g,''); var pp=personBy(n); if(pp && (pp.subs||[]).length) return true; /* 대체 강의 강사 */ if(pp && xOut(pp)) return false; return !!opsPersonOf(n) || ((opsExtra || xIn(pp)) && !opsAllNames()[n]); }
 function smsTargets(){ return people.map(rosterInfo).filter(function(x){ return x.name && smsNeeds(x) && inBatch(x.name); }).concat(unregList()); }
 function phoneOf(p){ return (p.phone||'').replace(/\D/g,''); }
 /* 보낼 때 제출 링크를 자동으로 만들 수 있는 강사(공유 자료 켬 · 휴대폰 있음 · 링크 없음/만료/미등록) */
@@ -2430,6 +2514,7 @@ function smsCsv(){
   var csv='﻿'+rows.map(function(r){ return r.map(q).join(','); }).join('\r\n');
   saveBlob(new Blob([csv], {type:'text/csv;charset=utf-8'}), '서류보완요청_'+pk.length+'명_'+today()+'.csv');
 }
+function bindSubs(){ $('sbAdd').onclick=subsAdd; $('sbName').addEventListener('input', subsWho); $('sbName').addEventListener('change', subsWho); }
 function bindSms(){
   $('xClose').onclick=function(){ $('xDlg').classList.remove('on'); };
   $('smSchool').onchange=renderSms; $('smItem').onchange=renderSms;
@@ -2701,6 +2786,7 @@ function go(p, fromHistory, viaNav){
   if(p==='ops') renderOps();
   if(p==='status') renderStatus();
   if(p==='roster') renderRoster();
+  if(p==='subs') renderSubs();
   if(p==='review') renderReview(); else if($('rvDlg') && $('rvDlg').classList.contains('on')) rvClose();
   if(p==='out') renderFix();
   if(p==='sms') renderSms();
@@ -4607,7 +4693,7 @@ function bindCert(){
 
 /* ---------- 시작 ---------- */
 mailCfg=JSON.parse(JSON.stringify(DEFAULT_MAIL));
-buildRows(); buildImgs(); buildPdfs(); bind(); bindImport(); bindOpsMail(); bindBackup(); bindSms(); bindCert(); bindSync(); bindDrv();
+buildRows(); buildImgs(); buildPdfs(); bind(); bindImport(); bindOpsMail(); bindBackup(); bindSms(); bindSubs(); bindCert(); bindSync(); bindDrv();
 var startPage='status';   /* 처음 열면 항상 서류 구비·발송 현황 (새로고침은 주소의 #메뉴 유지) */
 var hp=(location.hash||'').slice(1); if(PAGES.indexOf(hp)>=0) startPage=hp;
 page=startPage;
