@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-3';
+var APP_VERSION = '2026.11.27-4';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2262,7 +2262,7 @@ function smsTargets(){ return people.map(rosterInfo).filter(function(x){ return 
 function phoneOf(p){ return (p.phone||'').replace(/\D/g,''); }
 /* 보낼 때 제출 링크를 자동으로 만들 수 있는 강사(공유 자료 켬 · 휴대폰 있음 · 링크 없음/만료/미등록) */
 function smsAutoLink(x){ return !!(typeof syReady==='function' && syReady()) && String((x.unreg?x.p.phone:phoneOf(x.p))||'').replace(/\D/g,'').length>=10 && (x.unreg || linkState(x.p).st!=='ok'); }
-var SMS_LINK_PH='(보낼 때 본인 전용 제출 링크가 여기에 들어갑니다)';
+var SMS_LINK_PH='(문자를 보낼 때 본인 전용 제출 링크가 자동으로 들어갑니다)';
 function smsText(x, prev){
   var docs=x.miss.filter(function(k){ return k!=='phone'; }).map(missText), fixes=x.fix.map(function(f){ return fixName(f.k)+': '+f.why; }).concat(x.exp?[x.exp.t]:[]);
   var all=(docs.length ? '[미제출]\n- '+docs.join('\n- ') : '')+(docs.length&&fixes.length ? '\n' : '')+(fixes.length ? '[보완 필요]\n- '+fixes.join('\n- ') : '');
@@ -2277,7 +2277,7 @@ function smsText(x, prev){
   return tpl.split('\n').filter(function(line){
     var ks=(line.match(/\{(요청서류|부족서류|보완서류|제출링크)\}/g)||[]); if(!ks.length) return true;
     return ks.some(function(t){ return v[t.slice(1,-1)]; });
-  }).join('\n').replace(/\{([^{}]+)\}/g, function(m,k){ return v[k]!=null ? v[k] : m; }).replace(/^아래 링크에서 직접 입력·제출하실 수 있습니다\(본인만 열람\)\.\n(?!https?:|\(보낼 때)/m, '');
+  }).join('\n').replace(/\{([^{}]+)\}/g, function(m,k){ return v[k]!=null ? v[k] : m; }).replace(/^아래 링크에서 직접 입력·제출하실 수 있습니다\(본인만 열람\)\.\n(?!https?:|\(문자를 보낼 때)/m, '');
 }
 function smsBytes(t){ var n=0; for(var i=0;i<t.length;i++) n += t.charCodeAt(i)>127 ? 2 : 1; return n; }
 function smsMatch(x){
@@ -2372,12 +2372,13 @@ function renderSmsPreview(){
   $('smPrev').innerHTML = pk.length ? pk.map(function(x){
     var p=x.p, t=smsText(x, true), ph=phoneOf(p), b=smsBytes(t), lg=smsLog[p.id];
     return '<div class="smsitem"><div class="hd"><b>'+esc(x.name)+'</b><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+(function(){ var l=linkState(p); return l.st==='ok' ? '<span class="badge ok" title="'+esc(linkOf(p))+'">링크 ~'+dotDate(p.lnk.exp)+'</span>' : l.st==='none' ? '' : '<span class="badge err" title="「제출 링크 생성」를 누르면 새 링크를 만듭니다">링크 '+(l.st==='lock'?'잠김':'기간 지남')+'</span>'; })()+'<span class="by">'+b+'바이트 · '+(b<=90?'단문':'장문')+'</span></div>'+
-      '<pre>'+esc(t)+'</pre><div class="ft">'+(ph.length>=10?'<button type="button" class="save sm" data-smsend="'+esc(p.id)+'">문자 보내기</button>':'')+'<button type="button" class="ghost sm" data-smcopy="'+esc(p.id)+'">문자 내용 복사</button>'+(ph.length>=10?'<button type="button" class="ghost sm" data-smtel="'+esc(p.id)+'">전화번호 복사</button><a href="sms:'+ph+'?body='+encodeURIComponent(t)+'">휴대폰 문자 열기</a>':'')+
+      '<pre>'+esc(t)+'</pre><div class="ft">'+(ph.length>=10?'<button type="button" class="save sm" data-smsend="'+esc(p.id)+'">문자 보내기</button>':'')+(t.indexOf(SMS_LINK_PH)>=0?'<button type="button" class="ghost sm" data-smlink="'+esc(p.id)+'" title="보내기 전에 이 강사의 제출 링크를 지금 만들어 문자에 넣어 봅니다'+(x.unreg?' (운영현황 정보로 강사 등록도 함께 합니다)':'')+'">링크 지금 만들기</button>':'')+'<button type="button" class="ghost sm" data-smcopy="'+esc(p.id)+'">문자 내용 복사</button>'+(ph.length>=10?'<button type="button" class="ghost sm" data-smtel="'+esc(p.id)+'">전화번호 복사</button><a href="sms:'+ph+'?body='+encodeURIComponent(t)+'">휴대폰 문자 열기</a>':'')+
       '<span style="flex:1"></span>'+(lg?'<button type="button" class="ghost sm" data-smunreq="'+esc(p.id)+'">요청 기록 삭제</button>':'')+'<button type="button" class="ghost sm" data-smreq="'+esc(p.id)+'">'+(lg?(lg.date===today()?'오늘 요청함':'다시 요청함 처리'):'요청함 처리')+'</button></div></div>';
   }).join('') : '<p class="hint" style="margin:6px 0">선택한 강사가 없습니다.</p>';
   var byId={}; pk.forEach(function(x){ byId[x.p.id]=x; });
   var fresh=function(x){ return smsPicked().filter(function(y){ return y.name===x.name; })[0] || x; };
   each('[data-smsend]', function(b){ b.onclick=async function(){ var x=byId[b.dataset.smsend]; await smsEnsureLinks(b, [x]); smsBrSend([fresh(x)]); }; }, $('smPrev'));
+  each('[data-smlink]', function(b){ b.onclick=async function(){ var x=byId[b.dataset.smlink]; b.textContent='링크 만드는 중…'; await smsEnsureLinks(b, [x]); renderSms(); var y=fresh(x); toast(linkOf(y.p) ? x.name+' 강사 제출 링크를 만들어 문자에 넣었습니다 (14일 동안 사용)' : '링크를 만들지 못했습니다. 공유 자료 연결을 확인해 주세요'); }; }, $('smPrev'));
   each('[data-smcopy]', function(b){ b.onclick=async function(){ var x=byId[b.dataset.smcopy]; await smsEnsureLinks(b, [x]); copyText(smsText(fresh(x)), '문자 내용을 복사했습니다'); }; }, $('smPrev'));
   each('[data-smtel]', function(b){ b.onclick=function(){ copyText(Forms.fmtPhone(phoneOf(byId[b.dataset.smtel].p)), '전화번호를 복사했습니다'); }; }, $('smPrev'));
   each('[data-smreq]', function(b){ b.onclick=function(){ var x=byId[b.dataset.smreq]; smsLogSet(x.p.id, x); kvPut('smsLog', smsLog); renderSms(); }; }, $('smPrev'));
