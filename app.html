@@ -2276,7 +2276,7 @@ function render(){ RENDER_EPOCH++; if(S&&S.ui&&S.ui.role==='admin'&&typeof mwLoa
   if((S.ui.role==='school'&&S.ui.school&&!fcSch().kakao)||(S.ui.role==='join'&&!formCfg(S.ui.jType==='out'?'out':'school').kakao)) body=noKakaoWords(body);
   body=S.ui.role==='teacher'&&(S.bizInfo||[]).length>1?body.replace(/충남 1권역 앵커늘봄/g,'호서대학교 초등방과후 프로그램'):bizWords(body);
   if(['school','join'].includes(S.ui.role)&&curBiz()!=='anchor') body=body.replace(/도교육청|교육청/g,'늘봄허브');
-  document.getElementById('app').innerHTML=(S.ui.role==='admin'&&cur!=='stats'&&cur!=='docs'?seasonBar(sc):(sc?scopeBar():''))+(S.ui.role==='admin'&&cur!=='docs'?adminQuickNav():'')+brUpdHtml()+rn+body;
+  document.getElementById('app').innerHTML=(S.ui.role==='admin'&&cur!=='stats'&&cur!=='docs'?seasonBar(sc):(sc?scopeBar():''))+(S.ui.role==='admin'&&cur!=='docs'?adminQuickNav():'')+brUpdHtml()+pinReqHtml()+rn+body;
   enhanceTables(cur); renderLayer(); save(); if(typeof afterRender==='function') afterRender();
 }
 
@@ -2345,7 +2345,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER = '11.159';
+const LIB_VER = '11.160';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -3366,6 +3366,8 @@ function schoolCard(r,idx,tot){
 }
 
 /* ---------- 강사 화면 ---------- */
+/* 비밀번호 초기화 요청을 보낸 뒤 로그인 화면에 남기는 안내 */
+const tPinReqNote = () => { const q=S.ui.tPinReqOk; if(!q) return ''; return `<div class="notice stack" style="gap:4px"><b>${q.already?'이미 비밀번호 초기화 요청이 접수되어 있습니다':'비밀번호 초기화 요청을 접수했습니다'}</b><span class="small">관리자가 확인하고 초기화하면, 같은 이름·연락처로 다시 로그인해 앞으로 쓸 새 비밀번호를 정해 주세요. 업무 시간(평일 9시~18시) 외에는 초기화 승인이 늦어질 수 있습니다.</span></div>`; };
 function teacherGate(){
   const ps=S.ui.tPinSetup;
   if(ps) return `<div class="stack" style="max-width:640px"><div class="panel stack"><span class="logo-h" role="img" aria-label="호서대학교"></span>
@@ -3373,7 +3375,7 @@ function teacherGate(){
     <label class="f" style="max-width:260px">비밀번호 한 번 더<input id="tl-pin2" type="password" inputmode="numeric" autocomplete="new-password" maxlength="12"></label>
     <div class="row"><button class="btn pri" data-act="tpinset">비밀번호 정하고 들어가기</button><button class="btn" data-act="tpinback">처음부터 다시 입력</button></div>
     ${tHelp(true)}
-    <div class="small muted">비밀번호는 다른 사람이 이름과 연락처만으로 내 신청·배치 정보를 보지 못하게 막아 줍니다. 잊어버리지 않도록 꼭 기억하시고, 만약 잊어버리면 운영 담당자(호서대 강인희 연구교수)에게 초기화를 요청하세요.</div></div></div>`;
+    <div class="small muted">비밀번호는 다른 사람이 이름과 연락처만으로 내 신청·배치 정보를 보지 못하게 막아 줍니다. 잊어버리지 않도록 꼭 기억해 주세요. 잊어버리면 로그인 화면의 「비밀번호 초기화 요청」으로 초기화를 요청할 수 있습니다. 업무 시간(평일 9시~18시) 외에는 초기화 승인이 늦어질 수 있습니다.</div></div></div>`;
   if(tRoleA()) return `<div class="stack" style="max-width:760px">
    <div class="panel stack"><span class="logo-h" role="img" aria-label="호서대학교"></span><div><h2>${esc(bizWords('보조강사 수업 신청'))}</h2><div class="muted small" style="margin-top:4px">해당하는 쪽을 골라 주세요.</div></div>
     <div class="agate">
@@ -3383,15 +3385,15 @@ function teacherGate(){
      <section class="ag-card ag-old"><div class="ag-badge alt">가입한 적이 있나요?</div><h3>로그인</h3><div class="small muted">보조강사로 가입했거나 <b>주강사 명단</b>에 있는 분</div>
       <label class="f">이름<input id="tl-name" value="${esc(S.ui.tlName||'')}" autocomplete="name"></label><label class="f">휴대폰번호<input id="tl-phone" value="${esc(S.ui.tlPhone||'')}" placeholder="010-0000-0000" inputmode="tel" autocomplete="tel"></label>
       <label class="f">비밀번호<input id="tl-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="숫자 6자리 이상"></label>
-      <button class="btn" data-act="tlogin">로그인</button><div class="small muted">명단에 없는 정보면 가입 화면으로 넘어갑니다.</div></section>
+      ${tPinReqNote()}<div class="row" style="gap:6px"><button class="btn" data-act="tlogin">로그인</button><button class="btn" data-act="tpinreq">비밀번호 초기화 요청</button></div><div class="small muted">명단에 없는 정보면 가입 화면으로 넘어갑니다. 비밀번호를 잊었으면 이름·휴대폰번호를 입력하고 「비밀번호 초기화 요청」을 눌러 주세요. 업무 시간(평일 9시~18시) 외에는 초기화 승인이 늦어질 수 있습니다.</div></section>
     </div>
     ${tHelp(false)}</div></div>`;
   return `<div class="stack" style="max-width:640px">
    <div class="panel stack"><span class="logo-h" role="img" aria-label="호서대학교"></span><div><h2>앵커늘봄 강사 수업 신청</h2><div class="muted small" style="margin-top:4px">이름과 연락처를 입력하면 충남 1권역 앵커늘봄 선발 강사 명단에서 확인합니다. 강사 배치 신청은 <b>앵커늘봄 면접 절차를 거쳐 선발된 강사</b>만 할 수 있습니다.</div></div>
     <div class="fgrid"><label class="f">이름<input id="tl-name" value="${esc(S.ui.tlName||'')}" autocomplete="name"></label><label class="f">연락처<input id="tl-phone" value="${esc(S.ui.tlPhone||'')}" placeholder="010-0000-0000" inputmode="tel" autocomplete="tel"></label>
      <label class="f">비밀번호<input id="tl-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="숫자 6자리 이상" value="${esc(S.ui.tlPin||'')}"></label></div>
-    <div class="small muted">처음 로그인한다면 앞으로 쓸 번호(숫자 6~12자리)를 정해 입력하세요. 다음부터 같은 번호로 로그인합니다. 잊어버리면 초기화를 해야하므로 꼭 기억하시고, 만약 잊어버리면 운영 담당자(호서대 강인희 연구교수)에게 초기화를 요청하세요.</div>
-    <div><button class="btn pri" data-act="tlogin">확인</button></div>
+    <div class="small muted">처음 로그인한다면 앞으로 쓸 번호(숫자 6~12자리)를 정해 입력하세요. 다음부터 같은 번호로 로그인합니다. 잊어버리면 아래 「비밀번호 초기화 요청」을 눌러 주세요. 관리자가 확인하고 초기화하면, 같은 이름·연락처로 다시 로그인해 새 비밀번호를 정하면 됩니다. 업무 시간(평일 9시~18시) 외에는 초기화 승인이 늦어질 수 있습니다.</div>
+    ${tPinReqNote()}<div class="row" style="gap:8px"><button class="btn pri" data-act="tlogin">확인</button><button class="btn" data-act="tpinreq">비밀번호 초기화 요청</button></div>
     ${tHelp(false)}</div></div>`;
 }
 /* 보조강사 가입 화면 */
@@ -5513,6 +5515,10 @@ function brUpdList(){ const L=[], mv=mbVer();
   if(mv&&verN(mv)<verN(BR_LATEST.mail)) L.push(['메일 보내기',mv,BR_LATEST.mail,MB_URL]);
   try{ if(SMS_BR.on&&verN(SMS_BR.ver)<verN(BR_LATEST.sms)) L.push(['문자 보내기',SMS_BR.ver||'?',BR_LATEST.sms,S.ops.smsBridge||'hoseo-sms-bridge.user.js']); }catch(e){}
   return L; }
+/* 강사 비밀번호 초기화 요청(로그인 화면에서 강사가 보냄): 관리자 화면 위쪽에 목록, 「초기화」를 누르면 처리 */
+function pinReqHtml(){ if(S.ui.role!=='admin'||S.adminOrg) return ''; const L=S.pinReqs||[]; if(!L.length) return ''; const op=S.ui.pinReqOpen!==false;
+  return `<div class="notice stack" style="gap:8px;margin:0 0 12px;border-color:var(--accent)"><div class="row between" style="gap:8px;flex-wrap:wrap"><b>강사 비밀번호 초기화 요청 ${L.length}건</b><button class="btn sm" data-act="pinreqfold">${op?'접기':'목록 보기'}</button></div>
+   ${op?`<div class="tw"><table class="noenh"><thead><tr><th>강사</th><th>연락처</th><th>요청 시각</th><th></th></tr></thead><tbody>${L.map(q=>{ const t=S.instructors.find(x=>x.id===q.id); return `<tr><td class="nowrap"><b>${esc((t&&t.name)||q.name)}</b>${t?'':' <span class="muted small">(명단에 없음)</span>'}</td><td class="mono small">${esc(fmtPhone((t&&t.phone)||q.phone||''))}</td><td class="small nowrap">${esc(String(q.at||'').slice(5,16).replace('-','/'))}</td><td class="nowrap" style="text-align:right"><button class="btn sm pri" data-act="pinreqok" data-t="${esc(q.id)}">초기화</button> <button class="btn sm" data-act="pinreqno" data-t="${esc(q.id)}" title="본인 요청이 아니거나 처리할 필요가 없을 때">반려</button></td></tr>`; }).join('')}</tbody></table></div><div class="small muted">초기화하면 강사가 같은 이름·연락처로 다시 로그인할 때 새 비밀번호를 정합니다. 신청·배정 내역은 그대로 남습니다.</div>`:''}</div>`; }
 function brUpdHtml(){ if(S.ui.role!=='admin') return ''; const L=brUpdList(); if(!L.length) return '';
   const key=L.map(x=>x[0]+x[2]).join('|'); try{ if(sessionStorage.getItem('brUpdHide')===key) return ''; }catch(e){}
   return `<div class="notice warn stack" style="gap:6px;margin:0 0 12px"><div class="row between" style="gap:8px;flex-wrap:wrap"><b>Chrome 스크립트를 새 버전으로 업데이트해 주세요</b><button class="btn sm" data-act="brupdhide" data-k="${esc(key)}">닫기</button></div>
@@ -8242,6 +8248,9 @@ document.addEventListener('click',async e=>{
       if(S.instructors.some(t=>digits(t.phone)===digits(i.phone))){ toast('이미 등록된 휴대폰번호입니다. 로그인해 주세요'); return; }
       const n={id:'t'+Date.now().toString(36),name:i.name,phone:i.phone.replace(/\D/g,'').replace(/^(\d{3})(\d{4})(\d{4})$/,'$1-$2-$3'),email:i.email,region:i.region,years:i.years,car:i.car,job:i.job,jobSchool:i.jobSchool,jobMajor:i.jobMajor,jobFields:i.jobFields,jobEtc:i.jobEtc,progs:[],asstOnly:true,src:'보조강사 가입',joinedAt:now(),pin:i.pin,kind:({'대학생':'학부생 강사','대학원생':'대학원생 강사','전문강사':'전문강사'})[i.job]||''};
       S.instructors.push(n); S.ui.tSignup=null; S.ui.tAuth=n.id; S.ui.teacher=n.id; toast(`${n.name} 님, 보조강사로 가입되었습니다`); break; }
+    case 'pinreqfold': S.ui.pinReqOpen=S.ui.pinReqOpen===false; break;
+    case 'pinreqok': case 'pinreqno': { const id=el.dataset.t, t=S.instructors.find(x=>x.id===id); S.pinReqs=(S.pinReqs||[]).filter(q=>q.id!==id); if(a==='pinreqok'&&t){ delete t.pin; t.hasPin=false; } toast(a==='pinreqok'?`${t?t.name:''} 강사 비밀번호를 초기화했습니다`:'초기화 요청을 반려했습니다'); break; }
+    case 'tpinreq': { const n=((document.getElementById('tl-name')||{}).value||'').trim(), ph=((document.getElementById('tl-phone')||{}).value||'').trim(); if(!n||ph.replace(/\D/g,'').length<9){ toast('이름과 연락처를 먼저 입력해 주세요'); return; } S.ui.tlName=n; S.ui.tlPhone=ph; S.ui.tPinReqOk={already:false}; break; }
     case 'tlogin': { const g=tLoginRead(); if(g.err){ toast(g.err); return; }
       const hit=S.instructors.find(t=>digits(t.phone)===digits(g.phone));
       if(hit&&nname(hit.name)!==nname(g.name)){ toast('연락처는 명단에 있지만 이름이 다릅니다. 다시 확인해 주세요'); return; }
@@ -8736,7 +8745,7 @@ function aUse(d, keepUi) {
   const prevS = keepUi && S ? S : null;   /* 자동 새로고침: 서버가 보내지 않는 화면 쪽 자료(통계·프로그램 개발·대학 링크 등)는 그대로 둠 → 보던 화면이 「불러오는 중」으로 되돌아가지 않게 */
   const ui = keepUi && S ? S.ui : { role: 'admin', view: 'board', st: '', q: '', region: '', probOnly: false, sel: '', showWait: false, onlyApps: false, condEdit: '' };
   const set = d.settings || {};
-  S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined, mwDB: keepUi && S ? S.mwDB : undefined };
+  S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], pinReqs: d.pinReqs || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined, mwDB: keepUi && S ? S.mwDB : undefined };
   if (prevS) Object.keys(prevS).forEach(k => { if (k !== 'ui' && !(k in S) && prevS[k] != null) S[k] = prevS[k]; });
   S.serverVer = d.serverVer || '';
   MY_ORG = S.adminOrg || '호서대학교';
@@ -8882,7 +8891,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.159';
+const APP_VER = '11.160';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -9197,9 +9206,20 @@ document.addEventListener('click', e => {
     }
     if (a === 'st-link') { const m = el.dataset.m; if ((m === 'regen' || m === 'off') && S.ui.stLinkAsk !== m) return; stop(); S.ui.stLinkAsk = ''; el.disabled = true; run('adminStatsLink', ADMIN_KEY, m).then(L => { S.statsLink = L || ''; render(); toast(m === 'off' ? '공유 링크를 껐습니다' : m === 'regen' ? '새 링크를 만들었습니다. 이전 링크는 더 이상 열리지 않습니다' : (L ? '공유 링크를 만들었습니다' : '웹앱 주소를 먼저 저장해 주세요(기준정보)')); }).catch(err => { el.disabled = false; toast('링크를 만들지 못했습니다: ' + errMsg(err)); }); return; }
     if (a === 'st-linkopen') { stop(); if (S.statsLink) window.open(S.statsLink, '_blank', 'noopener'); return; }
+    if (a === 'pinreqok' || a === 'pinreqno') {
+      stop(); const id = el.dataset.t, t = S.instructors.find(x => x.id === id), nm = t ? t.name : ((S.pinReqs || []).find(q => q.id === id) || {}).name || '';
+      if (a === 'pinreqno' && !confirm(`${nm} 강사의 비밀번호 초기화 요청을 반려할까요?`)) return;
+      el.disabled = true;
+      (a === 'pinreqok' ? run('adminResetPin', ADMIN_KEY, id) : run('adminPinReqDismiss', ADMIN_KEY, id)).then(r => {
+        S.pinReqs = (r && r.pinReqs) || (S.pinReqs || []).filter(q => q.id !== id);
+        if (a === 'pinreqok' && t) { t.hasPin = false; if (SAVED && SAVED.inst) SAVED.inst[t.id] = JSON.stringify(t); }
+        render(); toast(a === 'pinreqok' ? `${nm} 강사 비밀번호를 초기화했습니다. 다음 로그인 때 새로 정합니다` : `${nm} 강사의 초기화 요청을 반려했습니다`);
+      }).catch(err => { el.disabled = false; toast(errMsg(err)); });
+      return;
+    }
     if (a === 'tpinreset') {
       stop(); const t = S.instructors.find(x => x.id === el.dataset.t); if (!t) return;
-      S.ui.pinAsk = ''; run('adminResetPin', ADMIN_KEY, t.id).then(() => { t.hasPin = false; SAVED.inst[t.id] = JSON.stringify(t); render(); toast(`${t.name} 강사 비밀번호를 초기화했습니다. 다음 로그인 때 새로 정합니다`); }).catch(err => toast(errMsg(err)));
+      S.ui.pinAsk = ''; run('adminResetPin', ADMIN_KEY, t.id).then(r => { if (r && r.pinReqs) S.pinReqs = r.pinReqs; t.hasPin = false; SAVED.inst[t.id] = JSON.stringify(t); render(); toast(`${t.name} 강사 비밀번호를 초기화했습니다. 다음 로그인 때 새로 정합니다`); }).catch(err => toast(errMsg(err)));
       return;
     }
     if (a === 'export-sheet') {
@@ -9292,6 +9312,14 @@ document.addEventListener('click', e => {
     if (a === 'tlogin') {
       stop(); const g = tLoginRead(); if (g.err) { toast(g.err); return; }
       teacherLoginGo(g.name, g.phone, g.pin); return;
+    }
+    if (a === 'tpinreq') {
+      stop(); const n = ((document.getElementById('tl-name') || {}).value || '').trim(), ph = ((document.getElementById('tl-phone') || {}).value || '').trim();
+      if (!n || ph.replace(/\D/g, '').length < 9) { toast('이름과 연락처를 먼저 입력해 주세요'); return; }
+      S.ui.tlName = n; S.ui.tlPhone = ph; el.disabled = true;
+      run('teacherPinReq', n, ph).then(r => { S.ui.tPinReqOk = { already: !!(r && r.already) }; render(); toast(r && r.already ? '이미 초기화 요청이 접수되어 있습니다' : '비밀번호 초기화 요청을 접수했습니다'); })
+        .catch(err => { el.disabled = false; toast(errMsg(err)); });
+      return;
     }
     if (a === 'tpinset') {
       stop(); const ps = S.ui.tPinSetup, v = ((document.getElementById('tl-pin2') || {}).value || '').trim();

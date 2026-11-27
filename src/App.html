@@ -199,7 +199,7 @@ function aUse(d, keepUi) {
   const prevS = keepUi && S ? S : null;   /* 자동 새로고침: 서버가 보내지 않는 화면 쪽 자료(통계·프로그램 개발·대학 링크 등)는 그대로 둠 → 보던 화면이 「불러오는 중」으로 되돌아가지 않게 */
   const ui = keepUi && S ? S.ui : { role: 'admin', view: 'board', st: '', q: '', region: '', probOnly: false, sel: '', showWait: false, onlyApps: false, condEdit: '' };
   const set = d.settings || {};
-  S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined, mwDB: keepUi && S ? S.mwDB : undefined };
+  S = { ...base(set), rows: d.rows || [], contacts: d.contacts || {}, instructors: d.instructors || [], schoolLinks: d.schoolLinks || [], joinReqs: d.joinReqs || [], univLinks: d.univLinks || [], statsLink: d.statsLink || '', mailInfo: d.mailInfo || null, adminLinkUrl: d.adminLinkUrl || '', adminOrg: d.adminOrg || '', ctxSeason: d.ctxSeason || set.season || '', yearFiles: d.yearFiles || {}, biz: d.biz || 'anchor', bizList: d.bizList || [], isMaster: !!d.isMaster, adminName: d.adminName || '', admins: d.admins || [], extBusy: d.extBusy || [], pinReqs: d.pinReqs || [], ui, stats: keepUi && S ? S.stats : undefined, kitDB: keepUi && S ? S.kitDB : undefined, mwDB: keepUi && S ? S.mwDB : undefined };
   if (prevS) Object.keys(prevS).forEach(k => { if (k !== 'ui' && !(k in S) && prevS[k] != null) S[k] = prevS[k]; });
   S.serverVer = d.serverVer || '';
   MY_ORG = S.adminOrg || '호서대학교';
@@ -345,7 +345,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.159';
+const APP_VER = '11.160';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -660,9 +660,20 @@ document.addEventListener('click', e => {
     }
     if (a === 'st-link') { const m = el.dataset.m; if ((m === 'regen' || m === 'off') && S.ui.stLinkAsk !== m) return; stop(); S.ui.stLinkAsk = ''; el.disabled = true; run('adminStatsLink', ADMIN_KEY, m).then(L => { S.statsLink = L || ''; render(); toast(m === 'off' ? '공유 링크를 껐습니다' : m === 'regen' ? '새 링크를 만들었습니다. 이전 링크는 더 이상 열리지 않습니다' : (L ? '공유 링크를 만들었습니다' : '웹앱 주소를 먼저 저장해 주세요(기준정보)')); }).catch(err => { el.disabled = false; toast('링크를 만들지 못했습니다: ' + errMsg(err)); }); return; }
     if (a === 'st-linkopen') { stop(); if (S.statsLink) window.open(S.statsLink, '_blank', 'noopener'); return; }
+    if (a === 'pinreqok' || a === 'pinreqno') {
+      stop(); const id = el.dataset.t, t = S.instructors.find(x => x.id === id), nm = t ? t.name : ((S.pinReqs || []).find(q => q.id === id) || {}).name || '';
+      if (a === 'pinreqno' && !confirm(`${nm} 강사의 비밀번호 초기화 요청을 반려할까요?`)) return;
+      el.disabled = true;
+      (a === 'pinreqok' ? run('adminResetPin', ADMIN_KEY, id) : run('adminPinReqDismiss', ADMIN_KEY, id)).then(r => {
+        S.pinReqs = (r && r.pinReqs) || (S.pinReqs || []).filter(q => q.id !== id);
+        if (a === 'pinreqok' && t) { t.hasPin = false; if (SAVED && SAVED.inst) SAVED.inst[t.id] = JSON.stringify(t); }
+        render(); toast(a === 'pinreqok' ? `${nm} 강사 비밀번호를 초기화했습니다. 다음 로그인 때 새로 정합니다` : `${nm} 강사의 초기화 요청을 반려했습니다`);
+      }).catch(err => { el.disabled = false; toast(errMsg(err)); });
+      return;
+    }
     if (a === 'tpinreset') {
       stop(); const t = S.instructors.find(x => x.id === el.dataset.t); if (!t) return;
-      S.ui.pinAsk = ''; run('adminResetPin', ADMIN_KEY, t.id).then(() => { t.hasPin = false; SAVED.inst[t.id] = JSON.stringify(t); render(); toast(`${t.name} 강사 비밀번호를 초기화했습니다. 다음 로그인 때 새로 정합니다`); }).catch(err => toast(errMsg(err)));
+      S.ui.pinAsk = ''; run('adminResetPin', ADMIN_KEY, t.id).then(r => { if (r && r.pinReqs) S.pinReqs = r.pinReqs; t.hasPin = false; SAVED.inst[t.id] = JSON.stringify(t); render(); toast(`${t.name} 강사 비밀번호를 초기화했습니다. 다음 로그인 때 새로 정합니다`); }).catch(err => toast(errMsg(err)));
       return;
     }
     if (a === 'export-sheet') {
@@ -755,6 +766,14 @@ document.addEventListener('click', e => {
     if (a === 'tlogin') {
       stop(); const g = tLoginRead(); if (g.err) { toast(g.err); return; }
       teacherLoginGo(g.name, g.phone, g.pin); return;
+    }
+    if (a === 'tpinreq') {
+      stop(); const n = ((document.getElementById('tl-name') || {}).value || '').trim(), ph = ((document.getElementById('tl-phone') || {}).value || '').trim();
+      if (!n || ph.replace(/\D/g, '').length < 9) { toast('이름과 연락처를 먼저 입력해 주세요'); return; }
+      S.ui.tlName = n; S.ui.tlPhone = ph; el.disabled = true;
+      run('teacherPinReq', n, ph).then(r => { S.ui.tPinReqOk = { already: !!(r && r.already) }; render(); toast(r && r.already ? '이미 초기화 요청이 접수되어 있습니다' : '비밀번호 초기화 요청을 접수했습니다'); })
+        .catch(err => { el.disabled = false; toast(errMsg(err)); });
+      return;
     }
     if (a === 'tpinset') {
       stop(); const ps = S.ui.tPinSetup, v = ((document.getElementById('tl-pin2') || {}).value || '').trim();
