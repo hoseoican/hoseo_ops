@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-11';
+var APP_VERSION = '2026.11.27-12';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2108,7 +2108,7 @@ function roleKind(x){ var r=rolesOf(x); return r.length>1 ? 'dual' : r[0]==='주
 function roleLabel(x){ return x.p.role+(roleKind(x)==='dual' ? ' · <b class="dual" title="운영현황에서 주강사와 보조강사를 모두 맡았습니다">겸임</b>' : ''); }
 function rosterMatch(x, f, q){
   if(q){ var qq=q.replace(/\s/g,''); if(x.name.replace(/\s/g,'').indexOf(qq)<0 && !x.schools.some(function(s){ return s.replace(/\s/g,'').indexOf(qq)>=0; })) return false; }
-  return f==='all' || (f==='lsub' && lsubWait(x.p)) || (f==='cur' && (x.unreg || inTerm(x.name))) || (f==='term' && x.term && !x.term.none) || (f==='exam' && x.exp) || (f==='late' && smsLog[x.p.id] && reqDays(smsLog[x.p.id])>=7 && (x.unreg || !x.ok || x.exp)) || (f==='unreg' && x.unreg) || (f==='miss' && !x.ok && !x.unreg) || (f==='ok' && x.ok) || (f==='unsent' && x.send.st!=='sent') || (f==='main' && roleKind(x)==='main') || (f==='sub' && roleKind(x)==='sub') || (f==='dual' && roleKind(x)==='dual');
+  return f==='all' || (f==='lsub' && lsubWait(x.p)) || (f==='cur' && (x.unreg || inTerm(x.name))) || (f==='term' && x.term && !x.term.none) || (f==='exam' && x.exp) || (f==='late' && smsLogOf(x.p) && reqDays(smsLogOf(x.p))>=7 && (x.unreg || !x.ok || x.exp)) || (f==='unreg' && x.unreg) || (f==='miss' && !x.ok && !x.unreg) || (f==='ok' && x.ok) || (f==='unsent' && x.send.st!=='sent') || (f==='main' && roleKind(x)==='main') || (f==='sub' && roleKind(x)==='sub') || (f==='dual' && roleKind(x)==='dual');
 }
 function rosterSort(list, how){
   return list.sort(function(a,b){
@@ -2165,7 +2165,7 @@ function renderRoster(){
   var list=all.filter(function(x){ return rosterMatch(x, rsF, q); }); list=rsCol.k ? rsColSort(list) : rosterSort(list, $('rsSort').value); rsLast=list;
   var allOn=list.length && list.every(function(x){ return rsSel[x.p.id]; });
   $('rsTable').innerHTML='<tr><th class="ck"><input type="checkbox" id="rsHead" title="보이는 강사 전체 선택"'+(allOn?' checked':'')+'></th>'+rsTh('name','강사',130)+rsTh('school','배치 학교',200)+rsTh('miss','부족 서류',0)+rsTh('send','발송',120)+rsTh('upd','최근 수정',100)+'<th style="width:60px"></th></tr>'+(list.length ? list.map(function(x){
-    var p=x.p, lg=smsLog[p.id];
+    var p=x.p, lg=smsLogOf(p);
     if(x.unreg) return '<tr class="unreg'+(rsSel[p.id]?' sel':'')+'"><td class="ck"><input type="checkbox" data-rs="'+esc(p.id)+'"'+(rsSel[p.id]?' checked':'')+'></td>'+
       '<td class="nm"><b>'+esc(x.name)+'</b><small>'+roleLabel(x)+'</small></td><td>'+esc(x.schools.join(', '))+'</td>'+
       '<td>'+missTags(x)+'<small>'+(p.phone?esc(p.phone):'연락처 없음')+'</small>'+(lg ? '<div class="reqd">'+reqText(lg)+'</div>' : '')+'</td>'+
@@ -2221,11 +2221,17 @@ var SMS_LATE_LINE = '기한 안에 내기 어려운 서류는 링크의 「제�
 var DEFAULT_SMS = { ver:4, bodyNew:'[호서대 앵커늘봄] {성명} 강사님, {배치학교} 늘봄 프로그램 출강을 위한 계약 서류 제출을 부탁드립니다.\n[제출 서류]\n{요청서류}\n'+SMS_LINK_LINE+'\n{제출기한}까지 제출해 주시기 바랍니다(링크 대신 {이메일} 로 보내셔도 됩니다).\n'+SMS_LATE_LINE+'\n문의 {연락처}', body:'[호서대 앵커늘봄] {성명} 강사님, 계약 서류 중 아래 서류의 제출·보완이 필요합니다.\n{요청서류}\n'+SMS_LINK_LINE+'\n{제출기한}까지 제출해 주시기 바랍니다(링크 대신 {이메일} 로 보내셔도 됩니다).\n'+SMS_LATE_LINE+'\n문의 {연락처}', due:'', who:'', tel:'041-423-2427', email:'jihun@hoseo.edu' };
 var SMS_PH = [['성명','강사 성명'],['요청서류','미제출·보완 서류를 나눠 정리'],['부족서류','미제출 서류(한 줄에 하나씩)'],['보완서류','보완 필요 서류와 사유'],['배치학교','배치 학교'],['제출기한','제출기한'],['담당자','담당자'],['연락처','담당자 연락처'],['이메일','제출 이메일'],['제출링크','강사 본인 제출 링크(「제출 링크 생성」로 만든 강사만)']];
 var smsCfg = JSON.parse(JSON.stringify(DEFAULT_SMS)), smsLog = {}, smsPick = {}, smsLastTa = 'body';
+/* 요청 기록: 요청 뒤에 강사가 제출 링크로 다시 냈으면 그 요청은 처리된 것으로 보고, 새로 보완을 요청하면 새 요청으로 셈 */
+function smsLogDone(p){ var lg=p && smsLog[p.id]; return !!(lg && p.lsub && p.lsub.at && p.lsub.at > (lg.at||0)); }
+function smsLogOf(p){ var lg=p && smsLog[p.id]; return lg && !smsLogDone(p) ? lg : null; }
+function smsPrevTxt(p){ var lg=p && smsLog[p.id]; if(lg && smsLogDone(p)) return dotDate(lg.date)+' 요청 → '+dotDate(p.lsub.at)+' 제출'; var pv=lg && lg.prev; return pv ? '지난 요청 '+dotDate(pv.date)+' → '+dotDate(pv.done)+' 제출' : ''; }
 function smsLogSet(id, x){
   if(!x) delete smsLog[id];
-  else { var old=smsLog[id], same=old && old.date===today();
+  else { var old=smsLog[id], prev=old && old.prev;
+    if(old && smsLogDone(x.p)){ prev={ date:old.date, n:old.n||1, done:x.p.lsub.at }; old=null; }   /* 지난 요청은 처리됨 → 새 요청 1회부터 */
+    var same=old && old.date===today();
     smsLog[id]={ date:today(), at:Date.now(), name:x.name, by:sy.me||'', n:(old ? (old.n||1) : 0)+(same?0:1), first:old ? (old.first||old.date) : today(),
-      items:x.unreg?['서류 전체(미등록)']:x.miss.map(missText).concat(x.fix.map(fixLabel)).concat(x.exp?[x.exp.t]:[]) }; }
+      items:x.unreg?['서류 전체(미등록)']:x.miss.map(missText).concat(x.fix.map(fixLabel)).concat(x.exp?[x.exp.t]:[]) }; if(prev) smsLog[id].prev=prev; }
   nMark('m:'+id);
 }
 function reqDays(lg){ return lg ? Math.floor((new Date(today()+'T00:00:00')-new Date(lg.date+'T00:00:00'))/86400000) : -1; }
@@ -2307,7 +2313,7 @@ function smsMatch(x){
   if(sc && x.schools.indexOf(sc)<0) return false;
   if(it==='unreg'){ if(!x.unreg) return false; } else if(it==='exp'){ if(!x.exp) return false; } else if(it && (it.indexOf('fix:')===0 ? !x.fix.some(function(f){ return 'fix:'+f.k===it; }) : x.miss.indexOf(it)<0)) return false;
   if(q && x.name.replace(/\s/g,'').indexOf(q)<0) return false;
-  var rq=$('smReq').value, lg=smsLog[x.p.id];
+  var rq=$('smReq').value, lg=smsLogOf(x.p);
   if(rq==='fixnew') return smsFixNew(x);
   if(rq==='none' && lg) return false;
   if(rq==='done' && !lg) return false;
@@ -2360,7 +2366,7 @@ function renderSms(){
   $('smSchool').innerHTML='<option value="">배치 학교 전체</option>'+Object.keys(scN).sort(natSort).map(function(s){ return '<option value="'+esc(s)+'">'+esc(s)+' ('+scN[s]+')</option>'; }).join('');
   $('smItem').innerHTML='<option value="">부족 서류 전체</option>'+(itN.unreg?'<option value="unreg">미등록 강사 · 서류 전체 ('+itN.unreg+')</option>':'')+MISS_ORDER.filter(function(k){ return itN[k]; }).map(function(k){ return '<option value="'+k+'">'+esc(missText(k))+' 미제출 ('+itN[k]+')</option>'; }).join('')+FIX_DOCS.filter(function(d){ return itN['fix:'+d[0]]; }).map(function(d){ return '<option value="fix:'+d[0]+'">'+esc(d[1])+' 보완 ('+itN['fix:'+d[0]]+')</option>'; }).join('')+(itN.exp?'<option value="exp">채용신체검사서 기한 ('+itN.exp+')</option>':'');
   if(scN[scV]) $('smSchool').value=scV; if(itN[itV]) $('smItem').value=itV;
-  var how=$('smSort').value, rk=function(x){ var lg=smsLog[x.p.id]; return how==='school' ? 0 : how==='miss' ? -(x.unreg ? 99 : x.miss.length+x.fix.length) : how==='req' ? (lg ? lg.at||0 : 9e15) : how==='noreq' ? (lg ? 1 : 0) : how==='smart' ? (lg ? lg.at||1 : 0) : 0; };
+  var how=$('smSort').value, rk=function(x){ var lg=smsLogOf(x.p); return how==='school' ? 0 : how==='miss' ? -(x.unreg ? 99 : x.miss.length+x.fix.length) : how==='req' ? (lg ? lg.at||0 : 9e15) : how==='noreq' ? (lg ? 1 : 0) : how==='smart' ? (lg ? lg.at||1 : 0) : 0; };
   /* 상태 탭: 요청 전 · 다시 요청 필요(7일 지남) · 요청함 · 전체 (조건 · 검색은 함께 적용) */
   var rq0=$('smReq').value, cnt=function(v){ $('smReq').value=v; var n=all.filter(smsMatch).length; return n; };
   var TB=[['none','요청 전'],['fixnew','보완 재요청'],['d7','다시 요청 필요'],['done','요청함'],['','전체']], TN=TB.map(function(t){ return cnt(t[0]); }); $('smReq').value=rq0;
@@ -2371,8 +2377,8 @@ function renderSms(){
   var nUn=all.filter(function(x){ return x.unreg; }).length; $('smBasis').textContent='미제출·보완 서류가 있는 강사 '+(all.length-nUn)+'명'+(nUn?' · 미등록 '+nUn+'명':'');
   $('smCount').textContent=list.length+'명 표시';
   $('smList').innerHTML = list.length ? list.map(function(x){
-    var p=x.p, ph=phoneOf(p), lg=smsLog[p.id];
-    return '<li data-smli="'+esc(p.id)+'" class="'+(smsPick[p.id]?'on':'')+(ph.length<10?' nophone':'')+'"><input type="checkbox" data-sm="'+esc(p.id)+'"'+(smsPick[p.id]?' checked':'')+'><div><div class="who"><b>'+esc(x.name)+'</b><small>'+p.role+(x.schools.length?' · '+esc(x.schools.join(', ')):'')+'</small><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+'</div>'+missTags(x)+(x.exp||lateOf(p)?'<div class="mtags" style="margin-top:3px">'+(x.exp?'<span class="mtag fx">'+esc(x.exp.tag)+'</span>':'')+lateTag(p)+'</div>':'')+'</div></li>';
+    var p=x.p, ph=phoneOf(p), lg=smsLogOf(p), pvt=smsPrevTxt(p);
+    return '<li data-smli="'+esc(p.id)+'" class="'+(smsPick[p.id]?'on':'')+(ph.length<10?' nophone':'')+'"><input type="checkbox" data-sm="'+esc(p.id)+'"'+(smsPick[p.id]?' checked':'')+'><div><div class="who"><b>'+esc(x.name)+'</b><small>'+p.role+(x.schools.length?' · '+esc(x.schools.join(', ')):'')+'</small><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':(pvt?'<span class="badge" style="background:#F1EBEA;color:var(--mute)" title="지난 요청은 강사가 다시 제출해 처리됐습니다. 남은 보완은 새 요청으로 보냅니다">'+esc(pvt)+'</span>':''))+'</div>'+missTags(x)+(x.exp||lateOf(p)?'<div class="mtags" style="margin-top:3px">'+(x.exp?'<span class="mtag fx">'+esc(x.exp.tag)+'</span>':'')+lateTag(p)+'</div>':'')+'</div></li>';
   }).join('') : '<li class="empty">'+(all.length?'해당하는 강사가 없습니다':'미제출·보완 서류가 있는 강사가 없습니다')+'</li>';
   each('[data-smli]', function(li){ li.onclick=function(e){ var id=li.dataset.smli, cb=li.querySelector('input'); if(e.target!==cb) cb.checked=!cb.checked; if(cb.checked) smsPick[id]=1; else delete smsPick[id]; li.classList.toggle('on', cb.checked); renderSmsPreview(); }; }, $('smList'));
   // 양식
@@ -2393,7 +2399,7 @@ function renderSmsPreview(){
   $('smCfgSum').textContent='제출기한 '+(smsCfg.due||smsDueDefault())+' · 담당 '+(smsCfg.who||'미입력')+' · '+(smsCfg.tel||'연락처 미입력')+' · '+(smsCfg.email||'메일 미입력');
   var nSend=pk.filter(function(x){ return phoneOf(x.p).length>=10; }).length; $('smSendAll').disabled=!nSend; $('smSendAll').textContent='1명씩 보내기'+(nSend?' ('+nSend+'명)':''); $('smSendInd').disabled=!nSend; $('smIndXlsx').disabled=!nSend; $('smSendInd').textContent='문자 보내기'+(nSend?' ('+nSend+'명)':'')+(SMS_BR.on?'':' · 설치 필요');
   $('smPrev').innerHTML = pk.length ? pk.map(function(x){
-    var p=x.p, t=smsText(x, true), ph=phoneOf(p), b=smsBytes(t), lg=smsLog[p.id];
+    var p=x.p, t=smsText(x, true), ph=phoneOf(p), b=smsBytes(t), lg=smsLogOf(p);
     return '<div class="smsitem"><div class="hd"><b>'+esc(x.name)+'</b><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+(function(){ var l=linkState(p); return l.st==='ok' ? '<span class="badge ok" title="'+esc(linkOf(p))+'">링크 ~'+dotDate(p.lnk.exp)+'</span>' : l.st==='none' ? '' : '<span class="badge err" title="「제출 링크 생성」를 누르면 새 링크를 만듭니다">링크 '+(l.st==='lock'?'잠김':'기간 지남')+'</span>'; })()+'<span class="by">'+b+'바이트 · '+(b<=90?'단문':'장문')+'</span></div>'+
       '<pre>'+esc(t)+'</pre><div class="ft">'+(ph.length>=10?'<button type="button" class="save sm" data-smsend="'+esc(p.id)+'">문자 보내기</button>':'')+(t.indexOf(SMS_LINK_PH)>=0?'<button type="button" class="ghost sm" data-smlink="'+esc(p.id)+'" title="보내기 전에 이 강사의 제출 링크를 지금 만들어 문자에 넣어 봅니다'+(x.unreg?' (운영현황 정보로 강사 등록도 함께 합니다)':'')+'">링크 지금 만들기</button>':'')+'<button type="button" class="ghost sm" data-smcopy="'+esc(p.id)+'">문자 내용 복사</button>'+(ph.length>=10?'<button type="button" class="ghost sm" data-smtel="'+esc(p.id)+'">전화번호 복사</button><a href="sms:'+ph+'?body='+encodeURIComponent(t)+'">휴대폰 문자 열기</a>':'')+
       '<span style="flex:1"></span>'+(lg?'<button type="button" class="ghost sm" data-smunreq="'+esc(p.id)+'">요청 기록 삭제</button>':'')+'<button type="button" class="ghost sm" data-smreq="'+esc(p.id)+'">'+(lg?(lg.date===today()?'오늘 요청함':'다시 요청함 처리'):'요청함 처리')+'</button></div></div>';
