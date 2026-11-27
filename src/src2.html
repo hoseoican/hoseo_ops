@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER = '11.158';
+const LIB_VER = '11.159';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5350,7 +5350,7 @@ const pdMobile = c => mobileOf([c.mobile,c.phone].filter(Boolean).join(' / '));
 function pdFill(tpl,sch){ const c=S.contacts[sch]||{}, rs=resultRowsOf(sch), ids=new Set();
   const list=rs.map(r=>{ const t=S.instructors.find(x=>x.id===r.inst), a=r.asstPend?null:S.instructors.find(x=>x.id===r.asst); [t,a].forEach(x=>x&&ids.add(x.id));
     const nm=x=>`${x.name} ${fmtPhone(mobileOf(x.phone)||x.phone||'')}`.trim();
-    return `- ${clsName(r)} : ${t?nm(t):'미배정'}${a?` / 보조 ${nm(a)}`:''}`; }).join('\n');
+    return `- ${shortSch(r.school)} ${clsName(r)}\n  ${(prog(r.prog)||{}).name||''} : ${t?nm(t):'미배정'}${a?` / 보조 ${nm(a)}`:''}`; }).join('\n');
   const link=schoolLinkOf(sch)||'';
   const m={학교:shortSch(sch),담당자:c.name||'',시즌:season().name,강사목록:list,강사수:ids.size,접속링크:link,운영담당자:S.ops.name||'',운영연락처:S.ops.phone||'',운영메일:S.ops.email||''};
   const t0=link?String(tpl||''):String(tpl||'').replace(/^[ \t]*\{접속링크\}[ \t]*\n?/m,'');
