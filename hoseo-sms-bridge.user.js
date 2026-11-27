@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         호서대 늘봄 문자 보내기 (i-ONE 캠퍼스 연결)
 // @namespace    hoseo-anchor-sms
-// @version      0.2.0
+// @version      0.2.1
 // @description  「초등방과후 프로그램 운영 관리」에서 고른 문자를 i-ONE 캠퍼스 「메시지전송(문자)」(1명씩) 또는 「개별메시지/사진 문자발송」(강사별 다른 내용을 한 번에) 화면에 채워 줍니다. 보내기는 담당자가 직접 누릅니다.
 // @match        https://hoseoican.github.io/hoseo_ops/*
 // @match        https://script.google.com/macros/*
@@ -17,7 +17,7 @@
 // ==/UserScript==
 (function () {
   'use strict';
-  var VER = '0.2.0';
+  var VER = '0.2.1';
   var CAMPUS_HOME = 'https://campus.ibk.co.kr/admin/';
   var JOB_TTL = 60 * 60 * 1000; /* 문자 목록은 1시간 동안만 유효 */
   var host = location.hostname;
@@ -168,7 +168,7 @@
     var st = iSteps.map(function (s) { return '<div>' + (s[0] ? '완료' : '확인') + ' ' + s[1] + '</div>'; }).join('');
     box.innerHTML = head +
       '<div style="padding:8px 10px;background:#fbf1f1;border-radius:8px;margin-bottom:8px;max-height:84px;overflow:auto">' + q.jobs.map(function (j) { return esc(j.name || '(이름 없음)'); }).join(', ') + '</div>' +
-      (I.page() ? '' : '<div style="color:#b3261e;margin-bottom:8px">「UMS서비스 → 메시지관리 → 개별메시지/사진 문자발송」 화면을 열어 주세요. 열리면 자동으로 채웁니다.</div>') +
+      (I.page() ? '' : '<div style="color:#b3261e;margin-bottom:8px">「개별메시지/사진 문자발송」 화면으로 이동하는 중입니다. 넘어가지 않으면 왼쪽 메뉴에서 직접 눌러 주세요. 열리면 자동으로 채웁니다.</div>') +
       (st ? '<div style="font-size:12.5px;margin-bottom:8px">' + st + '</div>' : '') +
       (msg ? '<div style="font-size:12.5px;margin-bottom:8px;color:#444">' + msg + '</div>' : '') +
       (q.state === 'filled' ? '<div style="font-size:12.5px;margin-bottom:8px">수신자 수와 미리보기 내용을 확인하고 i-ONE 화면의 <b>전송</b> 버튼을 눌러 주세요.</div>' : '') +
@@ -275,6 +275,18 @@
       if (!iBusy && I.page()) {
         if (iq.state === 'new') { iFill(iq); return; }
         if (iq.state === 'filled' && iPressed && Date.now() - iPressed < 120000) { var b0 = F.body(), c0 = F.count(); if ((b0 && !b0.value.trim()) || c0 === 0) { iPressed = 0; iMarkSent(true); return; } }
+      }
+      /* 다른 화면에 있을 때: 1명이면 지금 보이는 「메시지전송(문자)」에서 바로 1명씩 보내기로 바꾸고,
+         여러 명이면 왼쪽 메뉴 「개별메시지/사진 문자발송」을 눌러 이동 (못 찾으면 1명씩 보내기로 바꿈) */
+      if (!iBusy && !I.page() && iq.state === 'new') {
+        var toQueue = function () {
+          GM_setValue('hsSmsQueue', { jobs: iq.jobs.map(function (j) { return { key: j.key, name: j.name, phone: j.phone, title: iq.title || '', body: j.body, state: 'new' }; }), i: 0, created: Date.now(), label: iq.label || '' });
+          GM_setValue('hsSmsInd', null); setTimeout(tick, 200);
+        };
+        if (onSmsPage() && iq.jobs.length <= 1) { toQueue(); return; }
+        var lk = byText('a,li,span', /^개별\s*메시지\s*\/\s*사진\s*문자\s*발송$/);
+        if (lk && (!iq.navAt || Date.now() - iq.navAt > 15000)) { iq.navAt = Date.now(); saveIQ(iq); (lk.closest('a') || lk).click(); }
+        else if (!lk && onSmsPage()) { toQueue(); return; }
       }
       if (!iBusy) iDraw();
       return;
