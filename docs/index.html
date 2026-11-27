@@ -1222,6 +1222,7 @@ if(EMBED) document.documentElement.classList.add('embed');
         <div id="smTplBox" style="margin-top:10px;border-top:1px dashed var(--line);padding-top:8px"><b style="font-size:13px">문자 양식</b>
           <label class="fld" style="margin:8px 0"><span>본문 (등록 강사 · 미제출·보완 요청)</span><textarea id="smBody" style="min-height:150px"></textarea></label>
           <label class="fld" style="margin:8px 0"><span>본문 (미등록 강사 · 서류 전체 제출 요청)</span><textarea id="smBodyNew" style="min-height:130px"></textarea></label>
+          <label class="fld" style="margin:8px 0"><span>본문 (기한 임박 무응답 · 제출 또는 지연 사유 입력 요청)</span><textarea id="smBodyLate" style="min-height:130px"></textarea></label>
           <div class="ph-list" id="smPh"></div>
           <div class="row" style="margin:0;gap:6px;align-items:center"><button type="button" class="ghost sm" id="smReset">기본값 초기화</button><span style="flex:1"></span><span class="hint" id="smCfgDirty"></span><button type="button" class="ghost" id="smCfgCancel">취소</button><button type="button" class="save" id="smCfgSave">저장</button></div>
         </div>
@@ -1392,7 +1393,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-21';
+var APP_VERSION = '2026.11.27-22';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2418,6 +2419,15 @@ function smsLogSet(id, x){
       items:x.unreg?['서류 전체(미등록)']:x.miss.map(missText).concat(x.fix.map(fixLabel)).concat(x.exp?[x.exp.t]:[]) }; if(prev) smsLog[id].prev=prev; }
   nMark('m:'+id);
 }
+/* 기한 임박 무응답: 요청했는데 그 뒤로 제출도, 제출 지연 사유 입력도 없고 제출기한이 2일 이내로 남았거나 지난 강사
+   이 탭에서 보낸 문자는 「지연 사유 요청」(smsLog[id].la)으로 따로 기록하고, 요청 날짜는 그대로 둠 */
+var SMS_LATE_DEF='[호서대 앵커늘봄] {성명} 강사님, 계약 서류 제출기한({제출기한})이 다가왔으나 아직 서류 제출이나 제출 지연 사유가 확인되지 않았습니다.\n{요청서류}\n기한 안에 제출이 어려우면 아래 링크의 「제출 지연 사유」에 사유와 제출 예정일을 꼭 입력해 주세요(미응답 시 배치·계약에 제한이 있을 수 있습니다).\n{제출링크}\n문의 {연락처}';
+function smsLateMode(){ return $('smReq') && $('smReq').value==='late'; }
+function smsDueIso(lg){ if(smsCfg.dueD) return smsCfg.dueD; var d=new Date((lg&&lg.date||today())+'T00:00:00'); d.setDate(d.getDate()+7); return d.toISOString().slice(0,10); }
+function smsDueLeft(lg){ return Math.round((new Date(smsDueIso(lg)+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000); }
+function smsNoReply(x){ if(x.unreg) return false; var lg=smsLogOf(x.p); if(!lg) return false; var l=lateOf(x.p); if(l && (l.at||0) > (lg.at||0)) return false; return smsDueLeft(lg)<=2; }
+function smsLateSet(id){ var lg=smsLog[id]; if(!lg) return; lg.la={ date:today(), at:Date.now(), n:(lg.la&&lg.la.date!==today()?(lg.la.n||1)+1:(lg.la?lg.la.n||1:1)) }; nMark('m:'+id); }
+function smsLateTxt(p){ var lg=p && smsLog[p.id], la=lg && lg.la; return la && (la.at||0) > (lg.at||0) ? '지연 사유 요청 '+dotDate(la.date) : ''; }
 function reqDays(lg){ return lg ? Math.floor((new Date(today()+'T00:00:00')-new Date(lg.date+'T00:00:00'))/86400000) : -1; }
 function reqText(lg){ var d=reqDays(lg); return dotDate(lg.date)+' 요청'+((lg.n||1)>1?' '+lg.n+'회':'')+(d>0?' · '+d+'일 지남':''); }
 // 강사 본인 제출 링크 (강사 자료 공유를 켜야 만들 수 있다)
@@ -2487,12 +2497,13 @@ function smsText(x, prev){
   if(isNew){ docs=SMS_NEW_DOCS.slice(); all='- '+docs.join('\n- '); }
   var v={ '성명':x.name, '요청서류':all, '부족서류':docs.join('\n- '), '보완서류':fixes.join('\n- '), '배치학교':(subsPending(x.p).length ? subsPending(x.p).map(function(r){ return r.school; }).filter(function(v,i,a){ return a.indexOf(v)===i; }) : x.schools).join(', '), '제출기한':smsCfg.due||smsDueDefault(), '담당자':smsCfg.who||'', '연락처':smsCfg.tel||'', '이메일':smsCfg.email||'', '제출링크':linkOf(x.p) || (prev && smsAutoLink(x) ? SMS_LINK_PH : '') };
   // 목록 자리표시자만 있는 줄이 비면 그 줄을 지운다(예: 「- {보완서류}」인데 보완할 서류가 없을 때)
-  var tpl=String((isNew ? (smsCfg.bodyNew||DEFAULT_SMS.bodyNew) : smsCfg.body)||'');
+  var tpl=String((smsLateMode() && !isNew ? (smsCfg.bodyLate||SMS_LATE_DEF) : isNew ? (smsCfg.bodyNew||DEFAULT_SMS.bodyNew) : smsCfg.body)||'');
   /* 대체 강의: 양식에 학교 자리가 없으면 첫 줄 뒤에 대체 출강 정보를 넣음 */
   var spd=subsPending(x.p); if(spd.length && tpl.indexOf('{배치학교}')<0){ var sl='[대체 출강] '+spd.map(function(r){ return [r.school, r.prog, (r.from?dotDate(r.from):'')+(r.to?'~'+dotDate(r.to):'')].filter(Boolean).join(' · '); }).join(' / '); var L=tpl.split('\n'); L.splice(1, 0, sl); tpl=L.join('\n'); }
   /* 제출 링크가 없는 강사(미등록 강사 · 공유 자료를 안 켠 경우): 「링크」를 말하는 문장을 메일·전화 안내로 바꿈 */
   if(!v['제출링크']) tpl=tpl.replace(/\(링크 대신 (\{이메일\}|[^()\s]+@[^()\s]+) ?로 보내셔도 됩니다\)/g, '($1 로 보내 주세요)')
-    .replace(/기한 안에 내기 어려운 서류는 링크의 「제출 지연 사유」에 사유와 제출 예정일을 꼭 남겨 주세요/g, '기한 안에 내기 어려운 서류는 사유와 제출 예정일을 꼭 알려 주세요');
+    .replace(/기한 안에 내기 어려운 서류는 링크의 「제출 지연 사유」에 사유와 제출 예정일을 꼭 남겨 주세요/g, '기한 안에 내기 어려운 서류는 사유와 제출 예정일을 꼭 알려 주세요')
+    .replace(/아래 링크의 「제출 지연 사유」에 사유와 제출 예정일을 꼭 입력해 주세요/g, '사유와 제출 예정일을 문자나 메일({이메일})로 꼭 알려 주세요');
   return tpl.split('\n').filter(function(line){
     var ks=(line.match(/\{(요청서류|부족서류|보완서류|제출링크)\}/g)||[]); if(!ks.length) return true;
     return ks.some(function(t){ return v[t.slice(1,-1)]; });
@@ -2508,6 +2519,7 @@ function smsMatch(x){
   if(q && x.name.replace(/\s/g,'').indexOf(q)<0) return false;
   var rq=$('smReq').value, lg=smsLogOf(x.p);
   if(rq==='fixnew') return smsFixNew(x);
+  if(rq==='late') return smsNoReply(x);
   if(rq==='none' && lg) return false;
   if(rq==='done' && !lg) return false;
   if(/^d\d+$/.test(rq) && !(lg && reqDays(lg)>=+rq.slice(1))) return false;
@@ -2520,17 +2532,18 @@ function smsBrPost(m){ var ws=[window]; try{ if(window.top!==window) ws.unshift(
 window.addEventListener('message', function(e){ var d=e.data; if(!d || typeof d!=='object') return;
   if(d.type==='hs-sms-hello' && !SMS_BR.on){ SMS_BR.on=true; SMS_BR.ver=d.ver||''; if(page==='sms') renderSmsPreview(); }
   if(d.type==='hs-sms-sent' && d.key && String(d.key).indexOf('sdn:')===0){ sdMark(String(d.key).slice(4)); return; }
+  if(d.type==='hs-sms-sent' && d.key && String(d.key).indexOf('lat:')===0){ var lid=String(d.key).slice(4); smsLateSet(lid); kvPut('smsLog', smsLog); if(page==='sms') renderSms(); var lp=people.filter(function(y){ return y.id===lid; })[0]; toast((lp?lp.name+' 강사 ':'')+'지연 사유 입력 요청 문자를 기록했습니다'); return; }
   if(d.type==='hs-sms-sent' && d.key && String(d.key).indexOf('lec:')===0){ var id=String(d.key).slice(4), x=smsTargets().filter(function(y){ return y.p.id===id; })[0]; if(x){ smsLogSet(id, x); kvPut('smsLog', smsLog); if(page==='sms') renderSms(); toast(x.name+' 강사 문자 전송을 요청함으로 기록했습니다'); } } });
 setTimeout(function(){ smsBrPost({ type:'hs-sms-ping' }); }, 1200); setInterval(function(){ if(!SMS_BR.on) smsBrPost({ type:'hs-sms-ping' }); }, 6000);
 function smsBrSend(list){
-  var jobs=(list||[]).filter(Boolean).map(function(x){ return { key:'lec:'+x.p.id, name:x.name, phone:phoneOf(x.p), title:'강사 서류 제출·보완 요청', body:smsText(x) }; }).filter(function(j){ return /^01\d{8,9}$/.test(j.phone) && j.body; });
+  var jobs=(list||[]).filter(Boolean).map(function(x){ return { key:(smsLateMode()?'lat:':'lec:')+x.p.id, name:x.name, phone:phoneOf(x.p), title:'강사 서류 제출·보완 요청', body:smsText(x) }; }).filter(function(j){ return /^01\d{8,9}$/.test(j.phone) && j.body; });
   if(!jobs.length){ toast('휴대폰번호가 있는 강사가 없습니다'); return; }
   if(!SMS_BR.on){ $('smsBrDlg').classList.add('on'); smsBrPost({ type:'hs-sms-ping' }); return; }
   smsBrPost({ type:'hs-sms-send', req:'l'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), label:'강사 서류 요청', jobs:jobs });
   toast('i-ONE 캠퍼스 문자 화면을 엽니다 · '+jobs.length+'건. 새 탭에서 확인 후 「전송」을 눌러 주세요'); }
 /* 개별 문자: i-ONE 「개별메시지/사진 문자발송」 업로드 양식. 개별메시지1에 강사별 문자 내용 전체를 넣고 본문은 {{개별메시지1}} 하나만 씀 */
 var IND_HEAD=['학번/교번','이름','연락처','개별메시지1','개별메시지2','개별메시지3','개별메시지4','개별메시지5','개별메시지6','개별메시지7','개별메시지8','개별메시지9','개별메시지10'];
-function smsIndList(list){ return (list||[]).filter(Boolean).map(function(x){ return { key:'lec:'+x.p.id, name:String(x.name||'').replace(/\s+/g,''), phone:phoneOf(x.p), body:smsText(x) }; }).filter(function(j){ return /^01\d{8,9}$/.test(j.phone) && j.body; }); }
+function smsIndList(list){ return (list||[]).filter(Boolean).map(function(x){ return { key:(smsLateMode()?'lat:':'lec:')+x.p.id, name:String(x.name||'').replace(/\s+/g,''), phone:phoneOf(x.p), body:smsText(x) }; }).filter(function(j){ return /^01\d{8,9}$/.test(j.phone) && j.body; }); }
 function smsIndBook(jobs){
   var aoa=[IND_HEAD].concat(jobs.map(function(j){ var r=['',j.name,j.phone,j.body]; while(r.length<IND_HEAD.length) r.push(''); return r; }));
   var ws=XLSX.utils.aoa_to_sheet(aoa);
@@ -2563,8 +2576,8 @@ function renderSms(){
   var how=$('smSort').value, rk=function(x){ var lg=smsLogOf(x.p); return how==='school' ? 0 : how==='miss' ? -(x.unreg ? 99 : x.miss.length+x.fix.length) : how==='req' ? (lg ? lg.at||0 : 9e15) : how==='noreq' ? (lg ? 1 : 0) : how==='smart' ? (lg ? lg.at||1 : 0) : 0; };
   /* 상태 탭: 요청 전 · 다시 요청 필요(7일 지남) · 요청함 · 전체 (조건 · 검색은 함께 적용) */
   var rq0=$('smReq').value, cnt=function(v){ $('smReq').value=v; var n=all.filter(smsMatch).length; return n; };
-  var TB=[['none','요청 전'],['fixnew','보완 재요청'],['d7','다시 요청 필요'],['done','요청함'],['','전체']], TN=TB.map(function(t){ return cnt(t[0]); }); $('smReq').value=rq0;
-  $('smTabs').innerHTML=TB.map(function(t,i){ return '<button type="button" data-smtab="'+t[0]+'" class="'+(rq0===t[0]?'on':'')+'"'+(t[0]==='d7'?' title="요청한 지 7일이 지났는데 아직 서류가 남은 강사"':t[0]==='fixnew'?' title="서류 검토에서 「보완 필요」로 표시한 뒤 아직 문자를 보내지 않은 강사"':'')+'><b>'+TN[i]+'</b>'+t[1]+'</button>'; }).join('');
+  var TB=[['none','요청 전'],['fixnew','보완 재요청'],['d7','다시 요청 필요'],['late','기한 임박 무응답'],['done','요청함'],['','전체']], TN=TB.map(function(t){ return cnt(t[0]); }); $('smReq').value=rq0;
+  $('smTabs').innerHTML=TB.map(function(t,i){ return '<button type="button" data-smtab="'+t[0]+'" class="'+(rq0===t[0]?'on':'')+'"'+(t[0]==='late'?' title="요청한 뒤 서류 제출도, 제출 지연 사유 입력도 없고 제출기한이 2일 이내로 남았거나 지난 강사"':t[0]==='d7'?' title="요청한 지 7일이 지났는데 아직 서류가 남은 강사"':t[0]==='fixnew'?' title="서류 검토에서 「보완 필요」로 표시한 뒤 아직 문자를 보내지 않은 강사"':'')+'><b>'+TN[i]+'</b>'+t[1]+'</button>'; }).join('');
   each('[data-smtab]', function(b){ b.onclick=function(){ $('smReq').value=b.dataset.smtab; renderSms(); }; }, $('smTabs'));
   var cn=($('smSchool').value?1:0)+($('smItem').value?1:0); $('smCondN').textContent=cn?cn:'';
   var list=all.filter(smsMatch).sort(function(a,b){ return (how==='school' ? natSort(a.schools.join(',')||'힣', b.schools.join(',')||'힣') : rk(a)-rk(b)) || natSort(a.name,b.name); });
@@ -2572,16 +2585,17 @@ function renderSms(){
   $('smCount').textContent=list.length+'명 표시';
   $('smList').innerHTML = list.length ? list.map(function(x){
     var p=x.p, ph=phoneOf(p), lg=smsLogOf(p), pvt=smsPrevTxt(p);
-    return '<li data-smli="'+esc(p.id)+'" class="'+(smsPick[p.id]?'on':'')+(ph.length<10?' nophone':'')+'"><input type="checkbox" data-sm="'+esc(p.id)+'"'+(smsPick[p.id]?' checked':'')+'><div><div class="who"><b>'+esc(x.name)+'</b><small>'+p.role+(x.schools.length?' · '+esc(x.schools.join(', ')):'')+'</small><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':(pvt?'<span class="badge" style="background:#F1EBEA;color:var(--mute)" title="지난 요청은 강사가 다시 제출해 처리됐습니다. 남은 보완은 새 요청으로 보냅니다">'+esc(pvt)+'</span>':''))+'</div>'+missTags(x)+(x.exp||lateOf(p)?'<div class="mtags" style="margin-top:3px">'+(x.exp?'<span class="mtag fx">'+esc(x.exp.tag)+'</span>':'')+lateTag(p)+'</div>':'')+'</div></li>';
+    return '<li data-smli="'+esc(p.id)+'" class="'+(smsPick[p.id]?'on':'')+(ph.length<10?' nophone':'')+'"><input type="checkbox" data-sm="'+esc(p.id)+'"'+(smsPick[p.id]?' checked':'')+'><div><div class="who"><b>'+esc(x.name)+'</b><small>'+p.role+(x.schools.length?' · '+esc(x.schools.join(', ')):'')+'</small><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(smsLateTxt(p)?'<span class="badge wait">'+smsLateTxt(p)+'</span>':'')+(lg&&smsNoReply(x)?'<span class="badge wait">기한 '+(smsDueLeft(lg)<0?(-smsDueLeft(lg))+'일 지남':smsDueLeft(lg)===0?'오늘':smsDueLeft(lg)+'일 남음')+' · 무응답</span>':'')+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':(pvt?'<span class="badge" style="background:#F1EBEA;color:var(--mute)" title="지난 요청은 강사가 다시 제출해 처리됐습니다. 남은 보완은 새 요청으로 보냅니다">'+esc(pvt)+'</span>':''))+'</div>'+missTags(x)+(x.exp||lateOf(p)?'<div class="mtags" style="margin-top:3px">'+(x.exp?'<span class="mtag fx">'+esc(x.exp.tag)+'</span>':'')+lateTag(p)+'</div>':'')+'</div></li>';
   }).join('') : '<li class="empty">'+(all.length?'해당하는 강사가 없습니다':'미제출·보완 서류가 있는 강사가 없습니다')+'</li>';
   each('[data-smli]', function(li){ li.onclick=function(e){ var id=li.dataset.smli, cb=li.querySelector('input'); if(e.target!==cb) cb.checked=!cb.checked; if(cb.checked) smsPick[id]=1; else delete smsPick[id]; li.classList.toggle('on', cb.checked); renderSmsPreview(); }; }, $('smList'));
   // 양식
   if(document.activeElement!==$('smBody')) $('smBody').value=smsCfg.body;
   if(document.activeElement!==$('smBodyNew')) $('smBodyNew').value=smsCfg.bodyNew||DEFAULT_SMS.bodyNew;
+  if(document.activeElement!==$('smBodyLate')) $('smBodyLate').value=smsCfg.bodyLate||SMS_LATE_DEF;
   [['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ if(document.activeElement!==$(f[0])) $(f[0]).value=smsCfg[f[1]]||''; });
   if(document.activeElement!==$('smDueD') && document.activeElement!==$('smDueT')) smsDueFill();
   $('smPh').innerHTML='자리표시자(누르면 본문에 삽입): '+SMS_PH.map(function(x){ return '<code data-smph="'+x[0]+'" title="'+x[1]+'">{'+x[0]+'}</code>'; }).join(' ');
-  each('[data-smph]', function(el){ el.onclick=function(){ var ta=smsLastTa==='bodyNew' ? $('smBodyNew') : $('smBody'), at=ta.selectionStart||ta.value.length; ta.value=ta.value.slice(0,at)+'{'+el.dataset.smph+'}'+ta.value.slice(at); smsCfg[smsLastTa]=ta.value; smsCfgDirty(); renderSmsPreview(); }; }, $('smPh'));
+  each('[data-smph]', function(el){ el.onclick=function(){ var ta=smsLastTa==='bodyNew' ? $('smBodyNew') : smsLastTa==='bodyLate' ? $('smBodyLate') : $('smBody'), at=ta.selectionStart||ta.value.length; ta.value=ta.value.slice(0,at)+'{'+el.dataset.smph+'}'+ta.value.slice(at); smsCfg[smsLastTa]=ta.value; smsCfgDirty(); renderSmsPreview(); }; }, $('smPh'));
   renderSmsPreview();
 }
 function smsPicked(){ return smsTargets().filter(function(x){ return smsPick[x.p.id]; }).sort(function(a,b){ return natSort(a.name,b.name); }); }
@@ -2594,9 +2608,9 @@ function renderSmsPreview(){
   var nSend=pk.filter(function(x){ return phoneOf(x.p).length>=10; }).length; $('smSendAll').disabled=!nSend; $('smSendAll').textContent='1명씩 보내기'+(nSend?' ('+nSend+'명)':''); $('smSendInd').disabled=!nSend; $('smIndXlsx').disabled=!nSend; $('smSendInd').textContent='문자 보내기'+(nSend?' ('+nSend+'명)':'')+(SMS_BR.on?'':' · 설치 필요');
   $('smPrev').innerHTML = pk.length ? pk.map(function(x){
     var p=x.p, t=smsText(x, true), ph=phoneOf(p), b=smsBytes(t), lg=smsLogOf(p);
-    return '<div class="smsitem"><div class="hd"><b>'+esc(x.name)+'</b><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+(function(){ var l=linkState(p); return l.st==='ok' ? '<span class="badge ok" title="'+esc(linkOf(p))+'">링크 ~'+dotDate(p.lnk.exp)+'</span>' : l.st==='none' ? '' : '<span class="badge err" title="「제출 링크 생성」를 누르면 새 링크를 만듭니다">링크 '+(l.st==='lock'?'잠김':'기간 지남')+'</span>'; })()+'<span class="by">'+b+'바이트 · '+(b<=90?'단문':'장문')+'</span></div>'+
+    return '<div class="smsitem"><div class="hd"><b>'+esc(x.name)+'</b><small>'+(ph.length>=10?esc(Forms.fmtPhone(ph)):'연락처 없음')+'</small>'+(smsLateTxt(p)?'<span class="badge wait">'+smsLateTxt(p)+'</span>':'')+(lg&&smsNoReply(x)?'<span class="badge wait">기한 '+(smsDueLeft(lg)<0?(-smsDueLeft(lg))+'일 지남':smsDueLeft(lg)===0?'오늘':smsDueLeft(lg)+'일 남음')+' · 무응답</span>':'')+(lg?'<span class="badge '+(reqDays(lg)>=7?'wait':'sent')+'">'+reqText(lg)+'</span>':'')+(function(){ var l=linkState(p); return l.st==='ok' ? '<span class="badge ok" title="'+esc(linkOf(p))+'">링크 ~'+dotDate(p.lnk.exp)+'</span>' : l.st==='none' ? '' : '<span class="badge err" title="「제출 링크 생성」를 누르면 새 링크를 만듭니다">링크 '+(l.st==='lock'?'잠김':'기간 지남')+'</span>'; })()+'<span class="by">'+b+'바이트 · '+(b<=90?'단문':'장문')+'</span></div>'+
       '<pre>'+esc(t)+'</pre><div class="ft">'+(ph.length>=10?'<button type="button" class="save sm" data-smsend="'+esc(p.id)+'">문자 보내기</button>':'')+(t.indexOf(SMS_LINK_PH)>=0?'<button type="button" class="ghost sm" data-smlink="'+esc(p.id)+'" title="보내기 전에 이 강사의 제출 링크를 지금 만들어 문자에 넣어 봅니다'+(x.unreg?' (운영현황 정보로 강사 등록도 함께 합니다)':'')+'">링크 지금 만들기</button>':'')+'<button type="button" class="ghost sm" data-smcopy="'+esc(p.id)+'">문자 내용 복사</button>'+(ph.length>=10?'<button type="button" class="ghost sm" data-smtel="'+esc(p.id)+'">전화번호 복사</button><a href="sms:'+ph+'?body='+encodeURIComponent(t)+'">휴대폰 문자 열기</a>':'')+
-      '<span style="flex:1"></span>'+(lg?'<button type="button" class="ghost sm" data-smunreq="'+esc(p.id)+'">요청 기록 삭제</button>':'')+'<button type="button" class="ghost sm" data-smreq="'+esc(p.id)+'">'+(lg?(lg.date===today()?'오늘 요청함':'다시 요청함 처리'):'요청함 처리')+'</button></div></div>';
+      '<span style="flex:1"></span>'+(lg?'<button type="button" class="ghost sm" data-smunreq="'+esc(p.id)+'">요청 기록 삭제</button>':'')+'<button type="button" class="ghost sm" data-smreq="'+esc(p.id)+'">'+(smsLateMode()?(smsLateTxt(p).indexOf(dotDate(today()))>=0?'오늘 지연 사유 요청함':'지연 사유 요청함 처리'):lg?(lg.date===today()?'오늘 요청함':'다시 요청함 처리'):'요청함 처리')+'</button></div></div>';
   }).join('') : '<p class="hint" style="margin:6px 0">선택한 강사가 없습니다.</p>';
   var byId={}; pk.forEach(function(x){ byId[x.p.id]=x; });
   var fresh=function(x){ return smsPicked().filter(function(y){ return y.name===x.name; })[0] || x; };
@@ -2604,7 +2618,7 @@ function renderSmsPreview(){
   each('[data-smlink]', function(b){ b.onclick=async function(){ var x=byId[b.dataset.smlink]; b.textContent='링크 만드는 중…'; await smsEnsureLinks(b, [x]); renderSms(); var y=fresh(x); toast(linkOf(y.p) ? x.name+' 강사 제출 링크를 만들어 문자에 넣었습니다 (14일 동안 사용)' : '링크를 만들지 못했습니다. 공유 자료 연결을 확인해 주세요'); }; }, $('smPrev'));
   each('[data-smcopy]', function(b){ b.onclick=async function(){ var x=byId[b.dataset.smcopy]; await smsEnsureLinks(b, [x]); copyText(smsText(fresh(x)), '문자 내용을 복사했습니다'); }; }, $('smPrev'));
   each('[data-smtel]', function(b){ b.onclick=function(){ copyText(Forms.fmtPhone(phoneOf(byId[b.dataset.smtel].p)), '전화번호를 복사했습니다'); }; }, $('smPrev'));
-  each('[data-smreq]', function(b){ b.onclick=function(){ var x=byId[b.dataset.smreq]; smsLogSet(x.p.id, x); kvPut('smsLog', smsLog); renderSms(); }; }, $('smPrev'));
+  each('[data-smreq]', function(b){ b.onclick=function(){ var x=byId[b.dataset.smreq]; if(smsLateMode()) smsLateSet(x.p.id); else smsLogSet(x.p.id, x); kvPut('smsLog', smsLog); renderSms(); }; }, $('smPrev'));
   each('[data-smunreq]', function(b){ b.onclick=function(){ smsLogSet(b.dataset.smunreq, null); kvPut('smsLog', smsLog); renderSms(); }; }, $('smPrev'));
 }
 function copyText(t, msg){
@@ -2632,12 +2646,13 @@ function bindSms(){
   [['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).addEventListener('input', function(){ smsCfg[f[1]]=$(f[0]).value.trim(); smsCfgDirty(); renderSmsPreview(); }); });
   $('smBody').addEventListener('input', function(){ smsCfg.body=$('smBody').value; smsCfgDirty(); renderSmsPreview(); });
   $('smBodyNew').addEventListener('input', function(){ smsCfg.bodyNew=$('smBodyNew').value; smsCfgDirty(); renderSmsPreview(); });
-  $('smBody').addEventListener('focus', function(){ smsLastTa='body'; }); $('smBodyNew').addEventListener('focus', function(){ smsLastTa='bodyNew'; });
+  $('smBodyLate').addEventListener('input', function(){ smsCfg.bodyLate=$('smBodyLate').value; smsCfgDirty(); renderSmsPreview(); });
+  $('smBody').addEventListener('focus', function(){ smsLastTa='body'; }); $('smBodyNew').addEventListener('focus', function(){ smsLastTa='bodyNew'; }); $('smBodyLate').addEventListener('focus', function(){ smsLastTa='bodyLate'; });
   /* 양식 수정: 열 때 원래 값을 기억 → 「저장」해야 반영, 「취소」하면 되돌림 */
   var smSnap=null, smReopen=false;
   $('smCfgBox').addEventListener('toggle', function(){ if($('smCfgBox').open){ if(smReopen){ smReopen=false; return; } smSnap=JSON.stringify(smsCfg); $('smCfgDirty').textContent=''; } else if(smSnap && JSON.stringify(smsCfg)!==smSnap){ smReopen=true; $('smCfgBox').open=true; toast('수정한 내용이 있습니다. 「저장」 또는 「취소」를 눌러 주세요'); } });
   $('smCfgSave').onclick=function(){ kvPut('smsCfg', smsCfg); smSnap=null; $('smCfgDirty').textContent=''; $('smCfgBox').open=false; renderSmsPreview(); toast('기한·담당자·문자 양식을 저장했습니다'); };
-  $('smCfgCancel').onclick=function(){ if(smSnap){ smsCfg=JSON.parse(smSnap); [['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).value=smsCfg[f[1]]||''; }); smsDueFill(); $('smBody').value=smsCfg.body||''; $('smBodyNew').value=smsCfg.bodyNew||''; } smSnap=null; $('smCfgDirty').textContent=''; $('smCfgBox').open=false; renderSmsPreview(); toast('수정을 취소했습니다'); };
+  $('smCfgCancel').onclick=function(){ if(smSnap){ smsCfg=JSON.parse(smSnap); [['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).value=smsCfg[f[1]]||''; }); smsDueFill(); $('smBody').value=smsCfg.body||''; $('smBodyNew').value=smsCfg.bodyNew||''; $('smBodyLate').value=smsCfg.bodyLate||SMS_LATE_DEF; } smSnap=null; $('smCfgDirty').textContent=''; $('smCfgBox').open=false; renderSmsPreview(); toast('수정을 취소했습니다'); };
   $('smTplGo').onclick=function(){ var b=$('smCfgBox'); b.open=true; $('smBody').scrollIntoView({behavior:'smooth', block:'center'}); setTimeout(function(){ $('smBody').focus(); }, 300); };
   $('smReset').onclick=function(){ smsCfg.body=DEFAULT_SMS.body; smsCfg.bodyNew=DEFAULT_SMS.bodyNew; smsCfg.ver=DEFAULT_SMS.ver; $('smBody').value=smsCfg.body; $('smBodyNew').value=smsCfg.bodyNew; smsCfgDirty(); renderSmsPreview(); toast('기본 문구로 바꿨습니다. 「저장」을 눌러야 반영됩니다'); };
   $('smCopyAll').onclick=async function(){ await smsEnsureLinks($('smCopyAll')); var pk=smsPicked(); copyText(pk.map(function(x){ var ph=phoneOf(x.p); return x.name+' '+(ph.length>=10?Forms.fmtPhone(ph):'(연락처 없음)')+'\n'+smsText(x); }).join('\n\n'), pk.length+'명의 문자 내용을 복사했습니다'); };
@@ -2646,7 +2661,7 @@ function bindSms(){
   $('smSendAll').onclick=function(){ smsOneAuto(); };
   $('smSendInd').onclick=smsIndSendAuto; $('smIndXlsx').onclick=async function(){ await smsEnsureLinks($('smIndXlsx')); smsIndXlsx(); };
   $('smsBrClose').onclick=function(){ $('smsBrDlg').classList.remove('on'); };
-  $('smMark').onclick=function(){ var pk=smsPicked(); pk.forEach(function(x){ smsLogSet(x.p.id, x); }); kvPut('smsLog', smsLog); renderSms(); toast(pk.length+'명을 요청함으로 기록했습니다 ('+dotDate(today())+')'); };
+  $('smMark').onclick=function(){ var pk=smsPicked(); if(smsLateMode()){ pk.forEach(function(x){ smsLateSet(x.p.id); }); kvPut('smsLog', smsLog); renderSms(); toast(pk.length+'명을 지연 사유 요청함으로 기록했습니다 ('+dotDate(today())+')'); return; } pk.forEach(function(x){ smsLogSet(x.p.id, x); }); kvPut('smsLog', smsLog); renderSms(); toast(pk.length+'명을 요청함으로 기록했습니다 ('+dotDate(today())+')'); };
   // 강사 목록 화면
   $('rvQ').addEventListener('input', renderReview);
   $('rsQ').addEventListener('input', renderRoster); $('rsSort').onchange=function(){ rsCol={k:'', dir:1}; renderRoster(); };
