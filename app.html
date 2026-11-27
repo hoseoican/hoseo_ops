@@ -2345,7 +2345,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.152';
+const LIB_VER='11.153';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2876,7 +2876,9 @@ function applyWinPanel(){ const w=awObj(), {st}=applyState(), ro=!!S.adminOrg, e
   const P={none:ro?'<span class="chip">대학 추가 기간 없음</span>':'<span class="chip">기간 없음 · 항상 신청 가능</span>',unset:'<span class="chip x">기간 없음 · 신청 받지 않음</span>',before:'<span class="chip warn">시작 전</span>',open:'<span class="chip ok">신청 받는 중</span>',closed:'<span class="chip x">마감됨</span>'};
   const row=(k,nm,round,range,pill,meta)=>`<div class="awk">${k}</div><div class="awr">${nm?`<span class="muted small">${esc(nm)}</span> `:''}<b class="awrd">${round?esc(round):'<span class="muted">차수 없음</span>'}</b></div><div class="awg">${range}</div><div>${pill}</div><div class="awm small muted">${meta}</div>`;
   const cur=kind==='asst'?{round:aw.round||'',from:aw.from||'',to:aw.to||''}:{round:rnd,from:w.from||'',to:w.to||'',onlyOpen:!!w.onlyOpen};
-  const D=S.ui.awDraft||cur, kst=kind==='asst'?ast:st;
+  /* 기간을 열 때: 시작이 비었거나 이미 지난 시각이면 지금 시각으로 (아직 안 온 시작은 그대로) */
+  const nowL=(()=>{ const d=new Date(), p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; })();
+  const D=S.ui.awDraft||{...cur,from:(!cur.from||String(cur.from).slice(0,16)<=nowL)?nowL:cur.from}, kst=kind==='asst'?ast:st;
   return `<div class="panel stack awp"><div class="row between"><div class="row" style="gap:6px;align-items:center"><h3>강사 배치 신청 기간</h3>${qt(ro?['공통 신청 기간은 호서대(앵커늘봄총괄센터)가 정함','여기서는 '+orgShort(S.adminOrg)+' 수업만 따로 주강사 신청을 더 받는 기간을 정함','공통 기간 또는 이 기간 중 하나라도 열려 있으면 신청 가능']:['주강사 · 보조강사 신청 기간을 각각 정함','기간 밖에는 강사 화면에서 신청 · 신청 취소가 막힘','주강사: 기간이 없으면 항상 신청 가능','보조강사: 기간이 없으면 신청 받지 않음'])}</div>
     ${ed?'':`<button class="btn sm" data-act="awedit">기간 설정</button>`}</div>
    <div class="awtab">
@@ -8761,7 +8763,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.152';
+const APP_VER = '11.153';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
