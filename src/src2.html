@@ -2360,7 +2360,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER = '11.162';
+const LIB_VER = '11.163';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5527,7 +5527,7 @@ const mbVer = () => document.documentElement.dataset.hsMailBridge==='1' ? (docum
 const mbOn = () => { const v=mbVer(); return !!v && v.split('.').map(Number).reduce((a,x,i)=>a+x*[1e6,1e3,1][i],0)>=4000; };
 const MB_URL = 'docs/hoseo-mail-bridge.user.js';
 /* 최신 스크립트 버전: 스크립트를 고쳐 @version을 올리면 여기 숫자도 같이 올림 → 옛 버전을 쓰는 PC에 업데이트 안내가 뜸 */
-const BR_LATEST = { mail:'0.5.1', sms:'0.2.1' };
+const BR_LATEST = { mail:'0.5.1', sms:'0.2.2' };
 const verN = v => String(v||'0').split('.').map(Number).reduce((a,x,i)=>a+(x||0)*[1e6,1e3,1][i],0);
 function brUpdList(){ const L=[], mv=mbVer();
   if(mv&&verN(mv)<verN(BR_LATEST.mail)) L.push(['메일 보내기',mv,BR_LATEST.mail,MB_URL]);

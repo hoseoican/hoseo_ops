@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         호서대 늘봄 문자 보내기 (i-ONE 캠퍼스 연결)
 // @namespace    hoseo-anchor-sms
-// @version      0.2.1
+// @version      0.2.2
 // @description  「초등방과후 프로그램 운영 관리」에서 고른 문자를 i-ONE 캠퍼스 「메시지전송(문자)」(1명씩) 또는 「개별메시지/사진 문자발송」(강사별 다른 내용을 한 번에) 화면에 채워 줍니다. 보내기는 담당자가 직접 누릅니다.
 // @match        https://hoseoican.github.io/hoseo_ops/*
 // @match        https://script.google.com/macros/*
@@ -11,13 +11,14 @@
 // @grant        GM_getValue
 // @grant        GM_addValueChangeListener
 // @grant        GM_openInTab
+// @grant        unsafeWindow
 // @run-at       document-idle
 // @downloadURL  https://hoseoican.github.io/hoseo_ops/hoseo-sms-bridge.user.js
 // @updateURL    https://hoseoican.github.io/hoseo_ops/hoseo-sms-bridge.user.js
 // ==/UserScript==
 (function () {
   'use strict';
-  var VER = '0.2.1';
+  var VER = '0.2.2';
   var CAMPUS_HOME = 'https://campus.ibk.co.kr/admin/';
   var JOB_TTL = 60 * 60 * 1000; /* 문자 목록은 1시간 동안만 유효 */
   var host = location.hostname;
@@ -153,8 +154,20 @@
       var xl = L.filter(function (e) { return /xls|sheet|excel/i.test(e.getAttribute('accept') || ''); })[0];
       if (xl) return xl;
       var notImg = L.filter(function (e) { return !/jpe?g|image/i.test(e.getAttribute('accept') || ''); });
-      var near = notImg.filter(function (e) { var p = e; for (var k = 0; k < 6 && p; k++) { p = p.parentElement; if (p && /대상자\s*업로드|샘플다운/.test(p.textContent || '')) return true; } return false; })[0];
+      /* 사진(JPG) 칸 옆의 파일 칸은 빼고, 「업로드」·「샘플다운」 버튼과 가까운 칸을 고름 */
+      var jpgNear = function (e) { var p = e; for (var k = 0; k < 3 && p; k++) { p = p.parentElement; if (p && /JPG만|파일선택/.test(p.textContent || '') && !/샘플다운/.test(p.textContent || '')) return true; } return false; };
+      notImg = notImg.filter(function (e) { return !jpgNear(e); });
+      var near = notImg.filter(function (e) { var p = e; for (var k = 0; k < 8 && p; k++) { p = p.parentElement; if (p && /샘플다운/.test(p.textContent || '') && !/JPG만/.test(p.textContent || '')) return true; } return false; })[0];
       return near || (notImg.length === 1 ? notImg[0] : null);
+    },
+    upBtn: function () { return byText('button,a,span,label', /^업로드$/); },
+    nameBox: function () { var b = I.upBtn(), p = b && b.parentElement; for (var k = 0; k < 4 && p; k++) { var i = p.querySelector('input[type=text],input:not([type])'); if (i) return i; p = p.parentElement; } return null; },
+    /* 파일 칸이 미리 없고 누를 때 새로 만드는 화면: 파일 고르는 창 대신 엑셀을 바로 넣음(몇 초 동안만) */
+    hook: function (file) {
+      var W = (typeof unsafeWindow !== 'undefined') ? unsafeWindow : window, P = W.HTMLInputElement.prototype, orig = P.click, st = { got: false };
+      P.click = function () { if (this.type === 'file') { if (!st.got) { st.got = true; var el = this; try { var dt = new DataTransfer(); dt.items.add(file); el.files = dt.files; } catch (e) {} setTimeout(function () { el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }, 0); } return; } return orig.apply(this, arguments); };
+      setTimeout(function () { P.click = orig; }, 15000);
+      return st;
     },
     pick: function () { return byText('div,span,button,a,p,label', /^개별메시지를\s*선택하세요\.?$/); }
   };
@@ -206,11 +219,21 @@
         if (F.count() > 0) { iSteps.push([false, '수신자 목록에 ' + F.count() + '명이 남아 있습니다. 직접 지운 뒤 「다시 채우기」']); q.state = 'warn'; saveIQ(q); return; }
       }
       /* 2) 엑셀 올리기 */
-      var fi = I.file();
-      if (!fi || !q.file) { iSteps.push([false, '엑셀 올리는 칸을 찾지 못함 · 「엑셀 받기」 후 「업로드」로 직접 올려 주세요']); q.state = 'warn'; saveIQ(q); return; }
-      var dt = new DataTransfer(); dt.items.add(b64File(q.file, q.fname)); fi.files = dt.files;
-      fi.dispatchEvent(new Event('input', { bubbles: true })); fi.dispatchEvent(new Event('change', { bubbles: true }));
-      var ok = await waitFor(function () { return F.count() === q.jobs.length; }, 8000);
+      if (!q.file) { iSteps.push([false, '엑셀이 없습니다 · 운영 화면에서 다시 보내 주세요']); q.state = 'warn'; saveIQ(q); return; }
+      var file = b64File(q.file, q.fname), fi = I.file(), hk = I.hook(file);
+      if (fi) {
+        var dt = new DataTransfer(); dt.items.add(file); fi.files = dt.files;
+        fi.dispatchEvent(new Event('input', { bubbles: true })); fi.dispatchEvent(new Event('change', { bubbles: true }));
+        hk.got = true;
+      } else {
+        var nb = I.nameBox(); if (nb) nb.click();
+        await waitFor(function () { return hk.got; }, 1500);
+        if (!hk.got && I.upBtn()) { I.upBtn().click(); await waitFor(function () { return hk.got; }, 1500); }
+      }
+      if (!hk.got) { iSteps.push([false, '엑셀 올리는 칸을 찾지 못함 · 「엑셀 받기」 후 파일을 고르고 「업로드」를 눌러 주세요']); q.state = 'warn'; saveIQ(q); return; }
+      /* 파일만 고르고 「업로드」를 눌러야 목록에 올라가는 화면: 잠깐 기다려도 안 올라가면 「업로드」를 누름 */
+      var ok = await waitFor(function () { return F.count() === q.jobs.length; }, 1800);
+      if (!ok && !(F.count() > 0) && I.upBtn()) { I.upBtn().click(); ok = await waitFor(function () { return F.count() === q.jobs.length; }, 8000); }
       var cn = F.count();
       iSteps.push([!!ok, ok ? '수신자 ' + cn + '명 올림' : (cn ? '수신자 ' + cn + '명 (보낼 사람 ' + q.jobs.length + '명) · 확인해 주세요' : '수신자가 올라갔는지 확인해 주세요 · 안 되면 「엑셀 받기」 후 직접 업로드')]);
       /* 3) 제목 · 본문 = {{개별메시지1}} */
