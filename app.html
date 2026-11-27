@@ -2345,7 +2345,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER = '11.155';
+const LIB_VER = '11.156';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -3005,6 +3005,32 @@ function instSmsBody(kind){ const k=kind==='asst'?'asst':'main', kk=k==='asst'?'
    ${S.ui.smsTpl===k?smsTplPanel():''}
    ${L.length?`<div class="row small" style="gap:6px"><button class="lnk" data-act="issel" data-k="${k}" data-v="un">보낼 차례만 선택</button><button class="lnk" data-act="issel" data-k="${k}" data-v="all">모두 선택</button><button class="lnk" data-act="issel" data-k="${k}" data-v="none">선택 해제</button></div>
    <div class="tw" style="max-height:440px;overflow:auto"><table><thead><tr><th style="width:30px"><input type="checkbox" data-act="issel" data-k="${k}" data-v="${P.length===L.length?'none':'all'}" ${P.length===L.length?'checked':''} aria-label="모두 선택"></th><th>강사</th><th>휴대폰</th><th>배치 학급</th><th>문자</th></tr></thead><tbody>${L.map(x=>{ const s=smsSentOf(key(x)), on=isOn(kk,x); return `<tr class="${on?'':'muted'}"><td><input type="checkbox" data-act="isone" data-k="${k}" data-v="${esc(x.t.id)}" ${on?'checked':''} aria-label="${esc(x.t.name)} 받는 사람"></td><td class="nowrap"><b>${esc(x.t.name)}</b></td><td class="mono small">${esc(mobileOf(x.t.phone)||'없음')}</td><td class="small">${x.items.map(({r})=>`${esc(shortSch(r.school))} ${esc(clsName(r))}`).join(', ')}</td><td class="small">${s?`<span class="lv-ok">보냄 ${esc(s)}</span>`:'<span class="lv-crit">보낼 차례</span>'}</td></tr>`; }).join('')}</tbody></table></div>`:`<div class="muted small">${k==='asst'?'확정된 보조강사가 아직 없습니다.':'배치 확정된 강사가 아직 없습니다.'}</div>`}`; }
+/* 강사 단톡방 안내 문구: 열려 있거나 예정된 신청 기간 · 시기 · 주/보조 구분 · 모집 학급 · 신청 링크를 넣은 공지 글. 복사하거나 .txt로 다운로드 */
+function gcInfo(role){ const A=role==='asst', w=A?(S.asstWin||{}):awObj(), st=A?asstState().st:winSt(w).st;
+  const rec=A?matchRows().filter(r=>r.aOpen&&!fa(r)&&r.status!=='cancel'):matchRows().filter(r=>r.status==='recruit'&&!r.inst);
+  const pre=A?[]:myRows().filter(r=>typeof toOpen==='function'&&toOpen(r));
+  const base=S.webAppUrl||'', bq=curBiz()!=='anchor'?'&b='+curBiz():'', link=base?base+(A?'?r=asst':'?r=teacher')+bq:'';
+  return {A,w,st,rec,pre,link}; }
+function gcText(role){ const {A,w,st,rec,pre,link}=gcInfo(role), O=S.ops||{}, kind=A?'보조강사':'주강사', L=rec.length?rec:pre;
+  const per=st==='none'?'별도 마감 없이 신청 받는 중':st==='unset'?'(신청 기간 미정)':`${awTxt(w.from)||'지금'} ~ ${awTxt(w.to)||'별도 안내 시까지'}${st==='before'?' (예정)':st==='closed'?' (마감)':''}`;
+  const by={}; L.forEach(r=>{ const k=shortSch(r.school); by[k]=(by[k]||0)+1; });
+  const sch=Object.entries(by).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ko')).map(([k,n])=>`${k} ${n}`).join(', ');
+  const out=[`[충남 1권역 앵커늘봄] ${season().name} ${kind} 배치 신청 안내${w.round?` (${w.round})`:''}`,'',
+   '안녕하세요, 강사님들.',`${season().name} 늘봄 프로그램 ${kind} 배치 신청을 ${st==='before'?'아래 기간에 받습니다':'받고 있습니다'}.`,'',
+   `■ 구분: ${kind}`,`■ 신청 기간: ${per}`,
+   L.length?`■ 모집 학급: ${L.length}학급${Object.keys(by).length?` (학교 ${Object.keys(by).length}곳)`:''}${!rec.length&&pre.length?' · 공개 예정':''}`:'■ 모집 학급: 신청 링크에서 확인', sch?`  - ${sch}`:'','',
+   `■ 신청 방법: 아래 ${kind} 신청 링크에 접속해 ${A?'로그인(처음이면 가입)':'로그인'}한 뒤 원하는 수업을 신청해 주세요.`, link||'(신청 링크: 웹앱 주소가 정해지면 들어갑니다)','',
+   A?'※ 보조강사는 배치 확정된 학급의 수업일에 함께 참여합니다. 주강사 수업과 시간이 겹치면 신청할 수 없습니다.':'※ 시간이 겹치는 수업은 함께 신청할 수 없습니다. 배치 결과는 확정 후 문자로 안내드립니다.',
+   `문의: 호서대 ${O.name||''} ${O.phone||''}`.trim()];
+  return bizWords(out.join('\n').replace(/\n{3,}/g,'\n\n').trim()); }
+function gcPanel(role){ const u=S.ui, k=role==='asst'?'asst':'main', on=(u.gcOpen||{})[k];
+  const {st,link}=gcInfo(k);
+  if(!on) return `<div class="row" style="gap:6px;margin:4px 0"><button class="btn sm" data-act="gcopen" data-k="${k}">단톡방 안내 문구</button></div>`;
+  const d=(u.gcDraft||{})[k]!=null?u.gcDraft[k]:gcText(k);
+  return `<div class="panel stack" style="gap:8px;margin:6px 0"><div class="row between"><h3>${k==='asst'?'보조강사':'주강사'} 단톡방 안내 문구</h3><button class="btn sm" data-act="gcopen" data-k="${k}">닫기</button></div>
+   ${st==='unset'?'<div class="notice warn">보조강사 신청 기간이 정해지지 않았습니다. 기간을 먼저 정하면 문구에 들어갑니다.</div>':st==='closed'?'<div class="notice warn">신청 기간이 마감된 상태입니다.</div>':''}${link?'':'<div class="notice warn">웹앱 주소가 없어 신청 링크가 빠져 있습니다.</div>'}
+   <textarea id="gcbody" data-k="${k}" rows="16" style="width:100%;font-family:inherit">${esc(d)}</textarea>
+   <div class="row" style="gap:6px"><button class="btn sm" data-act="gcreset" data-k="${k}" title="지금 기간 · 학급 기준으로 다시 만들기">다시 만들기</button><span style="flex:1"></span><button class="btn sm" data-act="gccopy">복사</button><button class="btn sm pri" data-act="gcdl" data-k="${k}">.txt 다운로드</button></div></div>`; }
 function hsPubPanel(){ const L=otherFixRows(); if(!L.length) return ''; const sel=S.ui.hpSel||{}, on=r=>sel[r.id]!==false, by={}; L.forEach(r=>{ const o=orgOfRow(r); (by[o]=by[o]||[]).push(r); }); const n=L.filter(on).length;
   return `<div class="panel inner stack"><div class="row between" style="flex-wrap:wrap;gap:8px"><div><b>타대학 운영 확정 학급</b> <span class="small muted">${L.length}학급 · 강사 미정</span> ${qt(['다른 대학 학급 중 학교 확인을 마쳐 「운영 확정」이고 강사가 정해지지 않은 학급','공개하면 강사 화면에 나오고, 이 「검토 · 매칭」에서 신청 강사를 함께 배치합니다','그 대학이 참여 대학이 아니어도 강사 화면에 나옵니다'])}</div>
     <button class="btn sm pri" data-act="hspub" ${n?'':'disabled'}>선택 ${n}학급 강사 화면에 공개</button></div>
@@ -3042,7 +3068,7 @@ function viewMatch(){
   if(role==='main'){
     if(cur==='all'){ o.title='전체 학급'; o.desc='모든 학급의 배치 상태입니다. 위에서 단계를 고르면 그 단계에서 할 일만 남습니다.'; o.body=MT(list,{load:true}); }
     else if(cur==='review'){ const rs=M.filter(toReview), ok=rs.filter(reviewOk).length; o.desc='학교가 제출한 운영안을 확인하고 검토 완료 처리합니다.'; o.acts=btn('review-all',`검토 통과 ${ok}학급 검토 완료`,true,!ok); o.body=rs.length?MT(rs):done(); }
-    else if(cur==='open'){ const rs=M.filter(toOpen); o.desc='공개한 학급에 강사가 신청할 수 있습니다. 신청 기간도 여기서 정합니다.'; o.acts=btn('recruit',`${rs.length}학급 강사 화면에 공개`,true,!rs.length); o.body=applyWinPanel()+(rs.length?MT(rs):done())+hsPubPanel(); }
+    else if(cur==='open'){ const rs=M.filter(toOpen); o.desc='공개한 학급에 강사가 신청할 수 있습니다. 신청 기간도 여기서 정합니다.'; o.acts=btn('recruit',`${rs.length}학급 강사 화면에 공개`,true,!rs.length); o.body=applyWinPanel()+gcPanel('main')+(rs.length?MT(rs):done())+hsPubPanel(); }
     else if(cur==='assign'){ const rs=M.filter(r=>['fixed','recruit'].includes(r.status)&&canAssign(r)&&r.status!=='cancel'); o.desc='신청 강사 이름을 누르면 가배치됩니다. 가배치는 운영기관에만 보입니다.'; o.acts=(wish?btn('wishall',`대학 희망대로 가배치 (${wish})`):'')+btn('auto','자동 추천',false,!unassigned)+btn('stgsw','확정할 학급 보기 →',!!ready&&!unassigned,!ready,`data-g="${G}" data-v="confirm"`); o.body=rs.length?MT(rs):done(); }
     else if(cur==='confirm'){ o.desc='확정하면 강사 화면에 배치 결과가 공개됩니다.'; o.acts=btn('afask',S.ui.afAsk?'확정 창 닫기':`${ready}학급 배치 확정…`,true,!ready); o.body=(S.ui.afAsk?afPanel():'')+(ready?MT(afReady()):done()); }
     else if(cur==='school'){ o.desc='배치 결과를 학교 담당자 화면에 공개하고, 학교마다 배치 완료 메일을 보냅니다.'; o.acts=btn('spask',S.ui.spAsk?'공개 창 닫기':`${nSp}학급 학교에 공개…`,!!nSp,!nSp); o.body=(S.ui.spAsk?spPanel():'')+(R.length||nSp?resultPanel():done()); }
@@ -3051,7 +3077,7 @@ function viewMatch(){
   } else {
     const AP=(f,view)=>asPanel({embed:true,f,view});
     if(cur==='all'){ o.title='보조강사 전체'; o.desc='배치 확정된 학급 중 보조강사를 두는 학급을 관리합니다. 필요한 학급만 골라 모집합니다.'; o.body=AP(null,null); }
-    else if(cur==='open'){ o.desc='보조강사를 둘 학급을 골라 모집을 엽니다. 학교가 요청한 학급이 먼저 보입니다.'; o.body=AP('none','class'); }
+    else if(cur==='open'){ o.desc='보조강사를 둘 학급을 골라 모집을 엽니다. 학교가 요청한 학급이 먼저 보입니다.'; o.body=gcPanel('asst')+AP('none','class'); }
     else if(cur==='assign'){ o.desc='신청한 강사 이름을 누르면 가배치됩니다.'; o.body=aApp?AP('app',null):done(); }
     else if(cur==='confirm'){ o.desc='확정하면 강사 화면에 보조강사 배치가 공개됩니다.'; o.acts=btn('asfin',`${aPend}학급 보조강사 확정`,true,!aPend); o.body=aPend?AP('pend','class'):done(); }
     else if(cur==='teacher'){ const tk=u.tsTab||'placed'; o.desc='확정된 보조강사에게 배치 안내를, 배치되지 않은 신청자에게 결과 안내를 보냅니다.';
@@ -5788,6 +5814,10 @@ function nsAct(a,el){ const U=S.ui, k=U.nsOpen==='asst'?'asst':'main';
     case 'nssel': U.nsOff={...(U.nsOff||{}),[k+':'+el.dataset.v]:!el.checked}; return true;
     case 'nsselall': { const v=el.dataset.v, M={...(U.nsOff||{})}; nsList(k).forEach(x=>{ if(!x.wait) M[k+':'+x.t.id]=v==='all'?false:v==='none'?true:!!nsSent(k,x.t); }); U.nsOff=M; return true; }
     case 'nsall': U.nsAll=el.dataset.v==='all'; U.nsOff={}; return true;
+    case 'gcopen': { const g=el.dataset.k; U.gcOpen={...(U.gcOpen||{}),[g]:!(U.gcOpen||{})[g]}; return true; }
+    case 'gcreset': { const g=el.dataset.k, D={...(U.gcDraft||{})}; delete D[g]; U.gcDraft=D; return true; }
+    case 'gccopy': { const ta=document.getElementById('gcbody'); if(!ta) return false; (navigator.clipboard?navigator.clipboard.writeText(ta.value):Promise.reject()).then(()=>toast('안내 문구를 복사했습니다'),()=>{ ta.select(); toast('문구를 선택했습니다. Ctrl+C로 복사해 주세요'); }); return false; }
+    case 'gcdl': { const ta=document.getElementById('gcbody'), g=el.dataset.k, v=ta?ta.value:gcText(g); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+v.replace(/\n/g,'\r\n')],{type:'text/plain;charset=utf-8'})); a.download=`${season().name} ${g==='asst'?'보조강사':'주강사'} 배치 신청 단톡방 안내.txt`; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); toast('안내 문구를 다운로드했습니다'); return false; }
     case 'nskey': { const ta=document.getElementById('nsbody'); if(!ta) return false; const t=`{${el.dataset.k}}`, s0=ta.selectionStart??ta.value.length, e0=ta.selectionEnd??s0; ta.value=ta.value.slice(0,s0)+t+ta.value.slice(e0); nsPvUpdate(); ta.focus(); ta.selectionStart=ta.selectionEnd=s0+t.length; return false; }
     case 'nssave': { const ta=document.getElementById('nsbody'), v=ta?ta.value:nsTpl(k); if(!String(v).trim()){ toast('문구를 입력해 주세요'); return false; } S.ops=k==='asst'?{...S.ops,nsTplA:v,nsTplAAt:now()}:{...S.ops,nsTpl:v,nsTplAt:now()}; U.nsDraft=null; toast('미배치 안내 문구를 저장했습니다'); save(); return true; }
     case 'nsdef': U.nsDraft=k==='asst'?NS_TPL_DEF_A:NS_TPL_DEF; toast('기본 문구를 불러왔습니다. 「문구 저장」을 눌러야 반영됩니다'); return true;
@@ -8292,6 +8322,7 @@ document.addEventListener('input',e=>{
   if(t.id==='smsbody'||t.id==='smsitem'){ const d=S.ui.smsDraft||(S.ui.smsDraft={...smsTpl(smsK())}); d[t.id==='smsbody'?'body':'item']=t.value; smsPvUpdate(); return; }
   /* 검색칸: 값은 바로 저장하고, 화면 다시 그리기는 입력이 멈춘 뒤에만(한글 조합이 끊기지 않게) */
   if(t.id==='nsbody'){ nsPvUpdate(); return; }
+  if(t.id==='gcbody'){ S.ui.gcDraft={...(S.ui.gcDraft||{}),[t.dataset.k]:t.value}; return; }
   if(t.id==='mwf-find'){ const box=document.getElementById('mwf-found'); if(box) box.innerHTML=mwFindHtml(t.value); return; }
   const SQ={tq:v=>{ tF().q=v; },'jq-done':v=>{ S.ui.jq=v; },'as-q':v=>{ S.ui.asQ=v; },'mw-q':v=>{ S.ui.mwQ=v; },iq:v=>{ S.ui.if={...(S.ui.if||{}),q:v}; },uq:v=>{ S.ui.uq=v; },mq:v=>{ S.ui.mq=v; },q:v=>{ S.ui.q=v.trim(); }};
   if(SQ[t.id]){ SQ[t.id](t.value); liveSearch(t.id); return; }
@@ -8784,7 +8815,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.155';
+const APP_VER = '11.156';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
