@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-1';
+var APP_VERSION = '2026.11.27-2';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1623,7 +1623,7 @@ function rvPaint(x, focus, loading){
      '<div class="rvnav"><span class="hint">'+(rvIdx+1)+' / '+n+'</span><button type="button" class="ghost sm" id="rvPrev"'+(rvIdx<=0?' disabled':'')+'>이전</button><button type="button" class="ghost sm" id="rvNext"'+(rvIdx>=n-1?' disabled':'')+'>다음</button>'+
      (x.unreg?'':'<button type="button" class="ghost sm" id="rvEdit">강사 화면에서 수정</button>')+'<button type="button" class="ghost sm" id="rvX" aria-label="닫기">닫기</button></div></div>';
   if(x.unreg){
-    h+='<div class="rvbody"><div class="rvnote">서류가 등록되지 않은 강사입니다. 「강사 목록」에서 등록하거나 「서류 제출·보완 요청」으로 제출을 요청해 주십시오.</div></div>';
+    h+='<div class="rvbody"><div class="rvnote">서류가 등록되지 않은 강사입니다. 「서류 구비·발송 › 보완 요청」에서 문자를 보내면 운영현황 정보(성명·연락처·배치 학교)로 자동 등록되고, 본인 제출 링크가 함께 나갑니다.</div></div>';
     $('rvPane').innerHTML=h; rvWire(x); return;
   }
   var miss=x.miss.map(missText), fix=fixDocs(p).map(function(f){ return fixName(f.k)+'('+f.why+')'; }), errs=checks(p).filter(function(c){ return c.lv==='err' && !/주민등록번호|연락처|서명|증명사진/.test(c.t); }).map(function(c){ return c.t; });
@@ -2081,7 +2081,7 @@ function unregList(){
     return { p:p, name:o.name, miss:[], fix:[], ok:false, send:sendStateOf(p), schools:o.schools.slice(), unreg:true, flagged:o.flagged, ops:o };
   });
 }
-function registerUnreg(o){ var t=blank(); applyOpsPerson(t, o, false); var k='u:'+o.name; if(smsLog[k]){ smsLog[t.id]=smsLog[k]; delete smsLog[k]; kvPut('smsLog', smsLog); nMark('m:'+k); nMark('m:'+t.id); } return t; }
+function registerUnreg(o){ var t=blank(); t.regNew=1; applyOpsPerson(t, o, false); var k='u:'+o.name; if(smsLog[k]){ smsLog[t.id]=smsLog[k]; delete smsLog[k]; kvPut('smsLog', smsLog); nMark('m:'+k); nMark('m:'+t.id); } return t; }
 function rolesOf(x){ var o=x.ops || (x.term && x.term.o) || (typeof opsLoaded==='function' && opsLoaded() ? opsPersonOf(x.name) : null); return o ? o.roles : [x.p.role==='주강사' ? '주강사' : '보조강사']; }
 // 강사 한 명의 구분: 주강사만 · 보조강사만 · 겸임(운영현황에서 주·보조를 모두 맡음)
 function roleKind(x){ var r=rolesOf(x); return r.length>1 ? 'dual' : r[0]==='주강사' ? 'main' : 'sub'; }
@@ -2263,10 +2263,11 @@ function phoneOf(p){ return (p.phone||'').replace(/\D/g,''); }
 function smsText(x){
   var docs=x.miss.filter(function(k){ return k!=='phone'; }).map(missText), fixes=x.fix.map(function(f){ return fixName(f.k)+': '+f.why; }).concat(x.exp?[x.exp.t]:[]);
   var all=(docs.length ? '[미제출]\n- '+docs.join('\n- ') : '')+(docs.length&&fixes.length ? '\n' : '')+(fixes.length ? '[보완 필요]\n- '+fixes.join('\n- ') : '');
-  if(x.unreg){ docs=SMS_NEW_DOCS.slice(); all='- '+docs.join('\n- '); }
+  var isNew = x.unreg || (x.p.regNew && !x.p.lsub && !Object.keys(x.p.pdfs||{}).length && !Object.keys(x.p.imgs||{}).length);
+  if(isNew){ docs=SMS_NEW_DOCS.slice(); all='- '+docs.join('\n- '); }
   var v={ '성명':x.name, '요청서류':all, '부족서류':docs.join('\n- '), '보완서류':fixes.join('\n- '), '배치학교':x.schools.join(', '), '제출기한':smsCfg.due||smsDueDefault(), '담당자':smsCfg.who||'', '연락처':smsCfg.tel||'', '이메일':smsCfg.email||'', '제출링크':linkOf(x.p) };
   // 목록 자리표시자만 있는 줄이 비면 그 줄을 지운다(예: 「- {보완서류}」인데 보완할 서류가 없을 때)
-  var tpl=String((x.unreg ? (smsCfg.bodyNew||DEFAULT_SMS.bodyNew) : smsCfg.body)||'');
+  var tpl=String((isNew ? (smsCfg.bodyNew||DEFAULT_SMS.bodyNew) : smsCfg.body)||'');
   /* 제출 링크가 없는 강사(미등록 강사 · 공유 자료를 안 켠 경우): 「링크」를 말하는 문장을 메일·전화 안내로 바꿈 */
   if(!v['제출링크']) tpl=tpl.replace(/\(링크 대신 (\{이메일\}|[^()\s]+@[^()\s]+) ?로 보내셔도 됩니다\)/g, '($1 로 보내 주세요)')
     .replace(/기한 안에 내기 어려운 서류는 링크의 「제출 지연 사유」에 사유와 제출 예정일을 꼭 남겨 주세요/g, '기한 안에 내기 어려운 서류는 사유와 제출 예정일을 꼭 알려 주세요');
@@ -2313,9 +2314,9 @@ function smsIndCheck(jobs){ var big=jobs.filter(function(j){ return smsBytes(j.b
 function smsIndXlsx(){ var jobs=smsIndList(smsPicked()); if(!jobs.length){ toast('휴대폰번호가 있는 강사가 없습니다'); return; } if(!smsIndCheck(jobs)) return;
   var out=XLSX.write(smsIndBook(jobs), {bookType:'xlsx', type:'array'}); saveBlob(new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), '개별문자_서류보완요청_'+jobs.length+'명_'+today()+'.xlsx'); }
 /* 보내기 전에 제출 링크가 없거나 기간이 지난 강사는 링크를 새로 만듦(공유 자료를 켠 경우) */
-async function smsEnsureLinks(btn){ if(!(typeof syReady==='function' && syReady())) return; var need=smsPicked().filter(function(x){ return !x.unreg && phoneOf(x.p).length>=10 && linkState(x.p).st!=='ok'; }); if(!need.length) return;
+async function smsEnsureLinks(btn){ if(!(typeof syReady==='function' && syReady())) return; var need=smsPicked().filter(function(x){ return (x.unreg ? String(x.p.phone||'').replace(/\D/g,'').length>=10 : phoneOf(x.p).length>=10) && (x.unreg || linkState(x.p).st!=='ok'); }); if(!need.length) return;
   var label=btn.textContent; btn.disabled=true; var n=0;
-  try{ for(const x of need){ btn.textContent='제출 링크 만드는 중… '+(++n)+'/'+need.length; try{ var p=x.p; if(sy.dirty[p.id] || !p._rev){ sy.dirty[p.id]=1; await syPushOne(p.id); } if(p._rev) await linkCall(p, false); }catch(e){ console.error(e); } } await syPull(); }
+  try{ for(const x of need){ btn.textContent='제출 링크 만드는 중… '+(++n)+'/'+need.length; try{ var p=x.p; if(x.unreg){ p=registerUnreg(x.ops); delete smsPick[x.p.id]; smsPick[p.id]=1; } if(sy.dirty[p.id] || !p._rev){ sy.dirty[p.id]=1; await syPushOne(p.id); } if(p._rev) await linkCall(p, false); }catch(e){ console.error(e); } } await syPull(); renderAll(); }
   finally{ btn.textContent=label; btn.disabled=false; } }
 async function smsIndSendAuto(){ await smsEnsureLinks($('smSendInd')); smsIndSend(); }
 async function smsOneAuto(){ await smsEnsureLinks($('smSendAll')); smsBrSend(smsPicked()); }
