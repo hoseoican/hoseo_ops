@@ -1393,7 +1393,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-24';
+var APP_VERSION = '2026.11.27-25';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2544,10 +2544,16 @@ function smsBrSend(list){
 /* 개별 문자: i-ONE 「개별메시지/사진 문자발송」 업로드 양식. 개별메시지1에 강사별 문자 내용 전체를 넣고 본문은 {{개별메시지1}} 하나만 씀 */
 var IND_HEAD=['학번/교번','이름','연락처','개별메시지1','개별메시지2','개별메시지3','개별메시지4','개별메시지5','개별메시지6','개별메시지7','개별메시지8','개별메시지9','개별메시지10'];
 function smsIndList(list){ return (list||[]).filter(Boolean).map(function(x){ return { key:(smsLateMode()?'lat:':'lec:')+x.p.id, name:String(x.name||'').replace(/\s+/g,''), phone:phoneOf(x.p), body:smsText(x) }; }).filter(function(j){ return /^01\d{8,9}$/.test(j.phone) && j.body; }); }
+/* 문자 시스템(EUC-KR)에 없는 글자: 흔한 것은 바꾸고 나머지는 뺌 */
+var KR_SET=null;
+function krSet(){ if(KR_SET) return KR_SET; KR_SET={}; try{ var dec=new TextDecoder('euc-kr'); for(var a=0xA1;a<=0xFE;a++) for(var b=0xA1;b<=0xFE;b++){ var c=dec.decode(new Uint8Array([a,b])); if(c && c!=='\ufffd') KR_SET[c]=1; } }catch(e){ KR_SET=null; } return KR_SET; }
+function smsSafeKr(t){ var M={'\u2022':'·','\u2027':'·','\u30fb':'·','\u2013':'-','\u2014':'-','\u2212':'-','\u2018':"'",'\u2019':"'",'\u201c':'"','\u201d':'"','\u2026':'...','\u00a0':' ','\u200b':'','\u200c':'','\u200d':'','\ufeff':'','\t':' '};
+  var K=krSet(); return String(t||'').replace(/\r\n?/g,'\n').split('').map(function(c){ if(M[c]!=null) return M[c]; var n=c.charCodeAt(0); if(n<128 || !K) return c; return K[c] ? c : ''; }).join(''); }
 function smsIndBook(jobs){
   /* i-ONE 개별문자는 학번/교번 칸이 비면 수신자로 올라가지 않음 → 줄마다 겹치지 않는 8자리 번호를 넣음 */
   var used={}, sid=function(){ var v; do{ v=String(10000000+Math.floor(Math.random()*90000000)); }while(used[v]); used[v]=1; return v; };
-  var aoa=[IND_HEAD].concat(jobs.map(function(j){ var r=[sid(),j.name,j.phone,j.body]; while(r.length<IND_HEAD.length) r.push(''); return r; }));
+  /* 안내문: 「엑셀 작성 시 공란이 없도록」 → 쓰지 않는 개별메시지2~10 칸도 「-」로 채움. 문자에 못 쓰는 글자(EUC-KR 밖)는 비슷한 글자로 바꿈 */
+  var aoa=[IND_HEAD].concat(jobs.map(function(j){ var r=[sid(),j.name,j.phone,smsSafeKr(j.body)]; while(r.length<IND_HEAD.length) r.push('-'); return r; }));
   var ws=XLSX.utils.aoa_to_sheet(aoa);
   for(var i=1;i<aoa.length;i++){ [0,2].forEach(function(col){ var c=ws[XLSX.utils.encode_cell({r:i,c:col})]; if(c){ c.t='s'; c.z='@'; } }); }
   ws['!cols']=[{wch:10},{wch:10},{wch:14},{wch:60}]; var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet'); return wb; }
