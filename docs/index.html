@@ -841,7 +841,7 @@ if(EMBED) document.documentElement.classList.add('embed');
         <div class="fchips" id="rsFilter" style="margin:0"></div>
         <div class="row" style="margin:0;gap:6px"><select id="rsSort" title="정렬"><option value="miss">미구비 먼저</option><option value="name">이름순</option><option value="recent">최근 수정순</option></select><input type="text" id="rsQ" placeholder="이름·학교 찾기" autocomplete="off" style="width:220px"></div>
       </div>
-      <div class="bulkbar"><span id="rsSelInfo"></span><button type="button" class="ghost sm" id="rsAll">보이는 강사 전체 선택</button><button type="button" class="ghost sm" id="rsNone">선택 해제</button><span style="flex:1"></span><button type="button" class="ghost sm" id="rsReg" hidden>선택 강사 등록</button><button type="button" class="ghost sm" id="rsTerm" hidden title="고른 강사의 배치 학교(새 학교 추가·지난 학기 학교 빼기)·프로그램명·첫 출강일을 지금 고른 학기의 운영현황에 맞춥니다">운영현황 반영</button><button type="button" class="ghost sm" id="rsSms">서류 제출·보완 요청</button><button type="button" class="ghost sm" id="rsDrive" title="고른 강사의 서류를 만들어 공유 폴더의 「생성서류 › 강사별」에 저장합니다">공유드라이브에 저장</button><button type="button" class="sm" id="rsZip">선택 강사 서류 다운로드</button><button type="button" class="del sm" id="rsDel">선택 강사 삭제</button></div>
+      <div class="bulkbar"><span id="rsSelInfo"></span><button type="button" class="ghost sm" id="rsAll">보이는 강사 전체 선택</button><button type="button" class="ghost sm" id="rsNone">선택 해제</button><span style="flex:1"></span><button type="button" class="ghost sm" id="rsReg" hidden>선택 강사 등록</button><button type="button" class="ghost sm" id="rsTerm" hidden title="고른 강사의 배치 학교(새 학교 추가·지난 학기 학교 빼기)·프로그램명·첫 출강일을 지금 고른 학기의 운영현황에 맞춥니다">운영현황 반영</button><button type="button" class="ghost sm" id="rsCareer" title="고른 강사의 경력 사항을 「보완 필요」로 표시합니다. 보완 요청 문자에 함께 들어가고, 강사가 제출 링크에서 경력을 고치면 표시가 자동으로 풀립니다">경력 업데이트 요청</button><button type="button" class="ghost sm" id="rsSms">서류 제출·보완 요청</button><button type="button" class="ghost sm" id="rsDrive" title="고른 강사의 서류를 만들어 공유 폴더의 「생성서류 › 강사별」에 저장합니다">공유드라이브에 저장</button><button type="button" class="sm" id="rsZip">선택 강사 서류 다운로드</button><button type="button" class="del sm" id="rsDel">선택 강사 삭제</button></div>
       <div class="gview"><table class="stt" id="rsTable"></table></div>
     </div>
   </section>
@@ -1190,7 +1190,7 @@ if(EMBED) document.documentElement.classList.add('embed');
     <div class="card" style="max-width:1180px">
       <h3>제출 서류 보완 <small id="fixInfo"></small> <span class="hint tip" tabindex="0"><i class="ti">i</i><span class="tipbody">제출한 서류가 조건에 맞지 않으면 「보완 필요」를 표시하고 사유를 넣습니다. 표시한 서류는 「서류 보완 요청」 문자에 사유와 함께 들어갑니다. 그 서류를 새로 올리면 표시가 자동으로 지워집니다. 신체검사서가 출강일 기준 1년을 넘으면 자동으로 들어갑니다.</span></span></h3>
       <div class="gview"><table class="stt fixt" id="fixTable"></table></div>
-      <datalist id="fixWhy"><option value="글씨·사진이 흐리거나 잘림"><option value="본인 서류가 아님"><option value="필수 항목이 빠짐"><option value="발급일이 오래됨"><option value="최종학력 서류가 아님"><option value="계좌번호가 보이지 않음"><option value="신분증만 보이게 다시 올려 주세요 (손·배경 없이, 글자가 선명하게)"></datalist>
+      <datalist id="fixWhy"><option value="최신 경력을 반영해 주세요 (1줄 가장 최근 · 2줄 대표 · 3줄 처음 시작한 경력)"><option value="처음 시작한 경력(시작 연도)을 넣어 주세요"><option value="글씨·사진이 흐리거나 잘림"><option value="본인 서류가 아님"><option value="필수 항목이 빠짐"><option value="발급일이 오래됨"><option value="최종학력 서류가 아님"><option value="계좌번호가 보이지 않음"><option value="신분증만 보이게 다시 올려 주세요 (손·배경 없이, 글자가 선명하게)"></datalist>
     </div>
     <div class="outgrid">
       <div class="card"><h3>검토 결과</h3><ul class="check" id="check"></ul></div>
@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-5';
+var APP_VERSION = '2026.11.27-6';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1372,6 +1372,9 @@ var PDFS = [
   {k:'grad', no:'5', t:'최종학력 졸업증명서', need:true},
   {k:'cert', no:'6', t:'자격증 사본 및 경력증명서', need:false, multi:true, dir:'6. 경력증명서, 자격증 사본 스캔본'}
 ];
+/* 이력서 경력은 3줄뿐이라 최근 3개만 쓰면 경력이 짧아 보임 → 줄마다 쓸 내용을 정해 안내 */
+var CAREER_FIX_WHY = '최신 경력을 반영해 주세요 (1줄 가장 최근 · 2줄 대표 · 3줄 처음 시작한 경력)';
+var CAREER_GUIDE = ['가장 최근 경력', '대표 경력 (이번 프로그램과 가장 관련 깊은 경력)', '처음 시작한 경력 (경력 시작 연도가 보이게)'];
 var ROWS = [
   {k:'edu', t:'학력', f:[['period','기간','2010. 3.~2014. 2.'],['school','학교명','호서대학교'],['major','전공','']]},
   {k:'career', t:'경력', f:[['period','기간','2024. 3.~2025. 2.'],['place','장소','천안초등학교'],['note','비고','방과후 코딩 강사']]},
@@ -1406,11 +1409,12 @@ function buildRows(){
   ROWS.forEach(function(g){
     for(var r=0;r<3;r++){
       h += '<tr>'+(r===0?'<td class="g" rowspan="3">'+g.t+'</td>':'')+g.f.map(function(f){
-        return '<td><input type="text" data-row="'+g.k+'" data-r="'+r+'" data-f="'+f[0]+'" placeholder="'+(r===0?esc(f[1]+(f[2]?' (예: '+f[2]+')':'')):'')+'" autocomplete="off"></td>';
+        var ph = g.k==='career' ? (f[0]==='period' ? (r+1)+'. '+CAREER_GUIDE[r].replace(/ \(.*\)$/,'') : (r===0?f[1]+(f[2]?' (예: '+f[2]+')':''):'')) : (r===0?f[1]+(f[2]?' (예: '+f[2]+')':''):'');
+        return '<td><input type="text" data-row="'+g.k+'" data-r="'+r+'" data-f="'+f[0]+'" placeholder="'+esc(ph)+'" autocomplete="off"'+(g.k==='career'?' title="'+esc((r+1)+'줄: '+CAREER_GUIDE[r])+'"':'')+'></td>';
       }).join('')+'</tr>';
     }
   });
-  $('rows').innerHTML = h + '</table>';
+  $('rows').innerHTML = h + '</table><p class="hint" style="margin:6px 0 0">경력은 3줄까지만 들어갑니다. 1줄 가장 최근 경력 · 2줄 대표 경력 · 3줄 처음 시작한 경력(시작 연도) 순서로 써 주세요. 최근 것만 3개 쓰면 학교에서 경력이 짧은 강사로 볼 수 있습니다.</p>';
 }
 function buildImgs(){
   $('imgs').innerHTML = IMG_KEYS.map(function(m){
@@ -1639,7 +1643,7 @@ function rvPaint(x, focus, loading){
      '<tr data-rvs="rrn"><th>주민등록번호</th><td>'+(rrn.length===13?esc(p.rrn)+' <span class="hint">('+birth+')</span>':'<span class="rvno">'+(rrn?'자릿수 확인 ('+rrn.length+'자리)':'없음')+'</span>')+'</td></tr>'+
      '<tr data-rvs="phone"><th>연락처</th><td>'+val(p.phone)+'</td></tr><tr><th>이메일</th><td>'+val(p.email)+'</td></tr>'+
      '<tr data-rvs="addr"><th>주소</th><td>'+val(p.address)+'</td></tr>'+
-     '<tr data-rvs="cv"><th>학력</th><td>'+rowTxt(p.edu,['period','school','major'])+'</td></tr><tr><th>경력</th><td>'+rowTxt(p.career,['period','place','note'])+'</td></tr><tr><th>자격</th><td>'+rowTxt(p.cert,['date','name','issuer'])+'</td></tr></table></div>';
+     '<tr data-rvs="cv"><th>학력</th><td>'+rowTxt(p.edu,['period','school','major'])+'</td></tr><tr><th>경력</th><td>'+rowTxt(p.career,['period','place','note'])+'<div style="margin-top:4px">'+rvFixCtl(p,'career')+'</div></td></tr><tr><th>자격</th><td>'+rowTxt(p.cert,['date','name','issuer'])+'</td></tr></table></div>';
   // 이미지
   h+='<div class="rvsec"><h4>서명·증명사진·신분증·통장</h4><div class="rvimgs">'+IMG_KEYS.map(function(m){ var v=(p.imgs||{})[m.k], img='';
     if(v && v.data){ var u=rvUrl(v, v.ext==='png'?'image/png':'image/jpeg'); img='<a href="'+u+'" target="_blank" rel="noopener" title="크게 보기"><img src="'+u+'" alt="'+esc(m.t)+'"></a>'; }
@@ -1669,7 +1673,7 @@ function rvWire(x){
   $('rvNext').onclick=function(){ rvOpen(rvIdx+1); };
   if($('rvEdit')) $('rvEdit').onclick=function(){ var id=p.id; rvClose(); select(id); go('info'); };
   if(x.unreg) return;
-  each('[data-rvfix]', function(b){ b.onclick=function(){ var k=b.dataset.rvfix, why=prompt(fixName(k)+' 보완 사유', ''); if(why===null) return; p.fix=p.fix||{}; p.fix[k]={ why:why.trim(), at:Date.now() }; rvSaveP(p); re(); toast(fixName(k)+' 보완 필요로 표시했습니다'); }; }, $('rvPane'));
+  each('[data-rvfix]', function(b){ b.onclick=function(){ var k=b.dataset.rvfix, why=prompt(fixName(k)+' 보완 사유', k==='career'?CAREER_FIX_WHY:''); if(why===null) return; p.fix=p.fix||{}; p.fix[k]={ why:why.trim(), at:Date.now() }; rvSaveP(p); re(); toast(fixName(k)+' 보완 필요로 표시했습니다'); }; }, $('rvPane'));
   each('[data-rvunfix]', function(b){ b.onclick=function(){ clearFix(p, b.dataset.rvunfix); rvSaveP(p); re(); }; }, $('rvPane'));
   each('[data-rvpv]', function(b){ b.onclick=function(){ var box=b.closest('.rvpd'), fr=box.querySelector('iframe.rvpdf'); if(!fr){ fr=document.createElement('iframe'); fr.className='rvpdf'; box.appendChild(fr); } fr.src=b.dataset.rvpv+'#view=FitH'; fr.scrollIntoView({block:'nearest'}); }; }, $('rvPane'));
   if($('rvUndo')) $('rvUndo').onclick=function(){ delete p.rv; rvSaveP(p); re(); toast('검토 완료를 취소했습니다'); };
@@ -1984,9 +1988,11 @@ function renderList(){
 var MISS_NAMES = { rrn:'주민등록번호', phone:'연락처', sign:'서명 이미지', photo:'증명사진', idcard:'신분증 사본', bank:'통장 사본', exam:'채용신체검사서', examOld:'채용신체검사서(1년 이내)', tb:'잠복결핵 검사 확인서', grad:'최종학력 졸업증명서' };
 var MISS_ORDER = ['rrn','phone','sign','photo','idcard','bank','exam','tb','grad'];
 /* ---------- 보완 필요(제출했지만 조건에 안 맞는 서류) ---------- */
-var FIX_DOCS = [['sign','서명 이미지'],['photo','증명사진'],['idcard','신분증 사본'],['bank','통장 사본'],['exam','채용신체검사서'],['tb','잠복결핵 검사 확인서'],['grad','최종학력 졸업증명서'],['cert','자격증 사본 및 경력증명서']];
+var FIX_DOCS = [['career','경력 사항'],['sign','서명 이미지'],['photo','증명사진'],['idcard','신분증 사본'],['bank','통장 사본'],['exam','채용신체검사서'],['tb','잠복결핵 검사 확인서'],['grad','최종학력 졸업증명서'],['cert','자격증 사본 및 경력증명서']];
 function fixName(k){ var d=FIX_DOCS.filter(function(x){ return x[0]===k; })[0]; return d ? d[1] : k; }
+function careerRows(p){ return (p.career||[]).filter(function(r){ return r && (r.period||r.place||r.note); }); }
 function docFiles(p, k){
+  if(k==='career') return careerRows(p).map(function(r){ return [r.period,r.place,r.note].filter(Boolean).join(' '); });
   if(IMG_KEYS.some(function(m){ return m.k===k; })){ var v=(p.imgs||{})[k]; return v ? [v.pxW+'×'+v.pxH+' 이미지'] : []; }
   var a=(p.pdfs||{})[k]||[]; if(k==='tb' && !a.length && p.tbIn41 && ((p.pdfs||{}).exam||[]).length) return ['4-1 파일에 포함'];
   return a.map(function(f){ return f.name; });
@@ -1996,7 +2002,7 @@ function fixDocs(p){
   if(!p) return [];
   var out=[], fx=p.fix||{};
   FIX_DOCS.forEach(function(d){
-    var k=d[0]; if(!docFiles(p, k).length) return;
+    var k=d[0]; if(k!=='career' && !docFiles(p, k).length) return;
     var why=[], auto=false;
     if(k==='exam'){ var e=examState(p); if(e && e.lv==='err'){ why.push('출강일 기준 1년이 지남('+dotDate(p.examDate)+' 검진)'); auto=true; } }
     if(fx[k]) why.push(fx[k].why || '조건에 맞지 않음');
@@ -2103,12 +2109,12 @@ function sendBadge(sd){ return sd.st==='none' ? '<span class="hint">배치 학�
 function renderFix(){
   if(!cur) return;
   var fx=cur.fix||{}, auto={}; fixDocs(cur).forEach(function(f){ if(f.k==='exam' && /1년이 지남/.test(f.why)) auto.exam=f.why.split(', ')[0]; });
-  var rows=FIX_DOCS.filter(function(d){ return docFiles(cur, d[0]).length; });
+  var rows=FIX_DOCS.filter(function(d){ return d[0]==='career' || docFiles(cur, d[0]).length; });
   var nOn=fixDocs(cur).length;
   $('fixInfo').textContent = rows.length ? '제출 '+rows.length+'종'+(nOn?' · 보완 필요 '+nOn+'종':'') : '';
   $('fixTable').innerHTML = rows.length ? '<tr><th style="width:190px">서류</th><th>제출 파일</th><th style="width:96px">보완 필요</th><th style="width:300px">사유</th></tr>'+rows.map(function(d){
     var k=d[0], on=!!fx[k];
-    return '<tr class="'+(on||auto[k]?'on':'')+'"><td><b>'+esc(d[1])+'</b></td><td><small style="color:var(--ink)">'+esc(docFiles(cur, k).join(', '))+'</small>'+(auto[k]?'<div class="fixmark" style="font-size:12px">'+esc(auto[k])+' · 자동 포함</div>':'')+'</td>'+
+    return '<tr class="'+(on||auto[k]?'on':'')+'"><td><b>'+esc(d[1])+'</b></td><td><small style="color:var(--ink)">'+esc(docFiles(cur, k).join(', ')||(k==='career'?'입력한 경력 없음':''))+'</small>'+(auto[k]?'<div class="fixmark" style="font-size:12px">'+esc(auto[k])+' · 자동 포함</div>':'')+'</td>'+
       '<td style="text-align:center"><input type="checkbox" data-fx="'+k+'"'+(on?' checked':'')+'></td>'+
       '<td><input type="text" data-fxw="'+k+'" list="fixWhy" placeholder="'+(on?'사유를 넣어 주세요':'보완 필요를 먼저 표시')+'" value="'+esc(on?(fx[k].why||''):'')+'"'+(on?'':' disabled')+' autocomplete="off"></td></tr>';
   }).join('') : '<tr><td class="hint" style="text-align:center;padding:14px">제출한 서류가 아직 없습니다</td></tr>';
@@ -2424,6 +2430,10 @@ function bindSms(){
   $('rsAll').onclick=function(){ rsLast.forEach(function(x){ rsSel[x.p.id]=1; }); renderRoster(); };
   $('rsNone').onclick=function(){ rsSel={}; renderRoster(); };
   $('rsZip').onclick=rosterZip; $('rsDel').onclick=rosterDelete;
+  $('rsCareer').onclick=function(){ var sel=rsSelected(); if(!sel.length){ toast('등록된 강사를 골라 주세요'); return; }
+    var why=prompt(sel.length+'명의 경력 사항을 보완 요청으로 표시합니다. 강사에게 보일 사유', CAREER_FIX_WHY); if(why===null) return;
+    sel.forEach(function(p){ p.fix=p.fix||{}; p.fix.career={ why:why.trim()||CAREER_FIX_WHY, at:Date.now() }; p.updated=Date.now(); dbPut(p); });
+    renderAll(); toast(sel.length+'명 경력 업데이트 요청을 표시했습니다. 「서류 구비·발송 › 보완 요청」에서 문자를 보내 주세요'); };
   $('rsTerm').onclick=function(){ var n=0; rsSelected().forEach(function(p){ if(applyTerm(p)) n++; }); renderAll(); toast(n ? n+'명의 배치 학교·프로그램명·첫 출강일을 운영현황에 맞췄습니다' : '바꿀 내용이 없습니다'); };
   $('rsDrive').onclick=function(){ var sel=rsSelected(), ok=sel.filter(function(p){ return !checks(p).some(function(x){ return x.lv==='err'; }); }); if(!ok.length){ toast('서류를 만들 수 있는 강사가 없습니다. 빨간 항목을 먼저 채워 주세요'); return; } driveSave($('rsDrive'), ok.map(function(p){ return { p:p, only:null }; }), '강사별', sel.length-ok.length); };
   $('rsReg').onclick=function(){ var un=rsSelUnreg(); if(!un.length) return; un.forEach(function(x){ registerUnreg(x.ops); delete rsSel[x.p.id]; }); renderAll(); toast('미등록 강사 '+un.length+'명을 등록했습니다 (운영현황의 연락처·배치 학교·프로그램을 넣었습니다)'); };

@@ -45,6 +45,8 @@
   .doc.drag { border-color: #89171A !important; background: #FBEDED !important; box-shadow: 0 0 0 3px rgba(137,23,26,.15); }
   .dnd { display: none; font-size: 12px; color: #7A6E6F; margin-top: 6px; }
   @media (hover: hover) and (pointer: fine) { .dnd { display: block; } }
+  .cguide { font-size: 13px; line-height: 1.6; background: #FFF8EC; border: 1px solid #F0D29A; border-radius: 10px; padding: 9px 12px; margin: 0 0 8px; } .cguide ol { margin: 4px 0 0; padding-left: 20px; } .cguide .why { margin-top: 6px; color: #A15C00; font-weight: 600; }
+  .clab { font-size: 12.5px; font-weight: 700; color: var(--hs-d); margin: 8px 0 3px; } .rows.cfix h3 .st { font-size: 12px; }
   .doc.need { border-color: #F2C3BE; background: #FFFAF9; } .doc.fix { border-color: #F0D29A; background: #FFFCF5; } .doc.done { border-color: #CFE3D7; }
   .doc .hd { display: flex; justify-content: space-between; gap: 8px; align-items: center; } .doc .hd b { font-size: 15px; }
   .st { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
@@ -243,7 +245,7 @@ function render(){
   if (document.activeElement !== $('phone')) $('phone').value = fmtTel(me.phone || '');
   if (document.activeElement !== $('address')) $('address').value = me.address || '';
   if (document.activeElement !== $('email')) $('email').value = me.email || '';
-  if (!$('rowsBox').dataset.built) buildRows();
+  if (!$('rowsBox').dataset.built) buildRows(); else careerFixUi();
   renderCls();
   var c = me.center;
   $('center').hidden = !c;
@@ -258,11 +260,17 @@ function render(){
   renderDocs();
   renderLate();
 }
+/* 경력 보완 표시는 저장할 때마다 바뀔 수 있어 입력칸은 그대로 두고 표시만 바꿈 */
+function careerFixUi(){ var box = $('rows-career'); if (!box) return; var n = needOf('career'); box.classList.toggle('cfix', !!n);
+  var h3 = box.querySelector('h3'); if (h3) h3.innerHTML = '경력' + (n ? ' <span class="st fx">보완 필요</span>' : '');
+  var g = box.querySelector('.cguide'), w = g && g.querySelector('.why'); if (w) w.remove(); if (g && n) g.insertAdjacentHTML('beforeend', '<div class="why">보완 사유: ' + esc(n.why) + '</div>'); }
 function buildRows(){
   $('rowsBox').dataset.built = 1;
   $('rowsBox').innerHTML = ROWS.map(function(g){
-    var h = '<div class="rows"><h3>' + g.t + '</h3>';
-    for (var r = 0; r < 3; r++) h += '<div class="r">' + g.f.map(function(f){ return '<input type="text" data-row="' + g.k + '" data-i="' + r + '" data-f="' + f[0] + '" placeholder="' + f[1] + (f[2] ? ' (예: ' + f[2] + ')' : '') + '" value="' + esc(((me[g.k] || [])[r] || {})[f[0]] || '') + '">'; }).join('') + '</div>';
+    var cr = g.k === 'career', cfx = cr ? needOf('career') : null;
+    var h = '<div class="rows' + (cfx ? ' cfix' : '') + '" id="rows-' + g.k + '"><h3>' + g.t + (cfx ? ' <span class="st fx">보완 필요</span>' : '') + '</h3>' +
+      (cr ? '<div class="cguide"><b>경력은 이력서에 3줄까지만 들어갑니다.</b> 학교는 이 3줄로 경력 기간을 판단하니, 최근 것만 3개 쓰지 말고 아래 순서로 써 주세요.<ol><li><b>가장 최근 경력</b></li><li><b>대표 경력</b> · 이번 프로그램과 가장 관련 깊은 경력</li><li><b>처음 시작한 경력</b> · 경력 시작 연도가 보이게</li></ol>' + (cfx ? '<div class="why">보완 사유: ' + esc(cfx.why) + '</div>' : '') + '</div>' : '');
+    for (var r = 0; r < 3; r++) h += (cr ? '<div class="clab">' + (r + 1) + '. ' + ['가장 최근 경력', '대표 경력', '처음 시작한 경력'][r] + '</div>' : '') + '<div class="r">' + g.f.map(function(f){ return '<input type="text" data-row="' + g.k + '" data-i="' + r + '" data-f="' + f[0] + '" placeholder="' + f[1] + (f[2] && (!cr || r === 0) ? ' (예: ' + f[2] + ')' : '') + '" value="' + esc(((me[g.k] || [])[r] || {})[f[0]] || '') + '">'; }).join('') + '</div>';
     return h + '</div>';
   }).join('');
 }
