@@ -2345,7 +2345,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.153';
+const LIB_VER='11.154';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2655,8 +2655,12 @@ function afPanel(){
 /* ---------- 타대학 수업 (강사 배치 공동 운영) ---------- */
 /* 각 대학의 「운영 목록」 엑셀을 올려 강사 모집·배치에 함께 씀. 타대학 연구원은 희망 강사만 고르고(?u= 링크), 확정은 호서대가 함 */
 const extRows = () => S.rows.filter(r=>r.ext&&!mine(r)&&inScope(r));
-const matchRows = () => [...myRows(),...extRows()];
-const tLive = () => S.rows.filter(r=>activeOrgs().includes(orgOfRow(r))||r.ext);
+/* 앵커늘봄: 타대학(학교 확인을 거쳐 운영 확정된) 학급도 호서대가 강사 화면에 공개할 수 있음. 공개하면 r.hsPub → 검토·매칭에서 함께 관리 */
+const hsPubOk = () => curBiz()==='anchor' && !S.adminOrg;
+const otherFixRows = () => hsPubOk() ? S.rows.filter(r=>!mine(r)&&!r.ext&&!r.hsPub&&inScope(r)&&rowBiz(r)==='anchor'&&r.status==='fixed'&&!r.inst) : [];
+const hsPubRows = () => hsPubOk() ? S.rows.filter(r=>!mine(r)&&!r.ext&&r.hsPub&&inScope(r)) : [];
+const matchRows = () => [...myRows(),...extRows(),...hsPubRows()];
+const tLive = () => S.rows.filter(r=>activeOrgs().includes(orgOfRow(r))||r.ext||r.hsPub);
 const extOrgs = () => [...new Set(extRows().map(orgOfRow))].sort((a,b)=>ORGS.indexOf(a)-ORGS.indexOf(b));
 const orgByName = v => { const s=String(v||'').replace(/\s/g,''); if(!s) return ''; return ORGS.find(o=>o!=='미지정'&&(o===s||o.startsWith(s)||s.startsWith(orgShort(o))||s.startsWith(o.replace('학교',''))))||''; };
 function xIso(v){ if(v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`; const s=String(v??'').trim(); const ym=s.match(/^(20\d\d)\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/); if(ym) return `${ym[1]}-${String(+ym[2]).padStart(2,'0')}-${String(+ym[3]).padStart(2,'0')}`; const m=s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/)||s.match(/^(\d{1,2})[.\/](\d{1,2})$/); if(m){ const mo=+m[1], y=mo>=9?WIN.from.slice(0,4):WIN.to.slice(0,4); return `${y}-${String(mo).padStart(2,'0')}-${String(+m[2]).padStart(2,'0')}`; } return toIso(v); }
@@ -3001,6 +3005,11 @@ function instSmsBody(kind){ const k=kind==='asst'?'asst':'main', kk=k==='asst'?'
    ${S.ui.smsTpl===k?smsTplPanel():''}
    ${L.length?`<div class="row small" style="gap:6px"><button class="lnk" data-act="issel" data-k="${k}" data-v="un">보낼 차례만 선택</button><button class="lnk" data-act="issel" data-k="${k}" data-v="all">모두 선택</button><button class="lnk" data-act="issel" data-k="${k}" data-v="none">선택 해제</button></div>
    <div class="tw" style="max-height:440px;overflow:auto"><table><thead><tr><th style="width:30px"><input type="checkbox" data-act="issel" data-k="${k}" data-v="${P.length===L.length?'none':'all'}" ${P.length===L.length?'checked':''} aria-label="모두 선택"></th><th>강사</th><th>휴대폰</th><th>배치 학급</th><th>문자</th></tr></thead><tbody>${L.map(x=>{ const s=smsSentOf(key(x)), on=isOn(kk,x); return `<tr class="${on?'':'muted'}"><td><input type="checkbox" data-act="isone" data-k="${k}" data-v="${esc(x.t.id)}" ${on?'checked':''} aria-label="${esc(x.t.name)} 받는 사람"></td><td class="nowrap"><b>${esc(x.t.name)}</b></td><td class="mono small">${esc(mobileOf(x.t.phone)||'없음')}</td><td class="small">${x.items.map(({r})=>`${esc(shortSch(r.school))} ${esc(clsName(r))}`).join(', ')}</td><td class="small">${s?`<span class="lv-ok">보냄 ${esc(s)}</span>`:'<span class="lv-crit">보낼 차례</span>'}</td></tr>`; }).join('')}</tbody></table></div>`:`<div class="muted small">${k==='asst'?'확정된 보조강사가 아직 없습니다.':'배치 확정된 강사가 아직 없습니다.'}</div>`}`; }
+function hsPubPanel(){ const L=otherFixRows(); if(!L.length) return ''; const sel=S.ui.hpSel||{}, on=r=>sel[r.id]!==false, by={}; L.forEach(r=>{ const o=orgOfRow(r); (by[o]=by[o]||[]).push(r); }); const n=L.filter(on).length;
+  return `<div class="panel inner stack"><div class="row between" style="flex-wrap:wrap;gap:8px"><div><b>타대학 운영 확정 학급</b> <span class="small muted">${L.length}학급 · 강사 미정</span> ${qt(['다른 대학 학급 중 학교 확인을 마쳐 「운영 확정」이고 강사가 정해지지 않은 학급','공개하면 강사 화면에 나오고, 이 「검토 · 매칭」에서 신청 강사를 함께 배치합니다','그 대학이 참여 대학이 아니어도 강사 화면에 나옵니다'])}</div>
+    <button class="btn sm pri" data-act="hspub" ${n?'':'disabled'}>선택 ${n}학급 강사 화면에 공개</button></div>
+   ${Object.entries(by).map(([o,R])=>`<div class="stack" style="gap:4px"><div class="row small" style="gap:8px"><b>${esc(orgShort(o)||o)}</b> <span class="muted">${R.length}학급</span><button class="lnk" data-act="hpsel" data-o="${esc(o)}" data-v="1">모두</button><button class="lnk" data-act="hpsel" data-o="${esc(o)}" data-v="0">해제</button></div>
+    <div class="tw"><table class="small"><tbody>${R.map(r=>`<tr><td style="width:28px"><input type="checkbox" data-act="hpone" data-id="${r.id}" ${on(r)?'checked':''} aria-label="공개"></td><td class="nowrap"><b>${esc(shortSch(r.school))}</b> · ${esc(clsName(r))}</td><td>${esc(prog(r.prog).name)}</td><td class="nowrap">${daysTxt(r.days)} ${r.ts!=null?hm(r.ts)+'~'+hm(r.te):''}</td><td class="nowrap muted">${esc(String(r.start||'').slice(5).replace('-','.'))}~${esc(String(r.end||'').slice(5).replace('-','.'))}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}</div>`; }
 function viewMatch(){
   const u=S.ui, M=matchRows(), role=(u.rsw||{}).match||'main';
   const list=M.filter(r=>r.status!=='cancel'&&(u.showWait||!['wait'].includes(r.status)));
@@ -3033,7 +3042,7 @@ function viewMatch(){
   if(role==='main'){
     if(cur==='all'){ o.title='전체 학급'; o.desc='모든 학급의 배치 상태입니다. 위에서 단계를 고르면 그 단계에서 할 일만 남습니다.'; o.body=MT(list,{load:true}); }
     else if(cur==='review'){ const rs=M.filter(toReview), ok=rs.filter(reviewOk).length; o.desc='학교가 제출한 운영안을 확인하고 검토 완료 처리합니다.'; o.acts=btn('review-all',`검토 통과 ${ok}학급 검토 완료`,true,!ok); o.body=rs.length?MT(rs):done(); }
-    else if(cur==='open'){ const rs=M.filter(toOpen); o.desc='공개한 학급에 강사가 신청할 수 있습니다. 신청 기간도 여기서 정합니다.'; o.acts=btn('recruit',`${rs.length}학급 강사 화면에 공개`,true,!rs.length); o.body=applyWinPanel()+(rs.length?MT(rs):done()); }
+    else if(cur==='open'){ const rs=M.filter(toOpen); o.desc='공개한 학급에 강사가 신청할 수 있습니다. 신청 기간도 여기서 정합니다.'; o.acts=btn('recruit',`${rs.length}학급 강사 화면에 공개`,true,!rs.length); o.body=applyWinPanel()+(rs.length?MT(rs):done())+hsPubPanel(); }
     else if(cur==='assign'){ const rs=M.filter(r=>['fixed','recruit'].includes(r.status)&&canAssign(r)&&r.status!=='cancel'); o.desc='신청 강사 이름을 누르면 가배치됩니다. 가배치는 운영기관에만 보입니다.'; o.acts=(wish?btn('wishall',`대학 희망대로 가배치 (${wish})`):'')+btn('auto','자동 추천',false,!unassigned)+btn('stgsw','확정할 학급 보기 →',!!ready&&!unassigned,!ready,`data-g="${G}" data-v="confirm"`); o.body=rs.length?MT(rs):done(); }
     else if(cur==='confirm'){ o.desc='확정하면 강사 화면에 배치 결과가 공개됩니다.'; o.acts=btn('afask',S.ui.afAsk?'확정 창 닫기':`${ready}학급 배치 확정…`,true,!ready); o.body=(S.ui.afAsk?afPanel():'')+(ready?MT(afReady()):done()); }
     else if(cur==='school'){ o.desc='배치 결과를 학교 담당자 화면에 공개하고, 학교마다 배치 완료 메일을 보냅니다.'; o.acts=btn('spask',S.ui.spAsk?'공개 창 닫기':`${nSp}학급 학교에 공개…`,!!nSp,!nSp); o.body=(S.ui.spAsk?spPanel():'')+(R.length||nSp?resultPanel():done()); }
@@ -7813,6 +7822,10 @@ document.addEventListener('click',async e=>{
     case 'mst': S.ui.mst=el.dataset.v; break;
     case 'msortk': { const k=el.dataset.v; if(S.ui.msort===k) S.ui.mdir=S.ui.mdir==='desc'?'asc':'desc'; else { S.ui.msort=k; S.ui.mdir=['hrs','apps'].includes(k)?'desc':'asc'; } break; }
     case 'auto': autoAssign(); break;
+    case 'hpone': S.ui.hpSel={...(S.ui.hpSel||{}),[el.dataset.id]:el.checked}; break;
+    case 'hpsel': { const M={...(S.ui.hpSel||{})}; otherFixRows().filter(r=>orgOfRow(r)===el.dataset.o).forEach(r=>{ M[r.id]=el.dataset.v==='1'; }); S.ui.hpSel=M; break; }
+    case 'hspub': { const sel=S.ui.hpSel||{}, rs=otherFixRows().filter(r=>sel[r.id]!==false); if(!rs.length) return; if(!confirm(`타대학 ${rs.length}학급을 강사 화면에 공개합니다.\n공개한 학급은 이 「검토 · 매칭」에서 신청 강사를 배치합니다. 계속할까요?`)) return;
+      rs.forEach(r=>{ r.hsPub=true; r.status='recruit'; r.openedAt=now(); r.thread=r.thread||[]; r.thread.push({who:'호서대',text:'강사 화면에 공개했습니다 (호서대)',at:now()}); }); S.ui.hpSel={}; toast(`타대학 ${rs.length}학급을 강사 화면에 공개했습니다`); break; }
     case 'recruit': { const rs=matchRows().filter(toOpen); rs.forEach(r=>{ r.status='recruit'; r.openedAt=now(); }); toast(`${rs.length}학급을 강사 화면에 공개했습니다`); break; }
     case 'recone': if(r.status==='fixed'&&gate(r)){ r.status='recruit'; r.openedAt=now(); toast('이 학급을 강사 화면에 공개했습니다'); } break;
     case 'recclose': if(r.status==='recruit'){ r.status='fixed'; toast('강사 화면에서 내렸습니다. 이미 받은 신청은 그대로 남습니다'); } break;
@@ -8763,7 +8776,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.153';
+const APP_VER = '11.154';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
