@@ -2265,7 +2265,7 @@ function render(){ RENDER_EPOCH++; if(S&&S.ui&&S.ui.role==='admin'&&typeof mwLoa
   if((S.ui.role==='school'&&S.ui.school&&!fcSch().kakao)||(S.ui.role==='join'&&!formCfg(S.ui.jType==='out'?'out':'school').kakao)) body=noKakaoWords(body);
   body=S.ui.role==='teacher'&&(S.bizInfo||[]).length>1?body.replace(/충남 1권역 앵커늘봄/g,'호서대학교 초등방과후 프로그램'):bizWords(body);
   if(['school','join'].includes(S.ui.role)&&curBiz()!=='anchor') body=body.replace(/도교육청|교육청/g,'늘봄허브');
-  document.getElementById('app').innerHTML=(S.ui.role==='admin'&&cur!=='stats'&&cur!=='docs'?seasonBar(sc):(sc?scopeBar():''))+(S.ui.role==='admin'&&cur!=='docs'?adminQuickNav():'')+rn+body;
+  document.getElementById('app').innerHTML=(S.ui.role==='admin'&&cur!=='stats'&&cur!=='docs'?seasonBar(sc):(sc?scopeBar():''))+(S.ui.role==='admin'&&cur!=='docs'?adminQuickNav():'')+brUpdHtml()+rn+body;
   enhanceTables(cur); renderLayer(); save();
 }
 
@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.143';
+const LIB_VER='11.144';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5324,6 +5324,18 @@ const joinAutoMail = () => S.joinAutoMail!==false;
 const mbVer = () => document.documentElement.dataset.hsMailBridge==='1' ? (document.documentElement.dataset.hsMailBridgeVer||'0') : '';
 const mbOn = () => { const v=mbVer(); return !!v && v.split('.').map(Number).reduce((a,x,i)=>a+x*[1e6,1e3,1][i],0)>=4000; };
 const MB_URL = 'docs/hoseo-mail-bridge.user.js';
+/* 최신 스크립트 버전: 스크립트를 고쳐 @version을 올리면 여기 숫자도 같이 올림 → 옛 버전을 쓰는 PC에 업데이트 안내가 뜸 */
+const BR_LATEST = { mail:'0.5.1', sms:'0.2.1' };
+const verN = v => String(v||'0').split('.').map(Number).reduce((a,x,i)=>a+(x||0)*[1e6,1e3,1][i],0);
+function brUpdList(){ const L=[], mv=mbVer();
+  if(mv&&verN(mv)<verN(BR_LATEST.mail)) L.push(['메일 보내기',mv,BR_LATEST.mail,MB_URL]);
+  try{ if(SMS_BR.on&&verN(SMS_BR.ver)<verN(BR_LATEST.sms)) L.push(['문자 보내기',SMS_BR.ver||'?',BR_LATEST.sms,S.ops.smsBridge||'hoseo-sms-bridge.user.js']); }catch(e){}
+  return L; }
+function brUpdHtml(){ if(S.ui.role!=='admin') return ''; const L=brUpdList(); if(!L.length) return '';
+  const key=L.map(x=>x[0]+x[2]).join('|'); try{ if(sessionStorage.getItem('brUpdHide')===key) return ''; }catch(e){}
+  return `<div class="notice warn stack" style="gap:6px;margin:0 0 12px"><div class="row between" style="gap:8px;flex-wrap:wrap"><b>Chrome 스크립트를 새 버전으로 업데이트해 주세요</b><button class="btn sm" data-act="brupdhide" data-k="${esc(key)}">닫기</button></div>
+   <div class="small">${L.map(x=>`<a href="${esc(x[3])}" target="_blank" rel="noopener"><b>${x[0]} 스크립트 업데이트</b></a> <span class="muted">(지금 ${esc(x[1])} → 새 ${esc(x[2])})</span>`).join(' · ')}</div>
+   <div class="small muted">링크를 열고 Tampermonkey 화면에서 「업데이트」를 누른 뒤, 이 화면과 i-ONE·호서 웹메일 탭을 새로고침하면 됩니다.</div></div>`; }
 function mbGuideHtml(){ const v=mbVer(), old=v&&!mbOn();
   return `<div class="notice ${old?'warn':'info'} stack" style="gap:8px;margin:0"><div class="row between" style="gap:8px;flex-wrap:wrap"><b>${old?`호서 웹메일 스크립트를 새 버전으로 바꿔 주세요 (지금 ${esc(v)})`:'호서 웹메일 연동 방법'}</b><button class="btn sm" data-act="mbguide">닫기</button></div>
    <ol class="small" style="margin:0;padding-left:18px;line-height:1.8">
@@ -7546,6 +7558,7 @@ document.addEventListener('click',async e=>{
     case 'jopen': { const m=joinMine(); if(m){ S.ui.role='school'; S.ui.school=m.school; goView('school'); } break; }
     case 'jok': { joinDecideLocal(el.dataset.id,true); const q=joinReqs().find(x=>x.id===el.dataset.id); if(q&&q.status==='approved'&&joinAutoMail()){ q.mailedAt=new Date().toISOString().slice(0,16).replace('T',' '); q.mailCount=(q.mailCount||0)+1; toast(`${q.school} 승인 · (시연) 담당자에게 메일을 보낸 것으로 표시했습니다`); } break; }
     case 'mbguide': S.ui.mbGuide=!S.ui.mbGuide; break;
+    case 'brupdhide': try{ sessionStorage.setItem('brUpdHide',el.dataset.k); }catch(e){} break;
     case 'jsend': { const q=joinReqs().find(x=>x.id===el.dataset.id); if(!q) return; q.mailedAt=new Date().toISOString().slice(0,16).replace('T',' '); q.mailCount=(q.mailCount||0)+1; toast(`(시연) ${q.school} 담당자에게 메일을 보낸 것으로 표시했습니다`); break; }
     case 'jno': S.ui.jRej=el.dataset.id; render(); setTimeout(()=>{ const x=document.getElementById('jrej-why'); if(x) x.focus(); },30); return;
     case 'jnox': S.ui.jRej=''; break;
