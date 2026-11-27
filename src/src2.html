@@ -446,6 +446,7 @@ tr.tj.inbun td:first-child{box-shadow:inset 4px 0 0 var(--prop-fg)}
 .tj-bunend td{padding:0!important;height:6px;border:0!important;background:transparent}
 .chip.bun{background:var(--prop-bg);color:var(--prop-fg);border-color:transparent;font-weight:600}
 .chip.bun.bad{background:var(--blk-bg);color:var(--blk-fg)}
+.chip.bun.kit{background:#EEEDFE;color:#3C3489}
 .notice.bunn{border-left:4px solid var(--prop-fg)}
 .ie-btn{padding:1px 8px;font-size:11.5px;margin-left:4px}
 tr.iedit>td{background:var(--sunk);padding:12px!important}
@@ -1964,7 +1965,7 @@ function teacherContact(r){
   const via=orgOfRow(r)===MY_ORG?`<div><b>${esc(S.ops.name||'')}</b>${S.ops.pos?' '+esc(S.ops.pos):''} <span class="muted">(${esc(S.ops.title||'')})</span>${S.ops.phone?`<div class="mono">${esc(S.ops.phone)}</div>`:''}${S.ops.email?`<div>${esc(S.ops.email)}</div>`:''}</div>`:`<div><b>${esc(orgAsk(r))}</b> · ${orgContactHtml(orgOfRow(r))}</div>`;
   return `${rep}${known&&(c.rep||c.consent==='no')?'<div class="small lv-warn" style="margin:3px 0">학교에서 담당자 개인정보(연락처) 제공에 동의하지 않았습니다.</div>':''}${via}<div class="muted">학교 담당자 연락이 필요하면 이 수업의 운영 대학 담당자를 통해 주세요</div>`;
 }
-const canAssign = r => gate(r) && ['fixed','recruit','final'].includes(r.status);
+const canAssign = r => gate(r) && ['fixed','recruit','final'].includes(r.status) && !(S.adminOrg&&r.hsPub);
 const digits = v => String(v??'').replace(/\D/g,'');
 const nname = v => String(v??'').replace(/\s/g,'');
 /* 연락처 정규화(서버 normPhone_와 같은 기준): 앞자리 0 빠진 번호·+82 번호 보정 */
@@ -2164,14 +2165,28 @@ function candidates(row){
     return {t,app,sib,score:Math.round(sc*10)/10,why,load,c,hard,travel};
   }).sort((a,b)=>(a.hard-b.hard)||(a.travel-b.travel)||(b.score-a.score));
 }
-/* ---------- 한 강사 묶음: 학교 요청으로 여러 학급을 한 강사가 모두 맡게 묶음 (r.bundle = {id,name,why,at}) ---------- */
+/* ---------- 한 강사 묶음: 여러 학급을 한 강사가 모두 맡게 묶음 (r.bundle = {id,name,why,at,kind,cross})
+   kind 없음 = 같은 학교(학교 요청) · kind 'kit' = 같은 프로그램(교구 공유, 다른 학교·다른 대학 가능)
+   다른 대학 학급이 섞인 묶음(cross)은 총괄(호서대)이 만들고 배정: 그 학급은 hsPub(호서대가 강사 화면 공개·배정)로 바꿈 ---------- */
 const bunRows = r => { if(!r||!r.bundle||!r.bundle.id) return [r]; const g=S.rows.filter(x=>x.bundle&&x.bundle.id===r.bundle.id&&x.status!=='cancel'); return g.length?g:[r]; };
-const bunTag = r => { const g=bunRows(r); return g.length>1?`<span class="chip bun" title="${esc(r.bundle.why||'학교 요청: 한 강사가 모두 진행')}">한 강사 묶음${r.bundle.name?' '+esc(r.bundle.name):''} · ${g.length}학급</span>`:''; };
+const bunKit = r => !!(r&&r.bundle&&r.bundle.kind==='kit');
+const bunWhy = r => (r.bundle&&r.bundle.why)||(bunKit(r)?'교구 수량 부족: 한 강사가 교구를 같이 씀':'학교 요청: 한 강사가 모두 진행');
+const bunTag = r => { const g=bunRows(r); if(g.length<2) return ''; const k=bunKit(r), orgs=new Set(g.map(orgOfRow));
+  return `<span class="chip bun${k?' kit':''}" title="${esc(bunWhy(r))}">${k?'교구 공유':'한 강사 묶음'}${r.bundle.name?' '+esc(r.bundle.name):''} · ${g.length}학급${orgs.size>1?` · ${orgs.size}개 대학`:''}</span>${S.adminOrg&&r.hsPub?' <span class="chip warn" title="총괄(호서대)이 강사 화면 공개와 배정을 맡은 학급입니다">호서대가 배정</span>':''}`; };
+const bunEditOk = r => { const g=bunRows(r); return new Set(g.map(orgOfRow)).size<2||hsPubOk(); };
 const bunBad = r => { const g=bunRows(r); return g.length>1&&new Set(g.map(x=>x.inst||'')).size>1; };
 /* 묶음 학급에 같은 주강사를 맞춤 (배정·해제·변경 때) */
 function bunSync(r){ const g=bunRows(r); if(g.length<2) return 0; let n=0; g.forEach(x=>{ if(x===r||x.inst===r.inst||!canAssign(x)) return; const prev=x.inst; x.inst=r.inst; if(x.asst&&x.asst===x.inst) x.asst=''; if(prev&&prev!==x.inst) reopenFinal(x); n++; }); return n; }
+/* 묶음 때문에 총괄 공개로 바뀐 타대학 학급: 묶음에서 빠지면 강사가 정해지지 않은 경우 원래 대학으로 돌려줌 */
+function bunUnpub(x){ if(x.hsPubBy!=='bundle') return; delete x.hsPubBy; if(x.inst||x.status==='final') return; delete x.hsPub; if(x.status==='recruit') x.status='fixed'; }
 function bunOverlap(rs){ const out=[]; for(let i=0;i<rs.length;i++) for(let k=i+1;k<rs.length;k++){ const a=rs[i], b=rs[k]; if(a.ts==null||b.ts==null||!(a.ts<b.te&&b.ts<a.te)) continue; const db=new Set(classDays(b)), d=classDays(a).filter(x=>db.has(x)); if(d.length) out.push([a,b,d]); } return out; }
 function bunNext(sch){ const used=new Set(S.rows.filter(x=>x.school===sch&&x.bundle).map(x=>x.bundle.name)); for(const c of 'ABCDEFGHIJ') if(!used.has(c)) return c; return String(used.size+1); }
+function bunNextKit(){ const used=new Set(S.rows.filter(x=>bunKit(x)).map(x=>x.bundle.name)); for(const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') if(!used.has(c)) return c; return String(used.size+1); }
+/* 교구 공유 묶음 후보: 같은 프로그램 · 운영 확정(강사 화면 공개 전·모집 중) · 강사 미정 · 묶음 없음. 다른 대학은 총괄만, 「다른 대학 포함」을 켰을 때 */
+function bunKitCands(r){ const X=hsPubOk()&&S.ui.bunX, pool=X?S.rows.filter(x=>!x.ext&&inScope(x)&&rowBiz(x)===rowBiz(r)):matchRows();
+  return pool.filter(x=>x===r||(x.prog===r.prog&&['fixed','recruit'].includes(x.status)&&!x.inst&&!x.bundle))
+    .map(x=>{ if(x===r) return {x,st:'self'}; if(bunOverlap([r,x]).length) return {x,st:'clash'}; let gap=null; const db=new Set(classDays(x)); if(classDays(r).some(d=>db.has(d))&&r.ts!=null&&x.ts!=null) gap=Math.max(x.ts-r.te,r.ts-x.te); return {x,st:gap!=null&&gap<30?'tight':'ok',gap}; })
+    .sort((a,b)=>(a.st==='self'?-1:b.st==='self'?1:0)||(a.st==='clash')-(b.st==='clash')||(orgOfRow(a.x)!==orgOfRow(r))-(orgOfRow(b.x)!==orgOfRow(r))||a.x.school.localeCompare(b.x.school,'ko')); }
 /* 묶음 수업 나란히 보기 + 묶음 전체 수업일 달력 (학급별 색·글자로 구분) */
 const BL = i => 'ABCDEFGH'[i]||String(i+1);
 function bunCompareHtml(rs,forTeacher){
@@ -2197,16 +2212,26 @@ function bunCalHtml(rs){
 function bundleBox(r,act){ act=act||'mopen';
   const g=bunRows(r);
   if(g.length>1){ const all=S.instructors.filter(t=>g.every(x=>x.apps.some(a=>a.tid===t.id)));
-    return `<div class="conds bunbox"><div class="conds-h"><span>한 강사 묶음 ${esc(r.bundle.name||'')} · ${g.length}학급</span><button class="btn sm" data-act="bundis" data-id="${r.id}">묶음 풀기</button></div><div style="padding:8px 12px" class="stack small">
-      <div class="muted">${esc(r.bundle.why||'학교 요청: 한 강사가 모두 진행')} · 강사 화면에서 <b>${g.length}개 수업을 한 번에 신청</b>하고, 주강사를 정하면 묶음 학급에 같은 강사가 배정됩니다.</div>
+    return `<div class="conds bunbox"><div class="conds-h"><span>${bunKit(r)?'교구 공유':'한 강사 묶음'} ${esc(r.bundle.name||'')} · ${g.length}학급</span>${bunEditOk(r)?`<button class="btn sm" data-act="bundis" data-id="${r.id}">묶음 풀기</button>`:''}</div><div style="padding:8px 12px" class="stack small">
+      <div class="muted">${bunKit(r)?'<b>교구 공유</b> · ':''}${esc(bunWhy(r))}${new Set(g.map(orgOfRow)).size>1?` · <b>${[...new Set(g.map(orgOfRow))].map(o=>esc(orgShort(o))).join(' · ')}</b> 학급 (총괄이 배정)`:''} · 강사 화면에서 <b>${g.length}개 수업을 한 번에 신청</b>하고, 주강사를 정하면 묶음 학급에 같은 강사가 배정됩니다.</div>
       ${bunCompareHtml(g,false)}
       <details class="bcal-d" data-uiopen="bcalOpen" ${S.ui.bcalOpen!==false?'open':''}><summary><b>묶음 전체 수업일 달력</b> <span class="muted">· 학급별 색으로 구분</span></summary><div style="margin-top:6px">${bunCalHtml(g)}</div></details>
       <div class="small muted">학급 제외</div>
-      ${g.map(x=>`<div class="row between" style="gap:6px;flex-wrap:nowrap"><span>${x===r?'<b>':''}<button class="lnk" data-act="${act}" data-id="${x.id}">${esc(clsName(x))}</button> · ${esc(prog(x.prog).name)} · ${daysTxt(x.days)} ${hm(x.ts)}~${hm(x.te)} · ${classDays(x).length}회${x===r?'</b>':''} <span class="muted">주강사 ${x.inst?esc(instName(x.inst)):'미정'}</span></span><button class="btn sm" data-act="bunrm" data-id="${x.id}">제외</button></div>`).join('')}
+      ${g.map(x=>`<div class="row between" style="gap:6px;flex-wrap:nowrap"><span>${x===r?'<b>':''}<button class="lnk" data-act="${act}" data-id="${x.id}">${esc(clsName(x))}</button> · ${esc(prog(x.prog).name)} · ${daysTxt(x.days)} ${hm(x.ts)}~${hm(x.te)} · ${classDays(x).length}회${x===r?'</b>':''} <span class="muted">${orgOfRow(x)!==orgOfRow(r)?esc(orgShort(orgOfRow(x)))+' · '+esc(shortSch(x.school))+' · ':x.school!==r.school?esc(shortSch(x.school))+' · ':''}주강사 ${x.inst?esc(instName(x.inst)):'미정'}</span></span>${bunEditOk(r)?`<button class="btn sm" data-act="bunrm" data-id="${x.id}">제외</button>`:''}</div>`).join('')}
       ${bunBad(r)?'<div class="lv-crit"><b>묶음 학급의 주강사가 서로 다릅니다.</b> 한 강사로 맞춰 주세요.</div>':''}
       <div>묶음 전체에 신청한 강사: ${all.length?all.map(t=>`<b>${esc(t.name)}</b>`).join(', '):'<span class="muted">아직 없음</span>'}</div></div></div>`; }
   if(['cancel','final'].includes(r.status)) return '';
-  if(S.ui.bunEdit!==r.id) return `<div><button class="btn sm" data-act="bunopen" data-id="${r.id}">같은 학교 수업과 한 강사 묶음 생성…</button></div>`;
+  if(S.adminOrg&&r.hsPub) return '';
+  if(S.ui.bunEdit!==r.id) return `<div class="row" style="gap:6px"><button class="btn sm" data-act="bunopen" data-id="${r.id}" data-v="school">같은 학교 수업과 한 강사 묶음 생성…</button><button class="btn sm" data-act="bunopen" data-id="${r.id}" data-v="kit">같은 프로그램 수업과 묶기 (교구 공유)…</button></div>`;
+  if(S.ui.bunMode==='kit'){ const C=bunKitCands(r), X=hsPubOk(), lab={self:'',ok:'<span class="lv-ok">가능</span>',tight:'',clash:'<span class="lv-crit">시간 겹침</span>'};
+    return `<div class="conds bunbox"><div class="conds-h"><span>교구 공유 묶음 생성 · ${esc(prog(r.prog).name)}</span></div><div style="padding:8px 12px" class="stack small">
+    <div class="muted">교구 수량이 모자라 한 강사가 여러 학교 수업의 교구를 같이 써야 할 때 묶습니다. 같은 프로그램 · 운영 확정 · 강사 미정 학급만 나옵니다. 묶으면 강사는 묶음 전체를 한 번에 신청하고 배치도 함께 됩니다.</div>
+    ${X?`<label class="row" style="gap:6px"><input type="checkbox" data-act="bunx" ${S.ui.bunX?'checked':''}> 다른 대학 학급 포함 <span class="muted">(포함하면 그 학급은 총괄(호서대)이 강사 화면 공개와 배정을 맡습니다)</span></label>`:''}
+    <div class="tw"><table class="noenh"><thead><tr><th style="width:28px"></th><th>학교 · 학급</th><th>일정</th><th>상태</th><th>판정</th></tr></thead><tbody>${C.map(({x,st,gap})=>`<tr class="${st==='clash'?'muted':''}"><td><input type="checkbox" data-bunpick="${x.id}" ${st==='self'?'checked disabled':st==='clash'?'disabled':''}></td><td>${X?tOrgTag(x)+' ':''}<b>${esc(shortSch(x.school))}</b> ${esc(clsName(x))}${st==='self'?' <span class="muted">(이 학급)</span>':''}</td><td class="nowrap">${daysTxt(x.days)} <span class="mono">${hm(x.ts)}~${hm(x.te)}</span><div class="muted">${md(x.start)}~${md(x.end)}</div></td><td class="nowrap">${x.status==='recruit'?'강사 모집 중':'공개 전'}</td><td class="nowrap">${st==='tight'?`<span class="lv-warn">간격 ${gap}분</span>`:lab[st]}</td></tr>`).join('')}</tbody></table></div>
+    ${C.length<2?'<div class="muted">같은 프로그램으로 묶을 수 있는 학급이 없습니다.</div>':''}
+    <div class="muted">간격 = 같은 날 두 수업 사이 시간. 30분보다 짧으면 학교 간 이동이 가능한지 확인해 주세요.</div>
+    <div class="row" style="gap:8px"><label class="f">묶음 이름<input id="bun-name" value="${esc(bunNextKit())}" style="width:110px"></label><label class="f" style="flex:1 1 240px">이유 (강사에게도 보임)<input id="bun-why" value="교구 수량 부족: 한 강사가 교구를 같이 씀"></label></div>
+    <div class="row"><button class="btn sm pri" data-act="bunsave" data-id="${r.id}">묶음 저장</button><button class="btn sm" data-act="buncancel">닫기</button></div></div></div>`; }
   const peers=matchRows().filter(x=>x.school===r.school&&x.status!=='cancel'&&x.status!=='final'&&(!x.bundle||x===r));
   return `<div class="conds bunbox"><div class="conds-h"><span>한 강사 묶음 생성 · ${esc(r.school)}</span></div><div style="padding:8px 12px" class="stack small">
     <div class="muted">학교가 여러 학급을 한 강사에게 맡겨 달라고 요청한 경우 묶어 두세요. 강사는 묶음 전체를 한 번에 신청하고, 배치도 함께 됩니다. 같은 날 시간이 겹치는 학급은 묶을 수 없습니다.</div>
@@ -2334,7 +2359,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER = '11.160';
+const LIB_VER = '11.161';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -7813,16 +7838,21 @@ document.addEventListener('click',async e=>{
     case 'exncancel': S.ui.exnEdit=''; break;
     case 'exnsave': { const ta=document.getElementById('exn-'+r.id); if(!ta) return; if(!exnSet(r,ta.value.split(/\n/))) return; S.ui.exnEdit=''; toast('강사에게 보이는 메모를 저장했습니다'); break; }
     case 'exnpub': { const i=+el.dataset.i, x=(r.extPriv||[])[i]; if(!x||(x.names||[]).length) return; const cur=String(r.extNote||'').split(/\s*\/\s*(?!\d)/).filter(Boolean); if(!exnSet(r,[...cur,x.text])) return; r.extPriv.splice(i,1); toast('강사에게도 보이게 옮겼습니다'); break; }
-    case 'bunopen': S.ui.bunEdit=r.id; break;
+    case 'bunopen': S.ui.bunEdit=r.id; S.ui.bunMode=el.dataset.v==='kit'?'kit':'school'; break;
+    case 'bunx': S.ui.bunX=!S.ui.bunX; return render();
     case 'buncancel': S.ui.bunEdit=''; break;
     case 'bunsave': { const ids=[r.id,...[...document.querySelectorAll('[data-bunpick]')].filter(x=>x.checked&&!x.disabled).map(x=>x.dataset.bunpick)], rs=ids.map(id=>S.rows.find(x=>x.id===id)).filter(Boolean);
       if(rs.length<2){ toast('함께 묶을 학급을 1개 이상 골라 주세요'); return; }
       const ov=bunOverlap(rs); if(ov.length){ toast(`${clsName(ov[0][0])}과 ${clsName(ov[0][1])}이 ${md(ov[0][2][0])} 등 같은 시간에 겹쳐 한 강사가 맡을 수 없습니다`); return; }
-      const b={id:'b'+Date.now().toString(36),name:(document.getElementById('bun-name').value||'').replace(/^\s*묶음\s*/,'').trim()||bunNext(r.school),why:(document.getElementById('bun-why').value||'').trim()||'학교 요청: 한 강사가 모두 진행',at:now()};
-      rs.forEach(x=>{ x.bundle={...b}; }); S.ui.bunEdit='';
+      const kit=S.ui.bunMode==='kit', cross=new Set(rs.map(orgOfRow)).size>1;
+      if(cross&&!hsPubOk()){ toast('다른 대학 학급과 묶는 것은 총괄 관리자만 할 수 있습니다'); return; }
+      const b={id:'b'+Date.now().toString(36),name:(document.getElementById('bun-name').value||'').replace(/^\s*(묶음|교구 공유)\s*/,'').trim()||(kit?bunNextKit():bunNext(r.school)),why:(document.getElementById('bun-why').value||'').trim()||(kit?'교구 수량 부족: 한 강사가 교구를 같이 씀':'학교 요청: 한 강사가 모두 진행'),at:now()};
+      if(kit) b.kind='kit'; if(cross) b.cross=true;
+      const open=rs.some(x=>x.status==='recruit');
+      rs.forEach(x=>{ x.bundle={...b}; if(cross&&!mine(x)&&!x.hsPub){ x.hsPub=true; x.hsPubBy='bundle'; (x.thread=x.thread||[]).push({who:'운영기관',at:now(),text:`교구 공유 묶음 ${b.name}에 들어가 총괄(호서대)이 강사 화면 공개와 배정을 맡습니다`}); } if(open&&x.status==='fixed'){ x.status='recruit'; x.openedAt=now(); } }); S.ui.bunEdit=''; S.ui.bunMode='';
       const insts=new Set(rs.map(x=>x.inst||'')); toast(`${rs.length}학급을 묶음 ${b.name}(으)로 묶었습니다${insts.size>1?'. 주강사가 서로 달라 한 강사로 맞춰 주세요':''}`); break; }
-    case 'bunrm': { const g=bunRows(r); delete r.bundle; if(g.length===2) g.forEach(x=>delete x.bundle); toast(g.length===2?'묶음을 풀었습니다':`${clsName(r)}을 묶음에서 뺐습니다`); break; }
-    case 'bundis': { bunRows(r).forEach(x=>delete x.bundle); toast('묶음을 풀었습니다'); break; }
+    case 'bunrm': { if(!bunEditOk(r)){ toast('다른 대학 학급이 섞인 묶음은 총괄 관리자만 바꿀 수 있습니다'); return; } const g=bunRows(r); bunUnpub(r); delete r.bundle; if(g.length===2) g.forEach(x=>{ bunUnpub(x); delete x.bundle; }); toast(g.length===2?'묶음을 풀었습니다':`${clsName(r)}을 묶음에서 뺐습니다`); break; }
+    case 'bundis': { if(!bunEditOk(r)){ toast('다른 대학 학급이 섞인 묶음은 총괄 관리자만 풀 수 있습니다'); return; } bunRows(r).forEach(x=>{ bunUnpub(x); delete x.bundle; }); toast('묶음을 풀었습니다'); break; }
     case 'wishassign': { if(!r.wish) return; if(!canAssign(r)){ toast(gateReason(r)||'강사를 배치할 수 없는 상태입니다'); return; } const prev=r.inst; r.inst=r.wish.tid; if(prev&&prev!==r.inst) reopenFinal(r); bunSync(r); toast(`${instName(r.inst)} 강사를 가배치했습니다`); break; }
     case 'wishall': { const rs=matchRows().filter(x=>x.wish&&x.inst!==x.wish.tid&&x.status!=='final'&&canAssign(x)), ov=rs.filter(x=>x.inst).length; if(ov&&!confirm(`대학 희망대로 ${rs.length}학급을 가배치합니다.\n이 중 ${ov}학급은 이미 다른 강사가 가배치되어 있어 희망 강사로 바뀝니다.\n\n계속할까요?`)) return; rs.forEach(x=>{ x.inst=x.wish.tid; }); toast(`대학 희망대로 ${rs.length}학급을 가배치했습니다. 「배치 확정」 전까지 학교·강사에게 보이지 않습니다`); break; }
     case 'offseen': { const x=(r.offLog||[]).find(y=>y.d===el.dataset.d); if(x){ x.aSeen=now(); toast(`${offLab(x.d)} 휴강을 처리 완료로 표시했습니다`); } break; }
@@ -7934,9 +7964,9 @@ document.addEventListener('click',async e=>{
     case 'hpsel': { const M={...(S.ui.hpSel||{})}; otherFixRows().filter(r=>orgOfRow(r)===el.dataset.o).forEach(r=>{ M[r.id]=el.dataset.v==='1'; }); S.ui.hpSel=M; break; }
     case 'hspub': { const sel=S.ui.hpSel||{}, rs=otherFixRows().filter(r=>sel[r.id]!==false); if(!rs.length) return; if(!confirm(`타대학 ${rs.length}학급을 강사 화면에 공개합니다.\n공개한 학급은 이 「검토 · 매칭」에서 신청 강사를 배치합니다. 계속할까요?`)) return;
       rs.forEach(r=>{ r.hsPub=true; r.status='recruit'; r.openedAt=now(); r.thread=r.thread||[]; r.thread.push({who:'호서대',text:'강사 화면에 공개했습니다 (호서대)',at:now()}); }); S.ui.hpSel={}; toast(`타대학 ${rs.length}학급을 강사 화면에 공개했습니다`); break; }
-    case 'recruit': { const rs=matchRows().filter(toOpen); rs.forEach(r=>{ r.status='recruit'; r.openedAt=now(); }); toast(`${rs.length}학급을 강사 화면에 공개했습니다`); break; }
-    case 'recone': if(r.status==='fixed'&&gate(r)){ r.status='recruit'; r.openedAt=now(); toast('이 학급을 강사 화면에 공개했습니다'); } break;
-    case 'recclose': if(r.status==='recruit'){ r.status='fixed'; toast('강사 화면에서 내렸습니다. 이미 받은 신청은 그대로 남습니다'); } break;
+    case 'recruit': { const rs=matchRows().filter(toOpen); rs.forEach(r=>{ r.status='recruit'; r.openedAt=now(); bunRows(r).forEach(x=>{ if(x.status==='fixed'&&!x.inst){ x.status='recruit'; x.openedAt=now(); } }); }); toast(`${rs.length}학급을 강사 화면에 공개했습니다`); break; }
+    case 'recone': if(r.status==='fixed'&&gate(r)){ const g=bunRows(r).filter(x=>x.status==='fixed'&&!x.inst); g.forEach(x=>{ x.status='recruit'; x.openedAt=now(); }); if(!g.includes(r)){ r.status='recruit'; r.openedAt=now(); } toast(g.length>1?`묶음 ${g.length}학급을 함께 강사 화면에 공개했습니다`:'이 학급을 강사 화면에 공개했습니다'); } break;
+    case 'recclose': if(r.status==='recruit'){ bunRows(r).forEach(x=>{ if(x.status==='recruit') x.status='fixed'; }); r.status='fixed'; toast('강사 화면에서 내렸습니다. 이미 받은 신청은 그대로 남습니다'); } break;
     case 'publish': { const rs=myRows().filter(r=>r.status==='confirmed'&&gate(r)); rs.forEach(r=>{ r.status='proposed'; r.thread.push({who:'호서대',text:'운영안을 보냈습니다. 확인해 주세요.',at:now()}); }); toast(`${new Set(rs.map(r=>r.school)).size}개 학교(${rs.length}학급)에 운영안을 보냈습니다`); break; }
     case 'review-ok': { if(!reviewOk(r)){ toast('검토 항목 중 해결되지 않은 것이 있습니다'); return; }
       r.status='fixed'; r.reviewedAt=now(); r.thread.push({who:'호서대',text:'제출 내용 검토를 마쳤습니다. 운영을 확정합니다. 강사 배치가 끝나면 다시 안내드립니다.',at:now()});
