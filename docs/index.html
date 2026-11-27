@@ -780,7 +780,7 @@ if(EMBED) document.documentElement.classList.add('embed');
   <nav id="nav">
     <div class="navg">현황</div>
     <label data-page="status"><input type="radio" name="page" value="status">서류 구비·발송<em class="nb" id="nbStatus"></em><i class="st" data-sec="status"></i></label>
-    <label data-page="review"><input type="radio" name="page" value="review">서류 검토<i class="st" data-sec="review"></i></label>
+    <label data-page="review"><input type="radio" name="page" value="review">서류 검토<em class="nb" id="nbReview"></em><i class="st" data-sec="review"></i></label>
     <div class="navg">강사</div>
     <label data-page="person"><input type="radio" name="page" value="person">강사별 서류<i class="st" data-sec="person"></i></label>
     <label data-page="roster"><input type="radio" name="page" value="roster">강사 명단<i class="st" data-sec="roster"></i></label>
@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-6';
+var APP_VERSION = '2026.11.27-7';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1522,7 +1522,7 @@ async function openSplit(){
 /* ---------- 서류 검토 (적용 학기 배치 강사 전체) ---------- */
 // 칸: 인적사항·이미지·PDF·이력서. 칸을 누르면 그 강사의 서류를 한 화면에서 보고 보완 표시·검토 완료를 한다
 var RV_COLS=[['rrn','주민번호'],['phone','연락처'],['addr','주소'],['cv','이력'],['sign','서명'],['photo','사진'],['idcard','신분증'],['bank','통장'],['exam','4-1 검사서'],['tb','4-2 결핵'],['grad','5 학력'],['cert','6 자격·경력']];
-var RV_FILTERS=[['all','전체'],['todo','검토 전'],['miss','미제출 있음'],['fix','보완 필요'],['done','검토 완료'],['chg','검토 후 수정'],['unreg','미등록'],['|'],['main','주강사'],['sub','보조강사']];
+var RV_FILTERS=[['all','전체'],['lsub','강사 제출 · 검토 대기'],['todo','검토 전'],['miss','미제출 있음'],['fix','보완 필요'],['done','검토 완료'],['chg','검토 후 수정'],['unreg','미등록'],['|'],['main','주강사'],['sub','보조강사']];
 var rvF='todo', rvList=[], rvIdx=-1, rvUrls=[], rvSea='', rvKind='';
 /* 서류 검토 「시기 · 출강 기관」: 이 사업 운영현황 전체(모든 학기 파일)에서 그 시기·구분에 배치된 강사만 */
 function rvKindOf(r){ return /학교\s*밖/.test(rowFile(r)) ? 'out' : 'school'; }
@@ -1572,6 +1572,7 @@ function rvMatch(x, f, q){
   if(f==='unreg') return !!x.unreg;
   if(f==='main') return roleKind(x)!=='sub';
   if(f==='sub') return roleKind(x)!=='main';
+  if(f==='lsub') return !x.unreg && lsubWait(x.p);
   if(x.unreg) return f==='todo' || f==='miss';
   var st=rvState(x.p);
   if(f==='todo') return st!=='done';
@@ -2686,6 +2687,7 @@ function flowCounts(){ var P=[]; try{ P=statusPairs(); }catch(e){}
   c.missN=Object.keys(c.missP).length; return c; }
 function flowCur(){ return page==='sms' ? 'req' : page==='mail' ? 'send' : (stFilter==='sent' ? 'done' : 'check'); }
 function renderFlow(){ var fb=$('flowBar'); if(!fb) return; var c=flowCounts();
+  var nr=$('nbReview'); if(nr){ var nw=people.filter(lsubWait).length; nr.textContent=nw||''; nr.className='nb'+(nw?' r':''); nr.title=nw?'강사가 제출 링크로 다시 낸 서류 · 검토 대기 '+nw+'명':''; }
   var nb=$('nbStatus'); if(nb){ nb.textContent = c.ready ? c.ready : ''; nb.className='nb'+(c.ready?' r':''); nb.title = c.ready ? '구비 완료 · 미발송 '+c.ready+'건' : ''; }
   if(!FLOW_PAGES[page] || (typeof personOpen!=='undefined' && $('pick') && !$('pick').hidden)){ fb.hidden=true; return; }
   var cur=flowCur(), D=[
@@ -4070,7 +4072,7 @@ async function syPull(){
     sy.started = true;
   }
   sy.rev = r.rev; sySave();
-  if(syNewSub.length){ var nm=syNewSub.filter(function(v,i,a){ return v && a.indexOf(v)===i; }); syNewSub=[]; if(nm.length) toast('강사가 제출 링크로 서류를 올렸습니다: '+nm.join(', ')+' (강사 목록 → 강사 제출)'); }
+  if(syNewSub.length){ var nm=syNewSub.filter(function(v,i,a){ return v && a.indexOf(v)===i; }); syNewSub=[]; if(nm.length) toast('강사가 제출 링크로 서류를 올렸습니다: '+nm.join(', ')+' (서류 검토 → 강사 제출 · 검토 대기)'); if(typeof renderFlow==='function') renderFlow(); }
   if(r.notes && nApply(r.notes) && !(listChanged || curChanged)) nRefresh();
   if(listChanged || curChanged){ renderList(); if(curChanged){ renderAll(); syLoadCur(cur); } if(page === 'status') renderStatus(); if(page === 'roster') renderRoster(); }
   if(!OL.ran){ OL.ran=1; setTimeout(function(){ olKick(false); }, 500); } else if(listChanged && OL.list) olRun();
