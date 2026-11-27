@@ -870,6 +870,28 @@ if(EMBED) document.documentElement.classList.add('embed');
       </div></details>
     </div>
   </section>
+  <section data-sec="sdone" hidden>
+    <div class="card" style="max-width:1280px">
+      <h3>발송 완료 안내 <small id="sdInfo"></small></h3>
+      <div class="row" style="margin:0 0 8px;gap:10px;font-size:12.5px;align-items:center"><span>선택 <b id="sdN">0</b>곳</span><a href="#" data-sdsel="un">안내할 차례만</a><a href="#" data-sdsel="all">모두</a><a href="#" data-sdsel="none">해제</a></div>
+      <div class="gview"><table class="stt" id="sdTable"></table></div>
+    </div>
+    <div class="card" style="max-width:1280px">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">
+        <div class="fld"><span>담당자 문자 미리 보기 <small class="hint" id="sdPvWho"></small></span><pre id="sdPv" style="white-space:pre-wrap;background:#FAF7F6;border:1px solid var(--line);border-radius:10px;padding:10px;margin:0;font-family:inherit;font-size:13px;min-height:120px"></pre></div>
+        <div class="fld"><span>단톡방 공지 문구 <small class="hint" id="sdKInfo"></small></span><pre id="sdKPv" style="white-space:pre-wrap;background:#FAF7F6;border:1px solid var(--line);border-radius:10px;padding:10px;margin:0;font-family:inherit;font-size:13px;min-height:120px"></pre></div>
+      </div>
+      <div class="row" style="margin:10px 0 0;gap:8px;align-items:center"><span style="flex:1"></span><button type="button" class="ghost" id="sdKCopy">단톡방 문구 복사</button><button type="button" class="save" id="sdSend">선택 문자 보내기</button></div>
+      <details class="smcfg" id="sdTplBox" style="margin-top:10px"><summary><span>안내 문구</span><em>문구 수정</em></summary><div class="inner">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">
+          <label class="fld"><span>담당자 문자</span><textarea id="sdTSms" rows="9" style="font-family:inherit"></textarea></label>
+          <label class="fld"><span>단톡방 공지</span><textarea id="sdTKakao" rows="9" style="font-family:inherit"></textarea></label>
+        </div>
+        <div class="hint" style="margin:6px 0">문자: {학교명} {담당자} {강사수} {발송일} {받는메일} {사업명} {보내는사람} {연락처} · 단톡방: {기관목록} {기관수} {사업명} {연락처}</div>
+        <div class="row" style="margin:0;gap:6px;align-items:center"><button type="button" class="ghost sm" id="sdTReset">기본값 초기화</button><span style="flex:1"></span><span class="hint" id="sdTDirty"></span><button type="button" class="ghost" id="sdTCancel">취소</button><button type="button" class="save" id="sdTSave">저장</button></div>
+      </div></details>
+    </div>
+  </section>
   <section data-sec="roster" hidden>
     <div class="card" style="max-width:1280px">
       <h3>강사 <small id="rsBasis"></small></h3>
@@ -1370,17 +1392,17 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-20';
+var APP_VERSION = '2026.11.27-21';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
 var FORMS = Forms.FORMS;
 ['verSide','verFoot'].forEach(function(id){ $(id).textContent = '버전 ' + APP_VERSION; });
 
-var PAGES = ['ops','roster','subs','status','review','info','school','cv','imgs','pdf','out','mail','sms','cert','certlog'];
+var PAGES = ['ops','roster','subs','status','sdone','review','info','school','cv','imgs','pdf','out','mail','sms','cert','certlog'];
 var PTABS = [['info','인적사항'],['school','배치 학교'],['cv','학력·경력·자격'],['imgs','서명·사진·증빙'],['pdf','증빙서류'],['out','서류 만들기']];   // 강사별 서류 위쪽 탭
 var PTAB_KEYS = PTABS.map(function(x){ return x[0]; });
-var SHARED_PAGES = { ops: 1, roster: 1, subs: 1, status: 1, review: 1, mail: 1, sms: 1, cert: 1, certlog: 1 };   // 강사 한 명이 아니라 전체에 대한 화면
+var SHARED_PAGES = { ops: 1, roster: 1, subs: 1, status: 1, sdone: 1, review: 1, mail: 1, sms: 1, cert: 1, certlog: 1 };   // 강사 한 명이 아니라 전체에 대한 화면
 var PAGE_META = {
   cert: ['증명서', '경력·출강증명서 발급', '운영현황에서 강사의 수업을 골라 경력증명서·출강증명서(한글)를 만듭니다. 구글 시트 연동이 되어 있으면 날인대장에 자동으로 기록하고 문서번호를 매깁니다.'],
   certlog: ['증명서', '발급대장', '날인대장(앵커늘봄 탭)에 쌓인 증명서 발급 내역을 봅니다.'],
@@ -1396,6 +1418,7 @@ var PAGE_META = {
   imgs: ['강사별 서류', '서명·사진·증빙', '서명은 모든 서약서·동의서의 서명란에 들어갑니다.'],
   pdf: ['강사별 서류', '증빙서류', '스캔본 서류를 올리면 이름을 맞춰 ZIP에 넣습니다.'],
   out: ['강사별 서류', '서류 만들기', '빠진 것을 확인하고 ZIP으로 저장합니다.'],
+  sdone: ['현황', '서류 구비·발송', '서류 메일을 보낸 학교·기관 담당자에게 발송 완료 문자를 보내고, 단톡방에 올릴 공지 문구를 복사합니다.'],
   mail: ['현황', '서류 구비·발송', '학교·기관 담당자에게 보낼 메일을 만들고, 그 학교 강사들의 서류를 ZIP 하나로 묶습니다.']
 };
 var IMG_KEYS = [
@@ -2496,6 +2519,7 @@ var SMS_BR={ on:false, ver:'' };
 function smsBrPost(m){ var ws=[window]; try{ if(window.top!==window) ws.unshift(window.top); }catch(e){} ws.forEach(function(w){ try{ w.postMessage(m, '*'); }catch(e){} }); }
 window.addEventListener('message', function(e){ var d=e.data; if(!d || typeof d!=='object') return;
   if(d.type==='hs-sms-hello' && !SMS_BR.on){ SMS_BR.on=true; SMS_BR.ver=d.ver||''; if(page==='sms') renderSmsPreview(); }
+  if(d.type==='hs-sms-sent' && d.key && String(d.key).indexOf('sdn:')===0){ sdMark(String(d.key).slice(4)); return; }
   if(d.type==='hs-sms-sent' && d.key && String(d.key).indexOf('lec:')===0){ var id=String(d.key).slice(4), x=smsTargets().filter(function(y){ return y.p.id===id; })[0]; if(x){ smsLogSet(id, x); kvPut('smsLog', smsLog); if(page==='sms') renderSms(); toast(x.name+' 강사 문자 전송을 요청함으로 기록했습니다'); } } });
 setTimeout(function(){ smsBrPost({ type:'hs-sms-ping' }); }, 1200); setInterval(function(){ if(!SMS_BR.on) smsBrPost({ type:'hs-sms-ping' }); }, 6000);
 function smsBrSend(list){
@@ -2867,6 +2891,7 @@ function go(p, fromHistory, viaNav){
   if(p==='status') renderStatus();
   if(p==='roster') renderRoster();
   if(p==='subs') renderSubs();
+  if(p==='sdone') renderSdone();
   if(p==='review') renderReview(); else if($('rvDlg') && $('rvDlg').classList.contains('on')) rvClose();
   if(p==='out') renderFix();
   if(p==='sms') renderSms();
@@ -2879,12 +2904,12 @@ function go(p, fromHistory, viaNav){
   window.scrollTo(0,0);
 }
 /* 서류 구비·발송 흐름: 서류 구비 확인(현황) → 보완 요청(문자) → 학교 발송(메일) → 발송 완료(현황 · 발송 완료만) */
-var FLOW_PAGES = { status:1, sms:1, mail:1 };
+var FLOW_PAGES = { status:1, sms:1, mail:1, sdone:1 };
 function flowCounts(){ var P=[]; try{ P=statusPairs(); }catch(e){}
   var c={ all:P.length, miss:0, missP:{}, ready:0, sent:0 };
   P.forEach(function(x){ if(x.st==='notready'||x.st==='none'){ c.miss++; c.missP[x.name]=1; } else if(x.st==='sent') c.sent++; else c.ready++; });
   c.missN=Object.keys(c.missP).length; return c; }
-function flowCur(){ return page==='sms' ? 'req' : page==='mail' ? 'send' : (stFilter==='sent' ? 'done' : 'check'); }
+function flowCur(){ return page==='sms' ? 'req' : page==='mail' ? 'send' : page==='sdone' ? 'notice' : (stFilter==='sent' ? 'done' : 'check'); }
 function renderFlow(){ var fb=$('flowBar'); if(!fb) return; var c=flowCounts();
   var nr=$('nbReview'); if(nr){ var nw=people.filter(lsubWait).length; nr.textContent=nw||''; nr.className='nb'+(nw?' r':''); nr.title=nw?'강사가 제출 링크로 다시 낸 서류 · 검토 대기 '+nw+'명':''; }
   var nb=$('nbStatus'); if(nb){ nb.textContent = c.ready ? c.ready : ''; nb.className='nb'+(c.ready?' r':''); nb.title = c.ready ? '구비 완료 · 미발송 '+c.ready+'건' : ''; }
@@ -2893,12 +2918,13 @@ function renderFlow(){ var fb=$('flowBar'); if(!fb) return; var c=flowCounts();
     { k:'check', g:'현황', t:'서류 구비 확인', n:c.miss, u:'건 미구비', st:c.all&&!c.miss?'done':c.miss?'now':'' },
     { k:'req', g:'강사', t:'보완 요청', n:c.missN, u:'명', st:c.all&&!c.missN?'done':c.missN?'now':'' },
     { k:'send', g:'학교 · 기관', t:'학교 발송', n:c.ready, u:'건 대기', st:c.all&&!c.ready&&!c.miss?'done':c.ready?'now':'' },
-    { k:'done', g:'완료', t:'발송 완료', n:c.sent, u:'/ '+c.all+'건', st:'' } ];
+    { k:'done', g:'완료', t:'발송 완료', n:c.sent, u:'/ '+c.all+'건', st:'' },
+    (function(){ var L=sdSchools(), un=L.filter(sdDue).length; return { k:'notice', g:'학교 · 기관', t:'발송 완료 안내', n:un, u:'곳', st:L.length&&!un?'done':un?'now':'' }; })() ];
   fb.hidden=false;
   fb.innerHTML=D.map(function(d, i){ var done=d.st==='done';
     return '<button type="button" role="tab" aria-selected="'+(d.k===cur)+'" data-flow="'+d.k+'" class="'+(d.k===cur?'on ':'')+(done?'done ':'')+(d.st==='now'?'now':'')+'"><span class="fg">'+d.g+'</span><span class="ft"><span class="fd">'+(done?'✓':(i+1))+'</span>'+d.t+'</span><span class="fn">'+(done?'완료':d.n+'<small>'+d.u+'</small>')+'</span></button>'; }).join('');
   each('[data-flow]', function(b){ b.onclick=function(){ var k=b.dataset.flow;
-    if(k==='req') go('sms', false, true); else if(k==='send') go('mail', false, true);
+    if(k==='req') go('sms', false, true); else if(k==='send') go('mail', false, true); else if(k==='notice') go('sdone', false, true);
     else { stFilter = k==='done' ? 'sent' : 'all'; if(page==='status'){ renderStatus(); window.scrollTo(0,0); } else go('status', false, true); } }; }, fb); }
 
 /* ---------- 확인 목록 ---------- */
@@ -3709,6 +3735,58 @@ function renderMyOps(){
   $('myOpsNote').textContent = miss.length ? '배치 학교에 없는 곳: '+miss.join(', ') : '배치 학교가 운영현황과 같습니다';
 }
 
+/* ---------- 발송 완료 안내: 서류 메일을 보낸(발송 완료 처리된) 학교 담당자에게 문자, 단톡방 공지 문구 복사 ----------
+   문구는 사업별로 sdCfg[사업] = {sms, kakao}. 문자 기록은 sdLog['사업|학교'] = {date, at} */
+var SD_SMS_DEF='[호서대 {사업명}] {학교명} {담당자} 선생님, 안녕하세요.\n{학교명}에 배치된 강사 {강사수}명의 계약 서류를 {발송일} 메일({받는메일})로 보내드렸습니다. 메일함을 확인해 주세요.\n문의 {연락처}';
+var SD_KAKAO_DEF='[호서대 {사업명}] 강사 서류 발송 안내\n\n아래 학교·기관 담당자님께 강사 서류를 메일로 보내드렸습니다.\n{기관목록}\n\n메일함을 확인해 주시고, 받지 못하셨으면 연락 부탁드립니다.\n문의 {연락처}';
+var sdCfg={}, sdLog={}, sdPick={}, sdSnap=null;
+function sdTpl(k){ var c=sdCfg[docBiz]||{}; return c[k]!=null ? c[k] : (k==='sms' ? SD_SMS_DEF : SD_KAKAO_DEF); }
+function sdTopContacts(){ try{ if(EMBED && window.top.opsSchoolContacts) return window.top.opsSchoolContacts()||{}; }catch(e){} return {}; }
+function sdMobile(sch){ var t=sdTopContacts()[sch]||{}, c=contacts[sch]||{}, v=[t.mobile,t.phone,c.tel].filter(Boolean).join(' / ').split(/[\/,;|·\n]/);
+  for(var i=0;i<v.length;i++){ var d=String(v[i]).replace(/\D/g,''); if(/^01\d{8,9}$/.test(d)) return d; } return ''; }
+function sdSchools(){ var P=[]; try{ P=statusPairs(); }catch(e){} var m={};
+  P.forEach(function(x){ var o=m[x.school]=m[x.school]||{ school:x.school, all:0, sent:0, last:'' }; o.all++; if(x.sent){ o.sent++; if((x.sent.date||'')>o.last) o.last=x.sent.date||''; } });
+  return Object.keys(m).map(function(k){ return m[k]; }).filter(function(o){ return o.sent>0; }).sort(function(a,b){ return a.school.localeCompare(b.school,'ko'); }); }
+function sdLogOf(sch){ return sdLog[docBiz+'|'+sch]||null; }
+function sdDue(o){ var l=sdLogOf(o.school); return !l || (l.date||'')<o.last; }
+function sdOn(o){ var v=sdPick[o.school]; return v!=null ? v : (sdDue(o) && !!sdMobile(o.school)); }
+function sdShort(s){ return String(s||'').replace(/등학교$/,''); }
+function sdVals(o){ var c=contacts[o.school]||{}, t=sdTopContacts()[o.school]||{}, sd=(mailCfg&&mailCfg.sender)||{}, d=(o.last||'').split('-');
+  return { 학교명:o.school, 담당자:c.name||t.name||'', 강사수:o.sent, 발송일:d.length===3?(+d[1])+'/'+(+d[2]):'', 받는메일:c.email||t.email||'', 사업명:bizDef(docBiz).name, 보내는사람:sd.name||smsCfg.who||'', 연락처:sd.tel||smsCfg.tel||'' }; }
+function sdFill(tpl, v){ var out=String(tpl||'').split('\n').filter(function(l){ var ks=l.match(/\{[^{}\s]+\}/g); return !ks || !(l.replace(/\{[^{}\s]+\}/g,'').trim()==='' && ks.every(function(k){ return !v[k.slice(1,-1)]; })); }).join('\n');
+  return out.replace(/\{([^{}\s]+)\}/g, function(a,k){ return k in v ? v[k] : a; }).replace(/\(\)/g,'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(); }
+function sdSmsText(o){ return sdFill(sdTpl('sms'), sdVals(o)); }
+function sdKakaoText(){ var L=sdSchools(), sd=(mailCfg&&mailCfg.sender)||{};
+  return sdFill(sdTpl('kakao'), { 기관목록:L.map(function(o){ return '- '+sdShort(o.school); }).join('\n'), 기관수:L.length, 사업명:bizDef(docBiz).name, 연락처:sd.tel||smsCfg.tel||'' }); }
+function sdMark(sch){ sdLog[docBiz+'|'+sch]={ date:today(), at:Date.now() }; delete sdPick[sch]; kvPut('sdLog', sdLog); if(page==='sdone') renderSdone(); renderFlow(); toast(sdShort(sch)+' 담당자 문자 전송을 요청함으로 기록했습니다'); }
+function renderSdone(){ var L=sdSchools(), sel=L.filter(sdOn);
+  $('sdInfo').textContent=L.length ? '서류 메일을 보낸 학교·기관 '+L.length+'곳' : '';
+  $('sdN').textContent=sel.length;
+  $('sdTable').innerHTML='<thead><tr><th style="width:30px"></th><th>학교·기관</th><th>서류 메일</th><th>담당자</th><th>휴대폰</th><th>문자</th></tr></thead><tbody>'+(L.length ? L.map(function(o){ var v=sdVals(o), mb=sdMobile(o.school), lg=sdLogOf(o.school), on=sdOn(o);
+    return '<tr'+(on?'':' style="color:var(--mute)"')+'><td><input type="checkbox" data-sdpick="'+esc(o.school)+'"'+(on?' checked':'')+' aria-label="'+esc(o.school)+' 선택"></td><td><b>'+esc(sdShort(o.school))+'</b></td>'+
+      '<td class="nw">'+esc(v.발송일)+' 발송 · 강사 '+o.sent+(o.sent<o.all?'<small style="display:block;color:var(--warn,#B26A00)">'+o.sent+'/'+o.all+'명만 발송</small>':'명')+'</td><td>'+esc(v.담당자||'-')+'<small style="display:block;color:var(--mute)">'+esc(v.받는메일||'')+'</small></td>'+
+      '<td class="nw">'+(mb?esc(mb.replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3')):'<span style="color:var(--err,#B3261E)">휴대폰 없음</span>')+'</td>'+
+      '<td class="nw">'+(lg?'<span style="color:var(--ok)">'+esc(fmtSent(lg))+' 보냄</span>'+(sdDue(o)?'<small style="display:block;color:var(--mute)">이후 추가 발송 있음</small>':''):'<span style="color:var(--mute)">-</span>')+'</td></tr>'; }).join('') : '<tr><td colspan="6" style="color:var(--mute)">발송 완료 처리된 학교·기관이 아직 없습니다. 「학교 발송」에서 서류 메일을 보내면 여기에 나옵니다.</td></tr>')+'</tbody>';
+  each('[data-sdpick]', function(b){ b.onchange=function(){ sdPick[b.dataset.sdpick]=b.checked; renderSdone(); }; }, $('sdTable'));
+  var x0=sel[0]||L[0]; $('sdPv').textContent=x0 ? sdSmsText(x0) : ''; $('sdPvWho').textContent=x0 ? sdShort(x0.school)+(typeof smsBytes==='function'?' · '+smsBytes(sdSmsText(x0))+'바이트':'') : '';
+  $('sdKPv').textContent=L.length ? sdKakaoText() : ''; $('sdKInfo').textContent=L.length ? '발송 완료 '+L.length+'곳 · 가나다순' : '';
+  $('sdSend').textContent='선택 '+sel.length+'곳 문자 보내기'; $('sdSend').disabled=!sel.length; $('sdKCopy').disabled=!L.length;
+  if(!sdSnap){ $('sdTSms').value=sdTpl('sms'); $('sdTKakao').value=sdTpl('kakao'); } }
+(function(){ function bind(){ if(!$('sdSend')) return setTimeout(bind, 200);
+  each('[data-sdsel]', function(a){ a.onclick=function(e){ e.preventDefault(); var v=a.dataset.sdsel; sdPick={}; if(v!=='un') sdSchools().forEach(function(o){ sdPick[o.school]=v==='all'; }); renderSdone(); }; });
+  $('sdKCopy').onclick=function(){ copyText(sdKakaoText(), '단톡방 공지 문구를 복사했습니다'); };
+  $('sdSend').onclick=function(){ var jobs=sdSchools().filter(sdOn).map(function(o){ return { key:'sdn:'+o.school, name:sdShort(o.school)+' '+(sdVals(o).담당자||''), phone:sdMobile(o.school), title:'강사 서류 발송 안내', body:sdSmsText(o) }; }).filter(function(j){ return /^01\d{8,9}$/.test(j.phone) && j.body; });
+    if(!jobs.length){ toast('휴대폰 번호가 있는 학교·기관이 없습니다'); return; }
+    if(!SMS_BR.on){ $('smsBrDlg').classList.add('on'); smsBrPost({ type:'hs-sms-ping' }); return; }
+    smsBrPost({ type:'hs-sms-send', req:'d'+Date.now().toString(36), label:'강사 서류 발송 안내', jobs:jobs }); toast('i-ONE 캠퍼스 문자 화면을 엽니다 · '+jobs.length+'건. 새 탭에서 확인 후 「전송」을 눌러 주세요'); };
+  function dirty(){ $('sdTDirty').textContent='저장하지 않은 수정이 있습니다'; }
+  $('sdTplBox').addEventListener('toggle', function(){ if($('sdTplBox').open && !sdSnap){ sdSnap=JSON.stringify(sdCfg[docBiz]||{}); $('sdTSms').value=sdTpl('sms'); $('sdTKakao').value=sdTpl('kakao'); } });
+  $('sdTSms').oninput=function(){ dirty(); $('sdPv').textContent=(function(){ var L=sdSchools(), x=L.filter(sdOn)[0]||L[0]; return x ? sdFill($('sdTSms').value, sdVals(x)) : ''; })(); };
+  $('sdTKakao').oninput=function(){ dirty(); var keep=sdCfg[docBiz]; sdCfg[docBiz]=Object.assign({}, keep||{}, { kakao:$('sdTKakao').value }); $('sdKPv').textContent=sdSchools().length?sdKakaoText():''; if(keep) sdCfg[docBiz]=keep; else delete sdCfg[docBiz]; };
+  $('sdTReset').onclick=function(){ $('sdTSms').value=SD_SMS_DEF; $('sdTKakao').value=SD_KAKAO_DEF; dirty(); toast('기본 문구를 불러왔습니다. 「저장」을 눌러야 반영됩니다'); };
+  $('sdTSave').onclick=function(){ sdCfg[docBiz]={ sms:$('sdTSms').value, kakao:$('sdTKakao').value, at:Date.now() }; kvPut('sdCfg', sdCfg); sdSnap=null; $('sdTDirty').textContent=''; $('sdTplBox').open=false; renderSdone(); toast('발송 완료 안내 문구를 저장했습니다'); };
+  $('sdTCancel').onclick=function(){ sdSnap=null; $('sdTDirty').textContent=''; $('sdTplBox').open=false; renderSdone(); toast('수정을 취소했습니다'); };
+} bind(); })();
 /* ---------- 학교별 발송 ---------- */
 // 이전 기본 양식(v6): 저장된 양식이 이것과 같으면 새 기본 양식으로 바꾼다
 var MAIL_V6 = { subject: '[호서대학교 앵커늘봄] {학교명} 늘봄학교 강사 계약 서류 송부 ({강사수}명)', body: '{담당자} 선생님께\n\n안녕하십니까. 호서대학교 앵커늘봄총괄센터 {보내는사람}입니다.\n{학교명}에 배치된 늘봄학교 프로그램 강사의 계약 서류를 아래와 같이 보내 드립니다.\n\n■ 강사 및 프로그램 ({강사수}명)\n{강사목록}\n\n■ 첨부 파일\n{첨부목록}\n  - 강사별 폴더에 범죄경력조회 동의서, 이력서, 신분증·통장 사본, 개인정보 동의서, 서약서, 채용신체검사서·잠복결핵 검사 확인서 등이 들어 있습니다.\n  - 개인정보가 들어 있는 자료이니 확인 후 안전하게 보관·파기해 주시기 바랍니다.\n\n검토하시고 보완이 필요한 서류가 있으면 회신 부탁드립니다.\n감사합니다.\n\n{날짜}\n호서대학교 앵커늘봄총괄센터\n{보내는사람} · {보내는사람연락처} · {보내는사람이메일}' };
@@ -4799,6 +4877,7 @@ openDb().then(async function(){
     if((sc.ver||1)<4){ ['body','bodyNew'].forEach(function(k){ var b=sc[k]; if(!b || b.indexOf('{제출링크}')<0 || b.indexOf('지연 사유')>=0) return; sc[k]=b.indexOf(' 문의 {연락처}')>=0 ? b.replace(' 문의 {연락처}', '\n'+SMS_LATE_LINE+'\n문의 {연락처}') : b+'\n'+SMS_LATE_LINE; }); }
     sc.ver=DEFAULT_SMS.ver; } smsCfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_SMS)), sc); }
   var sl=await kvGet('smsLog'); if(sl) smsLog=sl;
+  var sdc=await kvGet('sdCfg'); if(sdc) sdCfg=sdc; var sdl=await kvGet('sdLog'); if(sdl) sdLog=sdl;
   var mc=await kvGet('mailCfg'); if(mc){ delete mc.html; delete mc.notice; delete mc.oldBody; if(!mc.ver || mc.ver<DEFAULT_MAIL.ver){ if(mc.body && mc.body.indexOf('{계약안내}')<0 && mc.body.indexOf('■ 협조사항\n  - 범죄경력 조회를 진행해 주시고, **직접 조회가 필요하실 경우 강사님과 연락하여 진행**해 주시기 바랍니다.\n  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.\n  - 개인정보가 들어 있는 자료이니 확인 후 안전하게 보관·파기해 주시기 바랍니다.')>=0) mc.body=mc.body.replace('■ 협조사항\n  - 범죄경력 조회를 진행해 주시고, **직접 조회가 필요하실 경우 강사님과 연락하여 진행**해 주시기 바랍니다.\n  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.\n  - 개인정보가 들어 있는 자료이니 확인 후 안전하게 보관·파기해 주시기 바랍니다.', '■ 협조사항\n{계약안내}\n  - 범죄경력 조회를 진행해 주시고, **직접 조회가 필요하실 경우 강사님과 연락하여 진행**해 주시기 바랍니다.\n{출근부안내}\n  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.\n  - 개인정보가 들어 있는 자료이니 확인 후 안전하게 보관·파기해 주시기 바랍니다.'); if(!mc.body || mc.body===DEFAULT_MAIL.notice || mc.body===MAIL_V6.body) mc.body=DEFAULT_MAIL.body; if(!mc.subject || mc.subject===MAIL_V6.subject) mc.subject=DEFAULT_MAIL.subject; if(mc.ver<9 && mc.body && mc.body.indexOf('범죄경력조회 동의서만 보내 드리는 이유')>=0){ mc.bodyOut=mc.body.replace('■ 부탁드리는 사항','■ 협조사항'); mc.subjectOut=mc.subject; mc.body=DEFAULT_MAIL.body; mc.subject=DEFAULT_MAIL.subject; } else if(mc.ver<7){ delete mc.bodyOut; delete mc.subjectOut; } if(mc.ver<10){ ['  - 그 밖의 서류(이력서, 신분증·통장 사본, 개인정보 동의서, 서약서 등)는 기관마다 쓰는 양식과 필요한 서류가 달라 센터에서 일괄로 작성해 드리지 않습니다.','  - 개인정보는 필요한 범위에서만 주고받는 것이 원칙이므로(개인정보 보호법), 기관에 필요한 서류는 강사님께 직접 받아 주시기 바랍니다.'].forEach(function(l){ if(mc.bodyOut) mc.bodyOut=mc.bodyOut.replace('\n'+l,''); }); if(mc.body) mc.body=mc.body.replace('  - 검토하시고 보완이 필요한 서류가 있으면 회신 부탁드립니다.','  - 그 밖에 필요한 서류도 강사님께 직접 받아 주시기 바랍니다.'); } mc.ver=DEFAULT_MAIL.ver; } mailCfg=Object.assign(JSON.parse(JSON.stringify(DEFAULT_MAIL)), mc); }
   var gs=await kvGet('gas'); if(gs) gas=Object.assign(gas, gs); if(!gas.url) gas.url=GAS_DEFAULT_URL;
   var cc=await kvGet('certCfg'); if(cc) applyCertCfg(cc, false);

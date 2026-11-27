@@ -2345,7 +2345,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER = '11.157';
+const LIB_VER = '11.158';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -8882,7 +8882,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.157';
+const APP_VER = '11.158';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
@@ -9353,6 +9353,8 @@ if (MODE === 'admin') window.orgPreviewEnd = () => {
     .catch(e => { ORG_PREV = ''; toast(errMsg(e)); location.reload(); });
 };
 if (MODE === 'admin') window.opsBizNow = () => (typeof curBiz === 'function' ? curBiz() : '');
+/* 강사서류(9번) 「발송 완료 안내」가 읽는 학교 담당자 연락처(휴대폰 포함) */
+if (MODE === 'admin') window.opsSchoolContacts = () => { try { const o = {}; Object.entries(S.contacts || {}).forEach(([k, c]) => { o[k] = { name: c.name || '', phone: c.phone || '', mobile: c.mobile || '', email: c.email || '' }; }); return o; } catch (e) { return {}; } };
 if (MODE === 'admin') window.opsBizGo = b => bizGo(b); /* 9번 강사서류에서 사업을 바꿀 때 */
 const docsBizNotify = () => setTimeout(() => { try { const f = document.getElementById('docsFrame'); if (f && f.contentWindow && f.contentWindow.bizFromTop) f.contentWindow.bizFromTop(); } catch (e) {} }, 0);
 if (MODE === 'admin') window.opsInstructors = () => S && S.instructors ? S.instructors.map(x => ({ id: x.id, name: x.name || '', phone: x.phone || '', email: x.email || '', region: x.region || '', asst: !!x.asstOnly })) : null;
