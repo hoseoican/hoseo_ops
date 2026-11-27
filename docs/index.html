@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-10';
+var APP_VERSION = '2026.11.27-11';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1538,7 +1538,7 @@ function rvHold(p){ var h=p && p.rvHold; return !!(h && h.at && !(p.lsub && p.ls
 function rvState(p){ if(!p || !p.rv || !p.rv.at) return rvHold(p) ? 'hold' : 'todo'; return (p.updated||0) > p.rv.at+3000 ? (rvHold(p) && p.rvHold.at > p.rv.at ? 'hold' : 'chg') : 'done'; }
 function rvCell(x, k){
   var p=x.p; if(x.unreg) return {lv:'na', t:'미등록'};
-  var fx=(p.fix||{})[k], pd=p.pdfs||{}, im=p.imgs||{};
+  var fx=(p.fix||{})[k==='cv'?'career':k], pd=p.pdfs||{}, im=p.imgs||{};   /* 이력 칸 = 경력 보완(career) */
   if(fx) return {lv:'fix', t:'보완', why:fx.why||''};
   switch(k){
     case 'rrn': return (p.rrn||'').replace(/\D/g,'').length===13 ? {lv:'ok'} : {lv:'miss', t:'없음'};
@@ -1613,6 +1613,8 @@ function renderReview(){
 }
 function rvFreeUrls(){ rvUrls.forEach(function(u){ URL.revokeObjectURL(u); }); rvUrls=[]; }
 function rvUrl(h, mime){ var u=URL.createObjectURL(new Blob([h.data], {type:mime})); rvUrls.push(u); return u; }
+/* 검토 창을 연 채로 뒤쪽 목록 표만 다시 그림 (보완·보류 표시가 바로 보이게) */
+function renderReviewKeep(){ var i=rvIdx, L=rvList; try{ renderReview(); }catch(e){} rvList=L; rvIdx=i; }
 function rvClose(){ $('rvDlg').classList.remove('on'); rvFreeUrls(); rvIdx=-1; if(page==='review') renderReview(); }
 async function rvOpen(i, focus){
   var x=rvList[i]; if(!x) return; rvIdx=i; $('rvDlg').classList.add('on');
@@ -1676,7 +1678,7 @@ function rvPaint(x, focus, loading){
 function rvSaveP(p){ p.updated=Date.now(); dbPut(p); if(people.indexOf(p)<0) people.push(p); }
 function rvDone(p){ var t=Date.now(); delete p.rvHold; p.rv={ at:t, by:(typeof sy!=='undefined' && sy.me)||'', term:(ops && ops.per ? ops.per.join(', ') : '') }; if(lsubWait(p)){ p.lsub.ok=t; p.lsub.okBy=p.rv.by; } p.updated=t; dbPut(p); }
 function rvWire(x){
-  var p=x.p, re=function(){ rvPaint(x); if(p===cur) refresh(); renderList(); };
+  var p=x.p, re=function(){ rvPaint(x); if(p===cur) refresh(); renderList(); if(page==='review') renderReviewKeep(); };
   $('rvX').onclick=rvClose;
   $('rvPrev').onclick=function(){ rvOpen(rvIdx-1); };
   $('rvNext').onclick=function(){ rvOpen(rvIdx+1); };
@@ -1688,9 +1690,9 @@ function rvWire(x){
   if($('rvUndo')) $('rvUndo').onclick=function(){ delete p.rv; rvSaveP(p); re(); toast('검토 완료를 취소했습니다'); };
   var fxN=function(){ return Object.keys(p.fix||{}).filter(function(k){ return p.fix[k]; }).length; };
   $('rvOk').onclick=function(){ if(fxN() && !confirm('보완 필요가 '+fxN()+'건 표시돼 있습니다. 그래도 검토 완료로 처리할까요?\n(보완을 요청할 강사라면 「취소」 후 「보류 후 다음」을 눌러 주세요)')) return; rvDone(p); re(); toast(x.name+' 강사 검토 완료'); };
-  $('rvHold').onclick=function(){ p.rvHold={ at:Date.now(), by:(typeof sy!=='undefined' && sy.me)||'' }; rvSaveP(p); renderList(); toast(x.name+' 강사를 보류했습니다 (서류 검토 → 보류에서 다시 볼 수 있습니다)'); if(rvIdx>=rvList.length-1){ re(); return; } rvOpen(rvIdx+1); };
+  $('rvHold').onclick=function(){ p.rvHold={ at:Date.now(), by:(typeof sy!=='undefined' && sy.me)||'' }; rvSaveP(p); renderList(); if(page==='review') renderReviewKeep(); toast(x.name+' 강사를 보류했습니다 (서류 검토 → 보류에서 다시 볼 수 있습니다)'); if(rvIdx>=rvList.length-1){ re(); return; } rvOpen(rvIdx+1); };
   if($('rvUnhold')) $('rvUnhold').onclick=function(){ delete p.rvHold; rvSaveP(p); re(); toast('보류를 취소했습니다'); };
-  if($('rvOkNext')) $('rvOkNext').onclick=function(){ rvDone(p); renderList(); toast(x.name+' 강사 검토 완료'); rvOpen(rvIdx+1); };
+  if($('rvOkNext')) $('rvOkNext').onclick=function(){ rvDone(p); renderList(); if(page==='review') renderReviewKeep(); toast(x.name+' 강사 검토 완료'); rvOpen(rvIdx+1); };
 }
 document.addEventListener('keydown', function(e){
   if(!$('rvDlg') || !$('rvDlg').classList.contains('on')) return;
