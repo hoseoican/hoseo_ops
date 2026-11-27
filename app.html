@@ -800,7 +800,7 @@ table.mtt td{vertical-align:top}
 .tgl{font-size:10px;font-weight:700;margin-left:2px;padding:0 3px;border-radius:4px;vertical-align:super}
 .tsum{width:100%;border-collapse:collapse;font-size:13px}.tsum th,.tsum td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}.tsum th{width:90px;color:var(--muted);font-weight:600}.tsum tr.tot td,.tsum tr.tot th{border-bottom:0;font-size:14px}
 .iprof>td{background:var(--sunk)}
-.tcmp th.best{background:#e8f3ec}.tcmp table th[scope=row]{color:var(--muted);font-weight:600;white-space:nowrap}
+.tcmp th.best{background:#e8f3ec}.tcmp table th[scope=row]{color:var(--fg);font-weight:700;white-space:nowrap}.tcmp tr.best>*{background:color-mix(in srgb,#e8f3ec 70%,var(--surface))}.tcmp td{vertical-align:middle}.tcmp .cmpt{table-layout:auto;width:100%}.tcmp .cmpt th,.tcmp .cmpt td{padding:8px 10px;font-size:13px;white-space:nowrap;width:auto;min-width:0}
 .cmpk input{vertical-align:middle}
 @media (prefers-color-scheme:dark){.tg-S{background:#163a24;color:#9fdcb3;border-color:#2b5a3b}.tg-A{background:#16294a;color:#a9c4ef;border-color:#2c4775}.tg-B{background:#2e2c1e;color:#d8d2a8;border-color:#4a4630}.tg-C{background:#3d2a12;color:#f0c58e;border-color:#5e431f}.tg-D{background:#431a1b;color:#f2b0b2;border-color:#6a2c2e}.tcmp th.best{background:#163a24}}
 
@@ -2345,7 +2345,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.146';
+const LIB_VER='11.147';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -2946,10 +2946,10 @@ function matchTable(all,opt){
       <td data-l="신청 강사" class="c-apps">${(()=>{ const sb=sibApps(r), own=r.apps.map(a=>a.tid).sort((a,b)=>(b===r.inst)-(a===r.inst)||(ix.clash(r,a)?1:0)-(ix.clash(r,b)?1:0));
         if(!own.length) return '<span class="muted">신청 없음</span>';
         const sr=sibRows(r).filter(x=>canAssign(x)&&x.status!=='final');
-        return `<div class="achips">${own.map(tid=>`<span class="achip-g">${asgChip(r,tid,ix,esc(instName(tid)))}${sr.map(x=>`<button class="amove ${x.inst===tid?'on':''}" data-act="qasg" data-id="${x.id}" data-t="${tid}" title="${x.inst===tid?`${esc(sibLetter(x))} 가배치 해제`:`같은 시간 분반 ${esc(sibLetter(x))}에 이 강사로 가배치`}">${x.inst===tid?'✓':'→'}${esc(sibLetter(x))}</button>`).join('')}</span>`).join('')}</div>`; })()}</td>
+        return `<div class="achips">${own.map(tid=>`<span class="achip-g">${asgChip(r,tid,ix,esc(instName(tid)))}${sr.map(x=>`<button class="amove ${x.inst===tid?'on':''}" data-act="qasg" data-id="${x.id}" data-t="${tid}" title="${x.inst===tid?`${esc(sibLetter(x))} 가배치 해제`:`같은 시간 분반 ${esc(sibLetter(x))}에 이 강사로 가배치`}">${x.inst===tid?'✓':'→'}${esc(sibLetter(x))}</button>`).join('')}</span>`).join('')}${own.length>=2?`<button class="btn sm" data-act="mcmp" data-id="${r.id}">${S.ui.mCmp===r.id?'비교 닫기':'신청자 비교'}</button>`:''}</div>`; })()}</td>
       <td class="nowrap" data-l="주강사">${r.inst?`${esc(instName(r.inst))}${r.status!=='final'?' <span class="chip warn">가배치</span>':''}`:r.wish&&r.status!=='final'?`<span class="muted small">${esc(orgShort(r.wish.by||orgOfRow(r)))} 희망: ${esc(r.wish.name||instName(r.wish.tid))}</span>`:'<span class="muted">미정</span>'}${asstCell(r)}</td>
       <td data-l="상태">${stPill(r.status)}${r.status==='final'&&r.schPend?'<div class="small lv-warn">학교 미공개</div>':''}${!g&&r.status!=='wait'?'<div class="small lv-crit">조건 미충족</div>':''}${worst(issues(r))==='crit'&&r.inst?'<div class="small lv-crit">일정 겹침</div>':''}</td></tr>`; }).join('')||`<tr><td colspan="10" class="muted">${all.length?'조건에 맞는 학급이 없습니다.':'아직 학교 확인이 끝난 학급이 없습니다.'}</td></tr>`}
-   </tbody></table></div>`}</div>`; }
+   </tbody></table></div>${(()=>{ const cr=S.ui.mCmp&&list.find(x=>x.id===S.ui.mCmp); if(!cr) return ''; const ids=cr.apps.map(a=>a.tid); if(cr.inst&&!ids.includes(cr.inst)) ids.push(cr.inst); return tCompareHtml2(cr, ids, 'main'); })()}`}</div>`; }
 function matchLayerHtml(){ const r=S.rows.find(x=>x.id===S.ui.mDrawer); if(!r) return '';
   return `<div class="ov" data-act="close"><div class="drawer mdrawer" role="dialog" aria-label="수업 정보 · 신청 강사"><div class="stack">
    <div class="row between"><span class="small muted">검토 · 매칭 · ${tOrgTag(r)}</span><button class="btn" data-act="close">닫기</button></div>
@@ -3714,7 +3714,11 @@ function tCompareHtml2(r, ids0, mode){ const AS=mode==='asst', ids=ids0||Object.
   const asCl=t=>(t.id===r.inst?[{hard:true}]:[]).concat(conflictsFor(t.id,r,true).filter(x=>x.hard)), sibOf=t=>!asApps(r).some(a=>a.tid===t.id)&&(r.status==='final'?asSibApps(r):[]).find(a=>a.tid===t.id);
   const L=ids.map(id=>S.instructors.find(t=>t.id===id)).filter(Boolean).map(t=>({t,s:tScoreOf(t,r),cl:AS?asCl(t):teacherClash(t.id,r)})).sort((a,b)=>b.s.total-a.s.total), best=L[0].s.total;
   const rowsD=[['등급 · 점수',x=>tGradeChip(x.t,r)],['경력',x=>`${x.t.years??'-'}년 <span class="muted">(${Math.round(x.s.parts.years)})</span>`],['연수',x=>`${x.s.th}/${x.s.need}차시 ${trainOn()?(x.s.trainOk?'<span class="lv-ok">충족</span>':'<span class="lv-crit">미충족</span>'):''} <span class="muted">(${Math.round(x.s.parts.train)})</span>`],['운영 평가',x=>`${x.s.ev==null?'없음':x.s.ev.toFixed(1)+'점'} <span class="muted">(${Math.round(x.s.parts.eval)})</span>`],['배치 실적',x=>`${x.s.pl}회 <span class="muted">(${Math.round(x.s.parts.place)})</span>`],['이 학급 분야',x=>x.s.fieldOk?'<span class="lv-ok">일치</span>':'<span class="muted">분야 외</span>'],['민원',x=>{ const I=tIssues(x.t); return I.length?`${I.length}건 <span class="lv-crit">−${x.s.pen}</span><div class="small muted">${I.slice(-2).map(z=>esc(z.kind)).join(', ')}</div>`:'없음'; }],['유형 · 지역',x=>`${esc(tKindTxt(x.t)||'-')} · ${esc(x.t.region||'')}`],['일정',x=>x.cl.length?`<span class="lv-crit">겹침 ${x.cl.length}건</span>`:'<span class="lv-ok">가능</span>'],['신청',x=>AS?(asApps(r).some(a=>a.tid===x.t.id)?'이 학급 신청':sibOf(x.t)?`<span class="muted">같은 시간 ${esc(clsName(sibOf(x.t).from))} 신청</span>`:'<span class="muted">미신청</span>'):(r.apps.some(a=>a.tid===x.t.id)?'신청함':'<span class="muted">미신청</span>')]];
-  return `<div class="panel stack tcmp noenh"><div class="row between"><b>${AS?`보조강사 신청자 비교 · ${esc(shortSch(r.school))} ${esc(clsName(r))}`:'강사 비교'} (${L.length}명)</b><button class="btn sm" data-act="${AS?'ascmp':'cmpclear'}" data-id="${r.id}">${AS?'비교 닫기':'비교 해제'}</button></div><div class="tw"><table><thead><tr><th></th>${L.map(x=>`<th class="${x.s.total===best?'best':''}">${esc(x.t.name)}</th>`).join('')}</tr></thead><tbody>${rowsD.map(([l,f])=>`<tr><th scope="row">${l}</th>${L.map(x=>`<td>${f(x)}</td>`).join('')}</tr>`).join('')}<tr><th></th>${L.map(x=>`<td>${AS?`<button class="btn sm ${r.asst===x.t.id?'danger':'pri'}" data-act="${r.asst===x.t.id?'asunpick':'aspick'}" data-id="${r.id}" data-t="${x.t.id}" ${!AS||r.asst===x.t.id||!x.cl.length?'':'disabled title="같은 시간 다른 수업에 배정돼 있습니다"'}>${r.asst===x.t.id?'보조 해제':'보조강사로 가배치'}</button>`:`<button class="btn sm ${r.inst===x.t.id?'danger':'pri'}" data-act="${r.inst===x.t.id?'uninst':'assign'}" data-id="${r.id}" data-t="${x.t.id}" >${r.inst===x.t.id?'주강사 해제':'주강사로'}</button>`}</td>`).join('')}</tr></tbody></table></div></div>`; }
+  /* 강사가 세로(행), 항목이 가로(열) — 주강사·보조강사 같은 모양 */
+  const MN=mode==='main', closeAct=AS?'ascmp':MN?'mcmp':'cmpclear', title=AS?'보조강사 신청자 비교':MN?'주강사 신청자 비교':'강사 비교';
+  const btn=x=>AS?`<button class="btn sm ${r.asst===x.t.id?'danger':'pri'}" data-act="${r.asst===x.t.id?'asunpick':'aspick'}" data-id="${r.id}" data-t="${x.t.id}" ${r.asst===x.t.id||!x.cl.length?'':'disabled title="같은 시간 다른 수업에 배정돼 있습니다"'}>${r.asst===x.t.id?'보조 해제':'보조강사로 가배치'}</button>`
+    :`<button class="btn sm ${r.inst===x.t.id?'danger':'pri'}" data-act="${r.inst===x.t.id?'uninst':'assign'}" data-id="${r.id}" data-t="${x.t.id}">${r.inst===x.t.id?'주강사 해제':'주강사로'}</button>`;
+  return `<div class="panel stack tcmp noenh"><div class="row between"><b>${title}${AS||MN?` · ${esc(shortSch(r.school))} ${esc(clsName(r))}`:''} (${L.length}명)</b><button class="btn sm" data-act="${closeAct}" data-id="${r.id}">${AS||MN?'비교 닫기':'비교 해제'}</button></div><div class="tw"><table class="cmpt"><thead><tr><th>강사</th>${rowsD.map(([l])=>`<th class="nowrap">${l}</th>`).join('')}<th></th></tr></thead><tbody>${L.map(x=>`<tr class="${x.s.total===best?'best':''}"><th scope="row" class="nowrap">${esc(x.t.name)}${x.s.total===best?' <span class="chip ok sm">최고점</span>':''}</th>${rowsD.map(([,f])=>`<td>${f(x)}</td>`).join('')}<td class="nowrap">${btn(x)}</td></tr>`).join('')}</tbody></table></div></div>`; }
 const emailOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim());
 function tLoginRead(){ const v=id=>((document.getElementById(id)||{}).value||'').trim(), name=v('tl-name'), phone=v('tl-phone'), pin=v('tl-pin');
   S.ui.tlName=name; S.ui.tlPhone=phone;
@@ -7754,6 +7758,7 @@ document.addEventListener('click',async e=>{
     case 'asno': { const rs=asRows().filter(x=>(S.ui.asSel||{})[x.id]), fin=rs.filter(x=>asState(x)==='fin'), go=rs.filter(x=>asState(x)!=='fin'); if(!go.length){ toast('보조강사가 확정된 학급은 먼저 확정을 해제해 주세요'); return; }
       if(!confirm(`${go.length}학급을 보조강사 배치 대상에서 뺍니다.\n모집 중이면 모집을 닫고, 가배치는 해제합니다. 받은 신청 기록은 남습니다.${fin.length?`\n(보조강사가 확정된 ${fin.length}학급은 빼지 않습니다)`:''}`)) return;
       go.forEach(x=>{ x.asNo={at:now(),by:S.adminName||''}; delete x.aOpen; if(x.asstPend){ x.asst=''; delete x.asstPend; } }); S.ui.asSel={}; toast(`${go.length}학급을 보조강사 배치 안 함으로 옮겼습니다 · 「배치 안 함 보기」에서 되돌릴 수 있습니다`); break; }
+    case 'mcmp': S.ui.mCmp=S.ui.mCmp===el.dataset.id?'':el.dataset.id; break;
     case 'ascmp': S.ui.asCmp=S.ui.asCmp===el.dataset.id?'':el.dataset.id; break;
     case 'asnolist': S.ui.asNoOpen=!S.ui.asNoOpen; break;
     case 'asnoback': { if(!r) return; delete r.asNo; toast(`${shortSch(r.school)} ${clsName(r)}을 다시 보조강사 배치 대상으로 옮겼습니다`); break; }
@@ -8667,7 +8672,7 @@ function pwChangeForm(box, oldPw, must, done) {
 function pwChangeOpen() { const box = document.createElement('div'); box.className = 'admlogin'; ['input', 'change', 'keydown', 'click', 'compositionend'].forEach(t => box.addEventListener(t, ev => ev.stopPropagation())); document.body.appendChild(box); pwChangeForm(box, '', false, () => box.remove()); }
 /* 운영 화면 맨 위: 접속한 관리자 · 로그아웃 (모든 사업 공통) */
 let ADM_TIMER = null;
-const APP_VER = '11.146';
+const APP_VER = '11.147';
 function docsFit() {
   const pane = document.getElementById('docsPane'); if (!pane || pane.hidden) return;
   const top = document.querySelector('header.top').getBoundingClientRect().bottom;
