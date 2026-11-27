@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.154';
+const LIB_VER = '11.155';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -5727,10 +5727,16 @@ const NS_TPL_DEF='[충남 1권역 앵커늘봄] {강사명} 강사님, 안녕하
 const NS_TPL_DEF_A='[충남 1권역 앵커늘봄] {강사명} 강사님, 안녕하세요.\n{시즌} 늘봄 프로그램 보조강사로 신청해 주셔서 감사합니다.\n아쉽게도 이번에는 신청하신 수업에 보조강사로 배치되지 않았습니다.\n\n[신청하신 수업]\n{신청수업}\n\n결원이 생기면 다시 안내드리겠습니다.\n문의: 호서대 {담당자} {담당자전화}';
 const NS_KEYS=['강사명','시즌','신청수업','신청수','접속주소','담당자','담당자전화'];
 const nsTpl=k=>String(((S.ops||{})[k==='asst'?'nsTplA':'nsTpl'])||(k==='asst'?NS_TPL_DEF_A:NS_TPL_DEF));
+/* 최근 모집 기준: 주강사는 강사 배치 신청 기간, 보조강사는 보조 신청 기간의 시작 시각 이후 신청만 봄. 기간이 없으면 시즌 전체 */
+const atKst = s => { const m=String(s||'').match(/^(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})/); if(!m) return ''; const n=kstNow(), pad=v=>String(v).padStart(2,'0'); let y=+n.slice(0,4); const f=y2=>`${y2}-${pad(m[1])}-${pad(m[2])}T${pad(m[3])}:${m[4]}`; return f(y)>n?f(y-1):f(y); };
+const nsWin = k => k==='asst'?(S.asstWin||{}):awObj();
+const nsSince = k => S.ui.nsAll?'':String(nsWin(k).from||'');
+const nsRecent = (k,a) => { const sc=nsSince(k); if(!sc) return true; const w=nsWin(k); if(k!=='asst'&&w.round&&a.round===w.round) return true; const t=atKst(a.at); return !!t&&t>=sc; };
+const nsSent = (k,t) => { const v=smsSentOf(nsKey(k,t)), sc=nsSince(k); if(!v||!sc) return v; const at=atKst(v); return at&&at<sc?'':v; };
 function nsList(k){ const A=k==='asst', R=matchRows().filter(r=>r.status!=='cancel');
   const placed=new Set(); R.forEach(r=>{ if(r.inst) placed.add(r.inst); if(r.asst) placed.add(r.asst); });
   const by=new Map();
-  R.forEach(r=>(A?(r.aApps||[]):(r.apps||[])).forEach(a=>{ if(!a||!a.tid||placed.has(a.tid)) return; const t=S.instructors.find(x=>x.id===a.tid); if(!t) return;
+  R.forEach(r=>(A?(r.aApps||[]):(r.apps||[])).forEach(a=>{ if(!a||!a.tid||placed.has(a.tid)||!nsRecent(k,a)) return; const t=S.instructors.find(x=>x.id===a.tid); if(!t) return;
     if(!by.has(t.id)) by.set(t.id,{t,rs:[],wait:0}); const o=by.get(t.id); if(!o.rs.includes(r)) o.rs.push(r);
     const open=A?(!!r.aOpen&&!fa(r)):(r.status!=='final'&&!r.inst); if(open) o.wait++; }));
   return [...by.values()].sort((a,b)=>a.t.name.localeCompare(b.t.name,'ko')); }
@@ -5739,17 +5745,18 @@ function nsText(x,k,tpl){ const items=x.rs.map(r=>{ const p=prog(r.prog)||{}; re
   const out=smsFill(body0,{강사명:x.t.name,시즌:season().name,신청수업:items,신청수:x.rs.length,접속주소:S.webAppUrl?S.webAppUrl+(k==='asst'?'?r=asst':'?r=teacher')+(curBiz()!=='anchor'?'&b='+curBiz():''):'',담당자:(S.ops||{}).name||'',담당자전화:(S.ops||{}).phone||''});
   return bizWords(smsSafe(out.split('\n').map(l=>l.replace(/\s+$/,'')).join('\n').replace(/\n{3,}/g,'\n\n')).trim()); }
 const nsKey=(k,t)=>`nsms:${k}:${curSK()}:${t.id}`;
-const nsOn=(k,x)=>{ if(x.wait) return false; const v=(S.ui.nsOff||{})[k+':'+x.t.id]; return v!=null ? !v : !smsSentOf(nsKey(k,x.t)); };
+const nsOn=(k,x)=>{ if(x.wait) return false; const v=(S.ui.nsOff||{})[k+':'+x.t.id]; return v!=null ? !v : !nsSent(k,x.t); };
 function nsJobs(k){ return nsList(k).filter(x=>nsOn(k,x)).map(x=>({key:nsKey(k,x.t),name:x.t.name,phone:mobileOf(x.t.phone),title:k==='asst'?'보조강사 배치 결과 안내':'강사 배치 결과 안내',body:nsText(x,k)})); }
 const nsBtn=k=>{ const L=nsList(k), n=L.filter(x=>!x.wait).length; return `<button class="btn sm" data-act="nsopen" data-k="${k}" ${L.length?'':'disabled'} title="이번 시기에 신청했지만 배치되지 않은 ${k==='asst'?'보조강사':'강사'}에게 결과 안내 문자">${k==='asst'?'보조 ':''}미배치 안내 문자 (${n}명)</button>`; };
 function nsPanel(kk,embed){ if(kk) S.ui.nsOpen=kk; const k=S.ui.nsOpen==='asst'?'asst':'main', A=k==='asst', L=nsList(k), go=L.filter(x=>nsOn(k,x)), wt=L.filter(x=>x.wait);
   const d=S.ui.nsDraft!=null?S.ui.nsDraft:nsTpl(k), x0=go[0]||L[0], pv=x0?nsText(x0,k,d):'', n=pv?smsBytes(pv):0;
   const noPh=go.filter(x=>!mobileOf(x.t.phone));
   return `<div class="${embed?'stack inner':'panel stack'}" style="gap:10px;${embed?'':'border-color:var(--accent)'}">${embed?'':`<div class="row between"><h3>${A?'보조강사':'강사'} 미배치 안내 문자</h3><button class="btn sm" data-act="nsopen" data-k="">닫기</button></div>`}
-   <div class="small muted">${season().name}에 ${A?'보조강사로 ':''}신청했지만 어느 학급에도 배치되지 않은 강사입니다.${wt.length?` 신청한 학급 중 아직 결과가 나지 않은 곳이 있는 ${wt.length}명은 「결과 대기」로 빠져 있습니다.`:''}</div>
+   ${(()=>{ const w=nsWin(k), has=!!w.from, all=!!S.ui.nsAll||!has; return `<div class="row small" style="gap:8px;align-items:center"><span class="seg">${[['recent',`최근 모집${has?` (${esc(w.round?w.round+' · ':'')}${esc(awTxt(w.from))}~)`:''}`],['all','시즌 전체']].map(([v,l])=>`<button class="${(v==='all')===all?'on':''}" data-act="nsall" data-v="${v}" ${v==='recent'&&!has?'disabled title="신청 기간이 정해져 있지 않아 시즌 전체로 봅니다"':''}>${l}</button>`).join('')}</span></div>`; })()}
+   <div class="small muted">${S.ui.nsAll||!nsWin(k).from?season().name+'에':'최근 모집 기간에'} ${A?'보조강사로 ':''}신청했지만 어느 학급에도 배치되지 않은 강사입니다.${wt.length?` 신청한 학급 중 아직 결과가 나지 않은 곳이 있는 ${wt.length}명은 「결과 대기」로 빠져 있습니다.`:''}</div>
    <div class="row small" style="gap:6px"><span>선택 <b>${go.length}</b>명</span><button class="lnk" data-act="nsselall" data-v="un">보낼 차례만 선택</button><button class="lnk" data-act="nsselall" data-v="all">모두 선택</button><button class="lnk" data-act="nsselall" data-v="none">선택 해제</button></div>
    <div class="tw" style="max-height:260px;overflow:auto"><table><thead><tr><th style="width:30px"></th><th>강사</th><th>휴대폰</th><th>신청한 학급</th><th>발송</th></tr></thead><tbody>
-    ${L.map(x=>{ const on=nsOn(k,x), sent=smsSentOf(nsKey(k,x.t)); return `<tr class="${x.wait?'muted':''}"><td>${x.wait?'':`<input type="checkbox" data-act="nssel" data-v="${esc(x.t.id)}" ${on?'checked':''} aria-label="${esc(x.t.name)} 받는 사람">`}</td><td class="nowrap"><b>${esc(x.t.name)}</b>${x.wait?' <span class="chip sm">결과 대기</span>':''}</td><td class="mono small">${esc(mobileOf(x.t.phone)||'없음')}</td><td class="small">${x.rs.map(r=>`${esc(shortSch(r.school))} ${esc(clsName(r))}`).join(', ')}</td><td class="small">${sent?`<span class="lv-ok">${esc(sent)}</span>`:'<span class="muted">-</span>'}</td></tr>`; }).join('')||'<tr><td colspan="5" class="muted">미배치 강사가 없습니다</td></tr>'}
+    ${L.map(x=>{ const on=nsOn(k,x), sent=nsSent(k,x.t), old=!sent&&smsSentOf(nsKey(k,x.t)); return `<tr class="${x.wait?'muted':''}"><td>${x.wait?'':`<input type="checkbox" data-act="nssel" data-v="${esc(x.t.id)}" ${on?'checked':''} aria-label="${esc(x.t.name)} 받는 사람">`}</td><td class="nowrap"><b>${esc(x.t.name)}</b>${x.wait?' <span class="chip sm">결과 대기</span>':''}</td><td class="mono small">${esc(mobileOf(x.t.phone)||'없음')}</td><td class="small">${x.rs.map(r=>`${esc(shortSch(r.school))} ${esc(clsName(r))}`).join(', ')}</td><td class="small">${sent?`<span class="lv-ok">${esc(sent)}</span>`:old?`<span class="muted" title="이전 모집 때 보낸 기록">이전 ${esc(old)}</span>`:'<span class="muted">-</span>'}</td></tr>`; }).join('')||'<tr><td colspan="5" class="muted">미배치 강사가 없습니다</td></tr>'}
    </tbody></table></div>
    <div class="grid2" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px">
     <div class="stack" style="gap:8px"><label class="small"><b>문구</b> <span class="muted">— {신청수업} 자리에 그 강사가 신청한 학급이 줄마다 들어갑니다</span></label>
@@ -5770,7 +5777,8 @@ function nsAct(a,el){ const U=S.ui, k=U.nsOpen==='asst'?'asst':'main';
   switch(a){
     case 'nsopen': if(el.dataset.k){ U.rsw={...(U.rsw||{}),match:el.dataset.k}; U.stg={...(U.stg||{}),['match_'+el.dataset.k]:'teacher'}; U.tsTab='none'; } else U.tsTab='placed'; U.nsOpen=el.dataset.k||''; U.nsDraft=null; return true;
     case 'nssel': U.nsOff={...(U.nsOff||{}),[k+':'+el.dataset.v]:!el.checked}; return true;
-    case 'nsselall': { const v=el.dataset.v, M={...(U.nsOff||{})}; nsList(k).forEach(x=>{ if(!x.wait) M[k+':'+x.t.id]=v==='all'?false:v==='none'?true:!!smsSentOf(nsKey(k,x.t)); }); U.nsOff=M; return true; }
+    case 'nsselall': { const v=el.dataset.v, M={...(U.nsOff||{})}; nsList(k).forEach(x=>{ if(!x.wait) M[k+':'+x.t.id]=v==='all'?false:v==='none'?true:!!nsSent(k,x.t); }); U.nsOff=M; return true; }
+    case 'nsall': U.nsAll=el.dataset.v==='all'; U.nsOff={}; return true;
     case 'nskey': { const ta=document.getElementById('nsbody'); if(!ta) return false; const t=`{${el.dataset.k}}`, s0=ta.selectionStart??ta.value.length, e0=ta.selectionEnd??s0; ta.value=ta.value.slice(0,s0)+t+ta.value.slice(e0); nsPvUpdate(); ta.focus(); ta.selectionStart=ta.selectionEnd=s0+t.length; return false; }
     case 'nssave': { const ta=document.getElementById('nsbody'), v=ta?ta.value:nsTpl(k); if(!String(v).trim()){ toast('문구를 입력해 주세요'); return false; } S.ops=k==='asst'?{...S.ops,nsTplA:v,nsTplAAt:now()}:{...S.ops,nsTpl:v,nsTplAt:now()}; U.nsDraft=null; toast('미배치 안내 문구를 저장했습니다'); save(); return true; }
     case 'nsdef': U.nsDraft=k==='asst'?NS_TPL_DEF_A:NS_TPL_DEF; toast('기본 문구를 불러왔습니다. 「문구 저장」을 눌러야 반영됩니다'); return true;
