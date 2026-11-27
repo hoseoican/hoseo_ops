@@ -1164,7 +1164,7 @@ if(EMBED) document.documentElement.classList.add('embed');
           <label class="fld" style="margin:8px 0"><span>본문 (등록 강사 · 미제출·보완 요청)</span><textarea id="smBody" style="min-height:150px"></textarea></label>
           <label class="fld" style="margin:8px 0"><span>본문 (미등록 강사 · 서류 전체 제출 요청)</span><textarea id="smBodyNew" style="min-height:130px"></textarea></label>
           <div class="ph-list" id="smPh"></div>
-          <div class="row" style="margin:0"><button type="button" class="ghost sm" id="smReset">기본값 초기화</button></div>
+          <div class="row" style="margin:0;gap:6px;align-items:center"><button type="button" class="ghost sm" id="smReset">기본값 초기화</button><span style="flex:1"></span><span class="hint" id="smCfgDirty"></span><button type="button" class="ghost" id="smCfgCancel">취소</button><button type="button" class="save" id="smCfgSave">저장</button></div>
         </div>
         </div></details>
         <div class="smsprev" id="smPrev"></div>
@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-12';
+var APP_VERSION = '2026.11.27-13';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2222,6 +2222,7 @@ var DEFAULT_SMS = { ver:4, bodyNew:'[호서대 앵커늘봄] {성명} 강사님,
 var SMS_PH = [['성명','강사 성명'],['요청서류','미제출·보완 서류를 나눠 정리'],['부족서류','미제출 서류(한 줄에 하나씩)'],['보완서류','보완 필요 서류와 사유'],['배치학교','배치 학교'],['제출기한','제출기한'],['담당자','담당자'],['연락처','담당자 연락처'],['이메일','제출 이메일'],['제출링크','강사 본인 제출 링크(「제출 링크 생성」로 만든 강사만)']];
 var smsCfg = JSON.parse(JSON.stringify(DEFAULT_SMS)), smsLog = {}, smsPick = {}, smsLastTa = 'body';
 /* 요청 기록: 요청 뒤에 강사가 제출 링크로 다시 냈으면 그 요청은 처리된 것으로 보고, 새로 보완을 요청하면 새 요청으로 셈 */
+function smsCfgDirty(){ var e=$('smCfgDirty'); if(e) e.textContent='저장하지 않은 수정이 있습니다'; }
 function smsLogDone(p){ var lg=p && smsLog[p.id]; return !!(lg && p.lsub && p.lsub.at && p.lsub.at > (lg.at||0)); }
 function smsLogOf(p){ var lg=p && smsLog[p.id]; return lg && !smsLogDone(p) ? lg : null; }
 function smsPrevTxt(p){ var lg=p && smsLog[p.id]; if(lg && smsLogDone(p)) return dotDate(lg.date)+' 요청 → '+dotDate(p.lsub.at)+' 제출'; var pv=lg && lg.prev; return pv ? '지난 요청 '+dotDate(pv.date)+' → '+dotDate(pv.done)+' 제출' : ''; }
@@ -2387,7 +2388,7 @@ function renderSms(){
   [['smDue','due'],['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ if(document.activeElement!==$(f[0])) $(f[0]).value=smsCfg[f[1]]||''; });
   $('smDue').placeholder=smsDueDefault()+' (비우면 7일 뒤)';
   $('smPh').innerHTML='자리표시자(누르면 본문에 삽입): '+SMS_PH.map(function(x){ return '<code data-smph="'+x[0]+'" title="'+x[1]+'">{'+x[0]+'}</code>'; }).join(' ');
-  each('[data-smph]', function(el){ el.onclick=function(){ var ta=smsLastTa==='bodyNew' ? $('smBodyNew') : $('smBody'), at=ta.selectionStart||ta.value.length; ta.value=ta.value.slice(0,at)+'{'+el.dataset.smph+'}'+ta.value.slice(at); smsCfg[smsLastTa]=ta.value; kvPut('smsCfg', smsCfg); renderSmsPreview(); }; }, $('smPh'));
+  each('[data-smph]', function(el){ el.onclick=function(){ var ta=smsLastTa==='bodyNew' ? $('smBodyNew') : $('smBody'), at=ta.selectionStart||ta.value.length; ta.value=ta.value.slice(0,at)+'{'+el.dataset.smph+'}'+ta.value.slice(at); smsCfg[smsLastTa]=ta.value; smsCfgDirty(); renderSmsPreview(); }; }, $('smPh'));
   renderSmsPreview();
 }
 function smsPicked(){ return smsTargets().filter(function(x){ return smsPick[x.p.id]; }).sort(function(a,b){ return natSort(a.name,b.name); }); }
@@ -2433,13 +2434,18 @@ function bindSms(){
   $('smAllCk').onchange=function(){ if($('smAllCk').checked) $('smAll').click(); else $('smNone').click(); };
   $('smAll').onclick=function(){ smsTargets().filter(smsMatch).forEach(function(x){ if(phoneOf(x.p).length>=10) smsPick[x.p.id]=1; }); renderSms(); };
   $('smNone').onclick=function(){ smsPick={}; renderSms(); };
-  [['smDue','due'],['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).addEventListener('input', function(){ smsCfg[f[1]]=$(f[0]).value.trim(); kvPut('smsCfg', smsCfg); renderSmsPreview(); }); });
-  $('smDue').addEventListener('blur', function(){ var v=Forms.normDates($('smDue').value); if(v!==$('smDue').value){ $('smDue').value=v; smsCfg.due=v.trim(); kvPut('smsCfg', smsCfg); renderSmsPreview(); } });
-  $('smBody').addEventListener('input', function(){ smsCfg.body=$('smBody').value; kvPut('smsCfg', smsCfg); renderSmsPreview(); });
-  $('smBodyNew').addEventListener('input', function(){ smsCfg.bodyNew=$('smBodyNew').value; kvPut('smsCfg', smsCfg); renderSmsPreview(); });
+  [['smDue','due'],['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).addEventListener('input', function(){ smsCfg[f[1]]=$(f[0]).value.trim(); smsCfgDirty(); renderSmsPreview(); }); });
+  $('smDue').addEventListener('blur', function(){ var v=Forms.normDates($('smDue').value); if(v!==$('smDue').value){ $('smDue').value=v; smsCfg.due=v.trim(); smsCfgDirty(); renderSmsPreview(); } });
+  $('smBody').addEventListener('input', function(){ smsCfg.body=$('smBody').value; smsCfgDirty(); renderSmsPreview(); });
+  $('smBodyNew').addEventListener('input', function(){ smsCfg.bodyNew=$('smBodyNew').value; smsCfgDirty(); renderSmsPreview(); });
   $('smBody').addEventListener('focus', function(){ smsLastTa='body'; }); $('smBodyNew').addEventListener('focus', function(){ smsLastTa='bodyNew'; });
+  /* 양식 수정: 열 때 원래 값을 기억 → 「저장」해야 반영, 「취소」하면 되돌림 */
+  var smSnap=null, smReopen=false;
+  $('smCfgBox').addEventListener('toggle', function(){ if($('smCfgBox').open){ if(smReopen){ smReopen=false; return; } smSnap=JSON.stringify(smsCfg); $('smCfgDirty').textContent=''; } else if(smSnap && JSON.stringify(smsCfg)!==smSnap){ smReopen=true; $('smCfgBox').open=true; toast('수정한 내용이 있습니다. 「저장」 또는 「취소」를 눌러 주세요'); } });
+  $('smCfgSave').onclick=function(){ kvPut('smsCfg', smsCfg); smSnap=null; $('smCfgDirty').textContent=''; $('smCfgBox').open=false; renderSmsPreview(); toast('기한·담당자·문자 양식을 저장했습니다'); };
+  $('smCfgCancel').onclick=function(){ if(smSnap){ smsCfg=JSON.parse(smSnap); [['smDue','due'],['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).value=smsCfg[f[1]]||''; }); $('smBody').value=smsCfg.body||''; $('smBodyNew').value=smsCfg.bodyNew||''; } smSnap=null; $('smCfgDirty').textContent=''; $('smCfgBox').open=false; renderSmsPreview(); toast('수정을 취소했습니다'); };
   $('smTplGo').onclick=function(){ var b=$('smCfgBox'); b.open=true; $('smBody').scrollIntoView({behavior:'smooth', block:'center'}); setTimeout(function(){ $('smBody').focus(); }, 300); };
-  $('smReset').onclick=function(){ smsCfg.body=DEFAULT_SMS.body; smsCfg.bodyNew=DEFAULT_SMS.bodyNew; smsCfg.ver=DEFAULT_SMS.ver; kvPut('smsCfg', smsCfg); $('smBody').value=smsCfg.body; $('smBodyNew').value=smsCfg.bodyNew; renderSmsPreview(); toast('문자 양식을 기본값으로 초기화했습니다'); };
+  $('smReset').onclick=function(){ smsCfg.body=DEFAULT_SMS.body; smsCfg.bodyNew=DEFAULT_SMS.bodyNew; smsCfg.ver=DEFAULT_SMS.ver; $('smBody').value=smsCfg.body; $('smBodyNew').value=smsCfg.bodyNew; smsCfgDirty(); renderSmsPreview(); toast('기본 문구로 바꿨습니다. 「저장」을 눌러야 반영됩니다'); };
   $('smCopyAll').onclick=async function(){ await smsEnsureLinks($('smCopyAll')); var pk=smsPicked(); copyText(pk.map(function(x){ var ph=phoneOf(x.p); return x.name+' '+(ph.length>=10?Forms.fmtPhone(ph):'(연락처 없음)')+'\n'+smsText(x); }).join('\n\n'), pk.length+'명의 문자 내용을 복사했습니다'); };
   $('smCsv').onclick=async function(){ await smsEnsureLinks($('smCsv')); smsCsv(); };
   $('smLink').onclick=function(){ makeLinks($('smLink')); };
