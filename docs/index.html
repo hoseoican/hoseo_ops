@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-9';
+var APP_VERSION = '2026.11.27-10';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1522,7 +1522,7 @@ async function openSplit(){
 /* ---------- 서류 검토 (적용 학기 배치 강사 전체) ---------- */
 // 칸: 인적사항·이미지·PDF·이력서. 칸을 누르면 그 강사의 서류를 한 화면에서 보고 보완 표시·검토 완료를 한다
 var RV_COLS=[['rrn','주민번호'],['phone','연락처'],['addr','주소'],['cv','이력'],['sign','서명'],['photo','사진'],['idcard','신분증'],['bank','통장'],['exam','4-1 검사서'],['tb','4-2 결핵'],['grad','5 학력'],['cert','6 자격·경력']];
-var RV_FILTERS=[['all','전체'],['lsub','강사 제출 · 검토 대기'],['todo','검토 전'],['miss','미제출 있음'],['fix','보완 필요'],['done','검토 완료'],['chg','검토 후 수정'],['unreg','미등록'],['|'],['main','주강사'],['sub','보조강사']];
+var RV_FILTERS=[['all','전체'],['lsub','강사 제출 · 검토 대기'],['todo','검토 전'],['hold','보류'],['miss','미제출 있음'],['fix','보완 필요'],['done','검토 완료'],['chg','검토 후 수정'],['unreg','미등록'],['|'],['main','주강사'],['sub','보조강사']];
 var rvF='todo', rvList=[], rvIdx=-1, rvUrls=[], rvSea='', rvKind='';
 /* 서류 검토 「시기 · 출강 기관」: 이 사업 운영현황 전체(모든 학기 파일)에서 그 시기·구분에 배치된 강사만 */
 function rvKindOf(r){ return /학교\s*밖/.test(rowFile(r)) ? 'out' : 'school'; }
@@ -1533,7 +1533,9 @@ function rvTermOf(r){ var f=rowFile(r), t='', y='';
 function rvTermList(){ var m={}, O=['1학기','여름방학','2학기','겨울방학']; (ops.rows||[]).forEach(function(r){ if(rowBizOk(r)&&r.src!=='직접 추가'){ var t=rvTermOf(r); if(t) m[t]=1; } });
   return Object.keys(m).sort(function(a,b){ var ya=parseInt(a,10)||0, yb=parseInt(b,10)||0; return ya!==yb ? yb-ya : O.indexOf(b.replace(/^\d+ /,''))-O.indexOf(a.replace(/^\d+ /,'')); }); }
 function rvScoped(){ if(!rvSea && !rvKind) return null; var rows=(ops.rows||[]).filter(function(r){ return rowBizOk(r) && (!rvKind || rvKindOf(r)===rvKind) && (!rvSea || rvTermOf(r)===rvSea); }); return Ops.byPerson(rows); }
-function rvState(p){ if(!p || !p.rv || !p.rv.at) return 'todo'; return (p.updated||0) > p.rv.at+3000 ? 'chg' : 'done'; }
+/* 보류: 검토하다 보완 요청 등으로 미뤄 둔 강사. 강사가 그 뒤에 다시 내면 보류가 풀리고 「강사 제출」로 */
+function rvHold(p){ var h=p && p.rvHold; return !!(h && h.at && !(p.lsub && p.lsub.at > h.at)); }
+function rvState(p){ if(!p || !p.rv || !p.rv.at) return rvHold(p) ? 'hold' : 'todo'; return (p.updated||0) > p.rv.at+3000 ? (rvHold(p) && p.rvHold.at > p.rv.at ? 'hold' : 'chg') : 'done'; }
 function rvCell(x, k){
   var p=x.p; if(x.unreg) return {lv:'na', t:'미등록'};
   var fx=(p.fix||{})[k], pd=p.pdfs||{}, im=p.imgs||{};
@@ -1578,6 +1580,7 @@ function rvMatch(x, f, q){
   if(f==='todo') return st!=='done';
   if(f==='done') return st==='done';
   if(f==='chg') return st==='chg';
+  if(f==='hold') return st==='hold';
   if(f==='miss') return x.miss.length>0;
   if(f==='fix') return x.fix.length>0 || RV_COLS.some(function(c){ return rvCell(x, c[0]).lv==='fix'; });
   return true;
@@ -1587,6 +1590,7 @@ function rvBadge(x){
   var st=rvState(x.p), r=x.p.rv||{};
   if(st==='done') return '<span class="badge ok" title="'+esc(new Date(r.at).toLocaleString('ko-KR')+(r.by?' · '+r.by:''))+'">검토 완료</span>';
   if(st==='chg') return '<span class="badge wait" title="검토 완료 뒤에 내용이 바뀌었습니다">검토 후 수정</span>';
+  if(st==='hold') return '<span class="badge part" title="'+esc(new Date(x.p.rvHold.at).toLocaleString('ko-KR')+(x.p.rvHold.by?' · '+x.p.rvHold.by:''))+'">보류</span>';
   return lsubWait(x.p) ? '<span class="badge sent">강사 제출</span>' : '<span class="badge no">검토 전</span>';
 }
 function renderReview(){
@@ -1660,16 +1664,17 @@ function rvPaint(x, focus, loading){
   h+='</div>';
   var st=rvState(p), r=p.rv||{};
   h+='<div class="rvft">'+(st==='done' ? '<span class="hint">검토 완료 '+esc(new Date(r.at).toLocaleString('ko-KR'))+(r.by?' · '+esc(r.by):'')+'</span><button type="button" class="ghost sm" id="rvUndo">검토 취소</button>' : (st==='chg' ? '<span class="hint">검토 완료 뒤에 내용이 바뀌었습니다</span>' : ''))+
-     /* 보완을 표시한 강사는 검토 완료 대신 「다음 강사」가 주 버튼 (아래로 읽어 내려와 실수로 완료 처리하지 않게) */
-     (function(){ var nf=Object.keys(p.fix||{}).filter(function(k){ return p.fix[k]; }).length, last=rvIdx>=n-1;
-       return nf ? '<span class="rvfx" style="margin-left:8px">보완 필요 '+nf+'건 표시됨</span><span style="flex:1"></span><button type="button" class="ghost" id="rvOk">검토 완료</button><button type="button" id="rvSkip">'+(last?'보완 표시 그대로 닫기':'보완 표시 그대로 다음 강사')+'</button>'
-         : '<span style="flex:1"></span><button type="button" class="ghost" id="rvOk">검토 완료</button><button type="button" class="ghost" id="rvSkip"'+(last?' disabled':'')+'>건너뛰고 다음</button><button type="button" id="rvOkNext"'+(last?' disabled':'')+'>검토 완료 후 다음</button>'; })()+'</div>';
+     /* 아래 버튼: 보완을 표시한 강사는 「보류 후 다음」이 주 버튼 (아래로 읽어 내려와 실수로 완료 처리하지 않게) */
+     (function(){ var nf=Object.keys(p.fix||{}).filter(function(k){ return p.fix[k]; }).length, last=rvIdx>=n-1, hd=st==='hold' ? '<span class="hint" style="margin-left:8px">보류 '+esc(new Date(p.rvHold.at).toLocaleString('ko-KR'))+(p.rvHold.by?' · '+esc(p.rvHold.by):'')+'</span><button type="button" class="ghost sm" id="rvUnhold">보류 취소</button>' : '';
+       return hd+(nf ? '<span class="rvfx" style="margin-left:8px">보완 필요 '+nf+'건</span>' : '')+'<span style="flex:1"></span><button type="button" class="ghost" id="rvOk">검토 완료</button>'+
+         (nf ? '<button type="button" id="rvHold">'+(last?'보류':'보류 후 다음')+'</button>'
+             : '<button type="button" class="ghost" id="rvHold">'+(last?'보류':'보류 후 다음')+'</button><button type="button" id="rvOkNext"'+(last?' disabled':'')+'>검토 완료 후 다음</button>'); })()+'</div>';
   $('rvPane').innerHTML=h; rvWire(x);
   if(focus){ var el=$('rvPane').querySelector('[data-rvs="'+focus+'"]'); if(el){ el.scrollIntoView({block:'center'}); el.classList.add('rvhl'); setTimeout(function(){ el.classList.remove('rvhl'); }, 1600); } }
   else $('rvPane').querySelector('.rvbody').scrollTop=0;
 }
 function rvSaveP(p){ p.updated=Date.now(); dbPut(p); if(people.indexOf(p)<0) people.push(p); }
-function rvDone(p){ var t=Date.now(); p.rv={ at:t, by:(typeof sy!=='undefined' && sy.me)||'', term:(ops && ops.per ? ops.per.join(', ') : '') }; if(lsubWait(p)){ p.lsub.ok=t; p.lsub.okBy=p.rv.by; } p.updated=t; dbPut(p); }
+function rvDone(p){ var t=Date.now(); delete p.rvHold; p.rv={ at:t, by:(typeof sy!=='undefined' && sy.me)||'', term:(ops && ops.per ? ops.per.join(', ') : '') }; if(lsubWait(p)){ p.lsub.ok=t; p.lsub.okBy=p.rv.by; } p.updated=t; dbPut(p); }
 function rvWire(x){
   var p=x.p, re=function(){ rvPaint(x); if(p===cur) refresh(); renderList(); };
   $('rvX').onclick=rvClose;
@@ -1682,8 +1687,9 @@ function rvWire(x){
   each('[data-rvpv]', function(b){ b.onclick=function(){ var box=b.closest('.rvpd'), fr=box.querySelector('iframe.rvpdf'); if(!fr){ fr=document.createElement('iframe'); fr.className='rvpdf'; box.appendChild(fr); } fr.src=b.dataset.rvpv+'#view=FitH'; fr.scrollIntoView({block:'nearest'}); }; }, $('rvPane'));
   if($('rvUndo')) $('rvUndo').onclick=function(){ delete p.rv; rvSaveP(p); re(); toast('검토 완료를 취소했습니다'); };
   var fxN=function(){ return Object.keys(p.fix||{}).filter(function(k){ return p.fix[k]; }).length; };
-  $('rvOk').onclick=function(){ if(fxN() && !confirm('보완 필요가 '+fxN()+'건 표시돼 있습니다. 그래도 검토 완료로 처리할까요?\n(보완을 요청할 강사라면 「취소」 후 「다음 강사」를 눌러 주세요)')) return; rvDone(p); re(); toast(x.name+' 강사 검토 완료'); };
-  if($('rvSkip')) $('rvSkip').onclick=function(){ if(rvIdx>=rvList.length-1){ rvClose(); return; } rvOpen(rvIdx+1); };
+  $('rvOk').onclick=function(){ if(fxN() && !confirm('보완 필요가 '+fxN()+'건 표시돼 있습니다. 그래도 검토 완료로 처리할까요?\n(보완을 요청할 강사라면 「취소」 후 「보류 후 다음」을 눌러 주세요)')) return; rvDone(p); re(); toast(x.name+' 강사 검토 완료'); };
+  $('rvHold').onclick=function(){ p.rvHold={ at:Date.now(), by:(typeof sy!=='undefined' && sy.me)||'' }; rvSaveP(p); renderList(); toast(x.name+' 강사를 보류했습니다 (서류 검토 → 보류에서 다시 볼 수 있습니다)'); if(rvIdx>=rvList.length-1){ re(); return; } rvOpen(rvIdx+1); };
+  if($('rvUnhold')) $('rvUnhold').onclick=function(){ delete p.rvHold; rvSaveP(p); re(); toast('보류를 취소했습니다'); };
   if($('rvOkNext')) $('rvOkNext').onclick=function(){ rvDone(p); renderList(); toast(x.name+' 강사 검토 완료'); rvOpen(rvIdx+1); };
 }
 document.addEventListener('keydown', function(e){
