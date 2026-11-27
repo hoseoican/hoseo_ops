@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-8';
+var APP_VERSION = '2026.11.27-9';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -1660,7 +1660,10 @@ function rvPaint(x, focus, loading){
   h+='</div>';
   var st=rvState(p), r=p.rv||{};
   h+='<div class="rvft">'+(st==='done' ? '<span class="hint">검토 완료 '+esc(new Date(r.at).toLocaleString('ko-KR'))+(r.by?' · '+esc(r.by):'')+'</span><button type="button" class="ghost sm" id="rvUndo">검토 취소</button>' : (st==='chg' ? '<span class="hint">검토 완료 뒤에 내용이 바뀌었습니다</span>' : ''))+
-     '<span style="flex:1"></span><button type="button" class="ghost" id="rvOk">검토 완료</button><button type="button" id="rvOkNext"'+(rvIdx>=n-1?' disabled':'')+'>검토 완료 후 다음</button></div>';
+     /* 보완을 표시한 강사는 검토 완료 대신 「다음 강사」가 주 버튼 (아래로 읽어 내려와 실수로 완료 처리하지 않게) */
+     (function(){ var nf=Object.keys(p.fix||{}).filter(function(k){ return p.fix[k]; }).length, last=rvIdx>=n-1;
+       return nf ? '<span class="rvfx" style="margin-left:8px">보완 필요 '+nf+'건 표시됨</span><span style="flex:1"></span><button type="button" class="ghost" id="rvOk">검토 완료</button><button type="button" id="rvSkip">'+(last?'보완 표시 그대로 닫기':'보완 표시 그대로 다음 강사')+'</button>'
+         : '<span style="flex:1"></span><button type="button" class="ghost" id="rvOk">검토 완료</button><button type="button" class="ghost" id="rvSkip"'+(last?' disabled':'')+'>건너뛰고 다음</button><button type="button" id="rvOkNext"'+(last?' disabled':'')+'>검토 완료 후 다음</button>'; })()+'</div>';
   $('rvPane').innerHTML=h; rvWire(x);
   if(focus){ var el=$('rvPane').querySelector('[data-rvs="'+focus+'"]'); if(el){ el.scrollIntoView({block:'center'}); el.classList.add('rvhl'); setTimeout(function(){ el.classList.remove('rvhl'); }, 1600); } }
   else $('rvPane').querySelector('.rvbody').scrollTop=0;
@@ -1678,8 +1681,10 @@ function rvWire(x){
   each('[data-rvunfix]', function(b){ b.onclick=function(){ clearFix(p, b.dataset.rvunfix); rvSaveP(p); re(); }; }, $('rvPane'));
   each('[data-rvpv]', function(b){ b.onclick=function(){ var box=b.closest('.rvpd'), fr=box.querySelector('iframe.rvpdf'); if(!fr){ fr=document.createElement('iframe'); fr.className='rvpdf'; box.appendChild(fr); } fr.src=b.dataset.rvpv+'#view=FitH'; fr.scrollIntoView({block:'nearest'}); }; }, $('rvPane'));
   if($('rvUndo')) $('rvUndo').onclick=function(){ delete p.rv; rvSaveP(p); re(); toast('검토 완료를 취소했습니다'); };
-  $('rvOk').onclick=function(){ rvDone(p); re(); toast(x.name+' 강사 검토 완료'); };
-  $('rvOkNext').onclick=function(){ rvDone(p); renderList(); toast(x.name+' 강사 검토 완료'); rvOpen(rvIdx+1); };
+  var fxN=function(){ return Object.keys(p.fix||{}).filter(function(k){ return p.fix[k]; }).length; };
+  $('rvOk').onclick=function(){ if(fxN() && !confirm('보완 필요가 '+fxN()+'건 표시돼 있습니다. 그래도 검토 완료로 처리할까요?\n(보완을 요청할 강사라면 「취소」 후 「다음 강사」를 눌러 주세요)')) return; rvDone(p); re(); toast(x.name+' 강사 검토 완료'); };
+  if($('rvSkip')) $('rvSkip').onclick=function(){ if(rvIdx>=rvList.length-1){ rvClose(); return; } rvOpen(rvIdx+1); };
+  if($('rvOkNext')) $('rvOkNext').onclick=function(){ rvDone(p); renderList(); toast(x.name+' 강사 검토 완료'); rvOpen(rvIdx+1); };
 }
 document.addEventListener('keydown', function(e){
   if(!$('rvDlg') || !$('rvDlg').classList.contains('on')) return;
