@@ -2334,7 +2334,7 @@ function foldMain(tb,key){
 /* 운영 화면 맨 위: 학교 담당자·강사·접속 신청 화면 바로 열기 */
 /* 사업별 공지 주소 복사: 주강사 신청 · 보조강사 신청 · 학교 접속 신청 (총괄관리자는 모든 사업, 사업 관리자는 자기 사업) */
 /* 화면 코드 버전: App.html의 APP_VER와 같아야 함(다르면 운영 화면 오른쪽 위에 「Lib 예전 버전」 표시) */
-const LIB_VER='11.142';
+const LIB_VER='11.143';
 /* 맨 위 바로가기: 화면마다 「열기 ↗」+「복사」를 한 묶음으로 (예전 「다른 화면 열기」·「공지 주소 복사」 두 줄을 합침) */
 function adminQuickNav(){
   const live=typeof persist==='function', base=S.webAppUrl||'', u=S.ui;
@@ -6655,8 +6655,8 @@ function csDashAll(){ const q=S.ui.csQ||csQNow(), U=CS_UNIVS(), t=csToday(), ym=
   /* 검사할 제출 건: 대학이 제출했지만 호서대가 아직 「제출 완료 확인」 하지 않은 점검표 · 운영 보고 */
   const us=o=>csUS(o)+'대', grp={};
   U.forEach(o=>{ const D=csOrgR(o);
-    Object.keys(D.sub||{}).forEach(m=>{ const at=(D.sub||{})[m]; if(at&&!(D.subOk||{})[m]){ const k='m'+m; (grp[k]=grp[k]||{d:String(at).slice(0,10),who:[],t:`${+m.slice(5)}월 마일스톤 점검표 검토`,go:o,tab:'mile',ym:m}); grp[k].who.push(us(o)); if(String(at).slice(0,10)<grp[k].d) grp[k].d=String(at).slice(0,10); } });
-    Object.keys(D.rep||{}).forEach(qq=>{ const R=(D.rep||{})[qq]||{}; if(R.subAt&&!R.ok){ const k='r'+qq; (grp[k]=grp[k]||{d:String(R.subAt).slice(0,10),who:[],t:`${CS_QN[qq]} 운영 보고 검토`,go:o,tab:'rep',q:+qq}); grp[k].who.push(us(o)); if(String(R.subAt).slice(0,10)<grp[k].d) grp[k].d=String(R.subAt).slice(0,10); } }); });
+    Object.keys(D.sub||{}).filter(m=>/^\d{4}-\d{2}$/.test(m)).forEach(m=>{ const at=(D.sub||{})[m]; if(at&&!(D.subOk||{})[m]){ const k='m'+m; (grp[k]=grp[k]||{d:String(at).slice(0,10),who:[],t:`${+m.slice(5)}월 마일스톤 점검표 검토`,go:o,tab:'mile',ym:m}); grp[k].who.push(us(o)); if(String(at).slice(0,10)<grp[k].d) grp[k].d=String(at).slice(0,10); } });
+    Object.keys(D.rep||{}).filter(qq=>/^[1-4]$/.test(qq)).forEach(qq=>{ const R=(D.rep||{})[qq]||{}; if(R.subAt&&!R.ok){ const k='r'+qq; (grp[k]=grp[k]||{d:String(R.subAt).slice(0,10),who:[],t:`${CS_QN[qq]} 운영 보고 검토`,go:o,tab:'rep',q:+qq}); grp[k].who.push(us(o)); if(String(R.subAt).slice(0,10)<grp[k].d) grp[k].d=String(R.subAt).slice(0,10); } }); });
   Object.values(grp).forEach(x=>todo.push({d:x.d,sub:1,who:x.who.join(' · '),t:x.t,go:x.go,tab:x.tab,ym:x.ym,q:x.q,n:`확인 대기 ${x.who.length}`}));
   todo.sort((a,b)=>a.d.localeCompare(b.d));
   const V={}; U.forEach(o=>{ V[o]=CS_OPROWS.map(([g,per])=>csOpVal(o,q,g,per)); });
