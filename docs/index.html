@@ -1393,7 +1393,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-23';
+var APP_VERSION = '2026.11.27-24';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2545,9 +2545,11 @@ function smsBrSend(list){
 var IND_HEAD=['학번/교번','이름','연락처','개별메시지1','개별메시지2','개별메시지3','개별메시지4','개별메시지5','개별메시지6','개별메시지7','개별메시지8','개별메시지9','개별메시지10'];
 function smsIndList(list){ return (list||[]).filter(Boolean).map(function(x){ return { key:(smsLateMode()?'lat:':'lec:')+x.p.id, name:String(x.name||'').replace(/\s+/g,''), phone:phoneOf(x.p), body:smsText(x) }; }).filter(function(j){ return /^01\d{8,9}$/.test(j.phone) && j.body; }); }
 function smsIndBook(jobs){
-  var aoa=[IND_HEAD].concat(jobs.map(function(j){ var r=['',j.name,j.phone,j.body]; while(r.length<IND_HEAD.length) r.push(''); return r; }));
+  /* i-ONE 개별문자는 학번/교번 칸이 비면 수신자로 올라가지 않음 → 줄마다 겹치지 않는 8자리 번호를 넣음 */
+  var used={}, sid=function(){ var v; do{ v=String(10000000+Math.floor(Math.random()*90000000)); }while(used[v]); used[v]=1; return v; };
+  var aoa=[IND_HEAD].concat(jobs.map(function(j){ var r=[sid(),j.name,j.phone,j.body]; while(r.length<IND_HEAD.length) r.push(''); return r; }));
   var ws=XLSX.utils.aoa_to_sheet(aoa);
-  for(var i=1;i<aoa.length;i++){ var c=ws[XLSX.utils.encode_cell({r:i,c:2})]; if(c){ c.t='s'; c.z='@'; } }
+  for(var i=1;i<aoa.length;i++){ [0,2].forEach(function(col){ var c=ws[XLSX.utils.encode_cell({r:i,c:col})]; if(c){ c.t='s'; c.z='@'; } }); }
   ws['!cols']=[{wch:10},{wch:10},{wch:14},{wch:60}]; var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet'); return wb; }
 function smsIndCheck(jobs){ var big=jobs.filter(function(j){ return smsBytes(j.body)>2000; }); if(big.length){ toast('2,000바이트를 넘는 문자가 있습니다: '+big.map(function(j){ return j.name; }).join(', ')+' · 문자 양식을 줄여 주세요'); return false; } return true; }
 function smsIndXlsx(){ var jobs=smsIndList(smsPicked()); if(!jobs.length){ toast('휴대폰번호가 있는 강사가 없습니다'); return; } if(!smsIndCheck(jobs)) return;
