@@ -1155,7 +1155,7 @@ if(EMBED) document.documentElement.classList.add('embed');
         <h3 style="display:flex;align-items:center;gap:8px">보낼 문자<span style="flex:1"></span><button type="button" class="ghost sm" id="smTplGo">문자 양식 수정</button></h3>
         <details class="smcfg" id="smCfgBox"><summary><span id="smCfgSum"></span><em>기한·담당자·문자 양식 수정</em></summary><div class="inner">
         <div class="grid g2">
-          <label class="fld"><span>제출기한</span><input type="text" id="smDue" autocomplete="off"></label>
+          <label class="fld"><span>제출기한 <small class="hint" id="smDueHint" style="font-weight:400"></small></span><span style="display:flex;gap:6px"><input type="date" id="smDueD" style="flex:1.4;min-width:0"><input type="time" id="smDueT" step="600" style="flex:1;min-width:0" title="시간은 비워 두면 날짜만 들어갑니다"></span></label>
           <label class="fld"><span>담당자</span><input type="text" id="smWho" placeholder="예: 연구원 이지훈" autocomplete="off"></label>
           <label class="fld"><span>연락처</span><input type="text" id="smTel" autocomplete="off"></label>
           <label class="fld"><span>제출 이메일</span><input type="text" id="smMail" autocomplete="off"></label>
@@ -1333,7 +1333,7 @@ if(EMBED) document.documentElement.classList.add('embed');
 <script src="certtpl.js"></script>
 <script>
 // 버전: 고칠 때마다 날짜(와 같은 날 여러 번이면 -2, -3)를 바꿔 주세요
-var APP_VERSION = '2026.11.27-13';
+var APP_VERSION = '2026.11.27-14';
 (function(){
 'use strict';
 var $ = function(id){ return document.getElementById(id); };
@@ -2282,6 +2282,11 @@ async function makeLinks(btn){
   toast(fail.length ? '링크를 만들지 못한 강사: '+fail.join(', ') : pk.length+'명의 제출 링크를 만들었습니다 (14일 동안 사용). 문자 내용에 링크가 들어갔습니다');
 }
 function smsDueDefault(){ return dotDate(Date.now()+7*86400000); }
+/* 제출기한: 달력(날짜)·시간으로 고름 → 문자에는 「2026. 12. 4.(금) 18:00」 */
+function smsDueFmt(d, t){ if(!/^\d{4}-\d{2}-\d{2}$/.test(d||'')) return ''; var x=new Date(d+'T00:00:00'); return dotDate(d)+'('+'일월화수목금토'[x.getDay()]+')'+(/^\d{2}:\d{2}$/.test(t||'') ? ' '+t : ''); }
+function smsDueSync(){ if(!smsCfg.dueD && smsCfg.due){ var m=String(smsCfg.due).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); if(m) smsCfg.dueD=m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2); var tm=String(smsCfg.due).match(/(\d{1,2}):(\d{2})/); if(tm) smsCfg.dueT=('0'+tm[1]).slice(-2)+':'+tm[2]; }
+  smsCfg.due=smsDueFmt(smsCfg.dueD, smsCfg.dueT); }
+function smsDueFill(){ smsDueSync(); $('smDueD').value=smsCfg.dueD||''; $('smDueT').value=smsCfg.dueT||''; $('smDueHint').textContent=smsCfg.dueD ? '' : '(비우면 7일 뒤 '+smsDueDefault()+')'; }
 function smsNeeds(x){ return x.unreg || !!x.exp || x.miss.some(function(k){ return k!=='phone'; }) || x.fix.length>0; }
 /* 지금 고른 적용 학기 운영현황에 배치된 강사만 (운영현황에 없는 등록 강사는 「운영현황에 없는 등록 강사 포함」을 켰을 때만) */
 function inBatch(name){ if(typeof opsHasRows!=='function' || !opsHasRows()) return true; var n=String(name||'').replace(/\s/g,''); var pp=personBy(n); if(pp && xOut(pp)) return false; return !!opsPersonOf(n) || ((opsExtra || xIn(pp)) && !opsAllNames()[n]); }
@@ -2385,8 +2390,8 @@ function renderSms(){
   // 양식
   if(document.activeElement!==$('smBody')) $('smBody').value=smsCfg.body;
   if(document.activeElement!==$('smBodyNew')) $('smBodyNew').value=smsCfg.bodyNew||DEFAULT_SMS.bodyNew;
-  [['smDue','due'],['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ if(document.activeElement!==$(f[0])) $(f[0]).value=smsCfg[f[1]]||''; });
-  $('smDue').placeholder=smsDueDefault()+' (비우면 7일 뒤)';
+  [['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ if(document.activeElement!==$(f[0])) $(f[0]).value=smsCfg[f[1]]||''; });
+  if(document.activeElement!==$('smDueD') && document.activeElement!==$('smDueT')) smsDueFill();
   $('smPh').innerHTML='자리표시자(누르면 본문에 삽입): '+SMS_PH.map(function(x){ return '<code data-smph="'+x[0]+'" title="'+x[1]+'">{'+x[0]+'}</code>'; }).join(' ');
   each('[data-smph]', function(el){ el.onclick=function(){ var ta=smsLastTa==='bodyNew' ? $('smBodyNew') : $('smBody'), at=ta.selectionStart||ta.value.length; ta.value=ta.value.slice(0,at)+'{'+el.dataset.smph+'}'+ta.value.slice(at); smsCfg[smsLastTa]=ta.value; smsCfgDirty(); renderSmsPreview(); }; }, $('smPh'));
   renderSmsPreview();
@@ -2434,8 +2439,8 @@ function bindSms(){
   $('smAllCk').onchange=function(){ if($('smAllCk').checked) $('smAll').click(); else $('smNone').click(); };
   $('smAll').onclick=function(){ smsTargets().filter(smsMatch).forEach(function(x){ if(phoneOf(x.p).length>=10) smsPick[x.p.id]=1; }); renderSms(); };
   $('smNone').onclick=function(){ smsPick={}; renderSms(); };
-  [['smDue','due'],['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).addEventListener('input', function(){ smsCfg[f[1]]=$(f[0]).value.trim(); smsCfgDirty(); renderSmsPreview(); }); });
-  $('smDue').addEventListener('blur', function(){ var v=Forms.normDates($('smDue').value); if(v!==$('smDue').value){ $('smDue').value=v; smsCfg.due=v.trim(); smsCfgDirty(); renderSmsPreview(); } });
+  ['smDueD','smDueT'].forEach(function(id){ $(id).addEventListener('input', function(){ smsCfg.dueD=$('smDueD').value; smsCfg.dueT=$('smDueD').value ? $('smDueT').value : ''; smsCfg.due=smsDueFmt(smsCfg.dueD, smsCfg.dueT); $('smDueHint').textContent=smsCfg.dueD ? '' : '(비우면 7일 뒤 '+smsDueDefault()+')'; smsCfgDirty(); renderSmsPreview(); }); });
+  [['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).addEventListener('input', function(){ smsCfg[f[1]]=$(f[0]).value.trim(); smsCfgDirty(); renderSmsPreview(); }); });
   $('smBody').addEventListener('input', function(){ smsCfg.body=$('smBody').value; smsCfgDirty(); renderSmsPreview(); });
   $('smBodyNew').addEventListener('input', function(){ smsCfg.bodyNew=$('smBodyNew').value; smsCfgDirty(); renderSmsPreview(); });
   $('smBody').addEventListener('focus', function(){ smsLastTa='body'; }); $('smBodyNew').addEventListener('focus', function(){ smsLastTa='bodyNew'; });
@@ -2443,7 +2448,7 @@ function bindSms(){
   var smSnap=null, smReopen=false;
   $('smCfgBox').addEventListener('toggle', function(){ if($('smCfgBox').open){ if(smReopen){ smReopen=false; return; } smSnap=JSON.stringify(smsCfg); $('smCfgDirty').textContent=''; } else if(smSnap && JSON.stringify(smsCfg)!==smSnap){ smReopen=true; $('smCfgBox').open=true; toast('수정한 내용이 있습니다. 「저장」 또는 「취소」를 눌러 주세요'); } });
   $('smCfgSave').onclick=function(){ kvPut('smsCfg', smsCfg); smSnap=null; $('smCfgDirty').textContent=''; $('smCfgBox').open=false; renderSmsPreview(); toast('기한·담당자·문자 양식을 저장했습니다'); };
-  $('smCfgCancel').onclick=function(){ if(smSnap){ smsCfg=JSON.parse(smSnap); [['smDue','due'],['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).value=smsCfg[f[1]]||''; }); $('smBody').value=smsCfg.body||''; $('smBodyNew').value=smsCfg.bodyNew||''; } smSnap=null; $('smCfgDirty').textContent=''; $('smCfgBox').open=false; renderSmsPreview(); toast('수정을 취소했습니다'); };
+  $('smCfgCancel').onclick=function(){ if(smSnap){ smsCfg=JSON.parse(smSnap); [['smWho','who'],['smTel','tel'],['smMail','email']].forEach(function(f){ $(f[0]).value=smsCfg[f[1]]||''; }); smsDueFill(); $('smBody').value=smsCfg.body||''; $('smBodyNew').value=smsCfg.bodyNew||''; } smSnap=null; $('smCfgDirty').textContent=''; $('smCfgBox').open=false; renderSmsPreview(); toast('수정을 취소했습니다'); };
   $('smTplGo').onclick=function(){ var b=$('smCfgBox'); b.open=true; $('smBody').scrollIntoView({behavior:'smooth', block:'center'}); setTimeout(function(){ $('smBody').focus(); }, 300); };
   $('smReset').onclick=function(){ smsCfg.body=DEFAULT_SMS.body; smsCfg.bodyNew=DEFAULT_SMS.bodyNew; smsCfg.ver=DEFAULT_SMS.ver; $('smBody').value=smsCfg.body; $('smBodyNew').value=smsCfg.bodyNew; smsCfgDirty(); renderSmsPreview(); toast('기본 문구로 바꿨습니다. 「저장」을 눌러야 반영됩니다'); };
   $('smCopyAll').onclick=async function(){ await smsEnsureLinks($('smCopyAll')); var pk=smsPicked(); copyText(pk.map(function(x){ var ph=phoneOf(x.p); return x.name+' '+(ph.length>=10?Forms.fmtPhone(ph):'(연락처 없음)')+'\n'+smsText(x); }).join('\n\n'), pk.length+'명의 문자 내용을 복사했습니다'); };
